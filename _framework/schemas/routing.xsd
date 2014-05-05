@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema elementFormDefault="qualified" targetNamespace="http://xquerrail.com/routing" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://xquerrail.com/routing" xmlns:routing="http://xquerrail.com/routing">
+  <xs:element name="routes">
+    <xs:complexType>
+      <xs:sequence minOccurs="1" maxOccurs="unbounded">
+	<xs:element name="route" type="routeType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="routeType">
+    <xs:sequence minOccurs="1">
+      <xs:choice minOccurs="1" maxOccurs="1">
+	<xs:element name="default" type="defaultType" minOccurs="0" maxOccurs="1"/>
+	<xs:element name="prepend" type="xs:string" minOccurs="0" maxOccurs="1"/>
+	<xs:element name="append" type="xs:string" minOccurs="0" maxOccurs="1"/>
+	<xs:element name="to" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      </xs:choice>
+      <xs:element name="param" type="paramType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attributeGroup ref="routeAttributes"/>
+  </xs:complexType>
+  <xs:complexType name="defaultType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+	<xs:attributeGroup ref="defaultAttributes"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="paramType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+	<xs:attributeGroup ref="defaultAttributes"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="replaceType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+	<xs:attribute name="path" type="xs:string"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:attributeGroup name="defaultAttributes">
+    <xs:attribute name="key" type="xs:string" use="required"/>
+  </xs:attributeGroup>
+  <xs:attributeGroup name="routeAttributes">
+    <xs:attribute name="id" type="xs:ID"/>
+    <xs:attribute name="pattern" type="xs:string"/>
+    <xs:attribute name="method">
+      <xs:simpleType>
+	<xs:restriction base="xs:string">
+	  <xs:enumeration value="post"/>
+	  <xs:enumeration value="put"/>
+	  <xs:enumeration value="get"/>
+	  <xs:enumeration value="delete"/>
+	  <xs:enumeration value="head"/>
+	  <xs:enumeration value="option"/>
+	</xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="is-resource" type="xs:boolean"/>
+  </xs:attributeGroup>
+</xs:schema>

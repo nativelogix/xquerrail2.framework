@@ -1,0 +1,15 @@
+<config xmlns="http://xquerrail.com/config">
+    <login-url url="/login.html"/>
+    <use-csrf value="true"/>
+    <!-- anonymous should be set in _config/config.xml -->
+    <!-- <anonymous-user value="anonymous"/> -->
+    <scope context="demo:default:login">
+        <allow-role>anonymous</allow-role>
+    </scope>
+    <scope context="demo:default:logout">
+        <deny-role>anonymous</deny-role>
+    </scope>
+    <scope context="*">
+        <deny-role>anonymous</deny-role>
+    </scope>
+</config>

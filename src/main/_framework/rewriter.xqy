@@ -11,10 +11,12 @@ xquery version "1.0-ml";
  : @see app/controller.xqy
  :
  :)
+import module namespace app = "http://xquerrail.com/application" at "application.xqy";
 import module namespace config = "http://xquerrail.com/config" at "config.xqy";
 
 declare namespace routing = "http://xquerrail.com/routing";
 declare option xdmp:mapping "false";
+let $_ := app:bootstrap()
 let $request := xdmp:get-request-url()
 let $router := config:get-route-module()
 let $routing := xdmp:function(xs:QName("routing:get-route"),$router)

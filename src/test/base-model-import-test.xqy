@@ -70,8 +70,8 @@ declare %private function create-items() as empty-sequence() {
 declare %test:setup function setup() as empty-sequence()
 {
   (
-    xdmp:log("*** SETUP ***"),
-    create-items()
+    xdmp:log("*** SETUP ***")(:,
+    create-items():)
   )
 };
 

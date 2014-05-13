@@ -2,9 +2,9 @@ xquery version "1.0-ml";
 
 module namespace authorization = "http://xquerrail.com/interceptor";
 
-import module namespace interceptor = "http://xquerrail.com/interceptor" at "..//interceptor.xqy";
-import module namespace request = "http://xquerrail.com/request" at "..//request.xqy";
-import module namespace config  = "http://xquerrail.com/config"  at "..//config.xqy";
+import module namespace interceptor = "http://xquerrail.com/interceptor" at "../interceptor.xqy";
+import module namespace request = "http://xquerrail.com/request" at "../request.xqy";
+import module namespace config  = "http://xquerrail.com/config"  at "../config.xqy";
 
    
 declare function authorization:name()

@@ -104,7 +104,9 @@ declare function engine:transform-title($node as node())
    response:title()
 };
 
-
+declare function engine:resource-file-exists($path as xs:string) as xs:boolean {
+  (config:property("ignore-missing-resource", "true") eq "true") or base:module-file-exists($path)
+};
 
 (:~
  : Generates a script element for the given controller.  If a controller 

@@ -77,8 +77,10 @@
 /> -->
     </interceptors>
     <properties>
-        <property name="resource-path" resource="js"/>
-        <property name="css-path" resource="css"/>
-        <property name="js-path"  resource="js"/>
+      <!-- If ignore-missing-resource is true the engine will not throw an error for missing resource - default is true -->
+      <property name="ignore-missing-resource" value="true" />
+      <property name="resource-path" resource="js"/>
+      <property name="css-path" resource="css"/>
+      <property name="js-path"  resource="js"/>
     </properties>    
 </config>

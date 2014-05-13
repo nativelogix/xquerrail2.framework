@@ -18,17 +18,6 @@
       <default-template value="main"/>
     </application>
 
-    <!--Interceptors-->
-    <interceptors>
-       <interceptor 
-            name="ml-security" 
-            resource="ml-security.xml"
-            before-request="false" 
-            after-request="true" 
-            before-response="false" 
-            after-response="false"
-        />
-    </interceptors>
     <properties>
       <property name="ignore-missing-resource" value="false" />
     </properties>    

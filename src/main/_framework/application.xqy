@@ -21,8 +21,8 @@ declare function app:bootstrap($application as element(config:application)?) as 
       config:set-config-path((xs:string($application/config:config), "/_config")[1])
     )
     else (
-      config:set-base-path(xs:string(xdmp:invoke("base.xqy")/config:base)),
-      config:set-config-path((xs:string(xdmp:invoke("base.xqy")/config:config), "/_config")[1])
+      config:set-base-path(xs:string(get-base()/config:base)),
+      config:set-config-path((xs:string(get-base()/config:config), "/_config")[1])
     )
   ,
   xdmp:log(("Bootstrap XQuerrail Application [" || config:version() || "] - [" || config:last-commit() || "]", "base [" || config:get-base-path() || "] - config [" || config:get-config-path() || "] - framework [" || config:framework-path() || "]"), "info")
@@ -30,3 +30,19 @@ declare function app:bootstrap($application as element(config:application)?) as 
   config:get-config()
   )
 };
+
+declare %private function get-base() as element(config:application) {
+  let $base := (get-base-safe("/base.xqy"), get-base-safe("base.xqy"))[1]
+  return
+    if ($base) then $base
+    else fn:error(xs:QName("BASE-NOTFOUND"), "Cannot find /base.xqy or base.xqy")
+};
+
+declare %private function get-base-safe($path as xs:string) as element(config:application)? {
+  try {
+    xdmp:invoke($path)
+  }
+  catch * {
+    ()
+  }
+}; 

@@ -25,6 +25,14 @@ declare variable $TEST-VALUE-2 :=
 <value>dummy2</value>
 ;
 
+declare %test:setup function setup() {
+  xdmp:log(("*** SETUP ***"))
+};
+
+declare %test:teardown function teardown() {
+  xdmp:log(("*** TEARDOWN ***"))
+};
+
 declare %private function _test-cache($type as xs:string, $user as xs:string?) as item()*
 {
   let $path := "http://xquerrail.com/test/"
@@ -45,8 +53,18 @@ declare %private function _test-cache($type as xs:string, $user as xs:string?) a
   )
 };
 
+declare %test:after-each function after-test() {
+  xdmp:log(("*** AFTER-TEST ***", xdmp:transaction()))
+};
+
+declare %test:before-each function before-test() {
+  xdmp:log(("*** BEFORE-TEST ***", xdmp:transaction()))
+};
+
 declare %test:case function test-server-field-cache() as item()*
 {
+  xdmp:log(("*** test-server-field-cache ***", xdmp:transaction()))
+  ,
   _test-cache($cache:SERVER-FIELD-CACHE-LOCATION, ())
 };
 

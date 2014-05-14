@@ -1062,19 +1062,21 @@ declare function domain:get-model-reference-key(
 declare function domain:get-model-references(
     $domain-model as element(domain:model)
 ) {
-    let $domain := config:get-domain($domain-model/ancestor::domain:domain/domain:name)
-    let $reference-key := domain:get-model-reference-key($domain-model)
-    let $reference-models := 
-        $domain/domain:model
-        (:[//cts:element/@reference = $reference-key]:)
-        [cts:contains(.,
-            cts:element-attribute-value-query(
-                xs:QName("domain:element"),
-                xs:QName("reference"),
-                $reference-key)
-        )]
-    return
-      $reference-models
+  let $domain-name := ($domain-model/ancestor::domain:domain/domain:name)[1]
+  let $domain := config:get-domain($domain-name)
+  (: let $domain := config:get-domain($domain-model/ancestor::domain:domain/domain:name) :)
+  let $reference-key := domain:get-model-reference-key($domain-model)
+  let $reference-models := 
+      $domain/domain:model
+      (:[//cts:element/@reference = $reference-key]:)
+      [cts:contains(.,
+          cts:element-attribute-value-query(
+              xs:QName("domain:element"),
+              xs:QName("reference"),
+              $reference-key)
+      )]
+  return
+    $reference-models
 };
 
 (:~

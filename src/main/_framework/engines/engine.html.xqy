@@ -105,7 +105,7 @@ declare function engine:transform-title($node as node())
 };
 
 declare function engine:resource-file-exists($path as xs:string) as xs:boolean {
-  (config:property("ignore-missing-resource", "true") eq "true") or base:module-file-exists($path)
+  (config:property("ignore-missing-resource", "true") eq "true") or base:resource-file-exists($path)
 };
 
 (:~
@@ -123,7 +123,7 @@ declare function engine:transform-controller-script($node)
       response:controller(),".js")
   
   return 
-  if(response:controller() ne "" and engine:module-file-exists($script-uri)) 
+  if(response:controller() ne "" and engine:resource-file-exists($script-uri)) 
   then element script {
           attribute type{"text/javascript"},
           attribute src {$script-uri},
@@ -141,7 +141,7 @@ declare function engine:transform-controller-stylesheet($node)
   let $stylesheet-directory := config:application-stylesheet-directory(response:application())
   let $stylesheet-uri := fn:concat($stylesheet-directory,if(fn:ends-with($stylesheet-directory,"/")) then () else "/",response:controller(),".css")
    return 
-  if(response:controller() ne "" and engine:module-file-exists($stylesheet-uri))  
+  if(response:controller() ne "" and engine:resource-file-exists($stylesheet-uri))  
   then element link {
           attribute type{"text/css"},
           attribute href {$stylesheet-uri},
@@ -164,9 +164,9 @@ declare function engine:transform-application-script($node)
       if(fn:ends-with($script-directory,"/")) then () else "/",
       response:application(),".js"
     )
-  let $_ := xdmp:log(($script-uri, engine:module-file-exists($script-uri)))
+  let $_ := xdmp:log(($script-uri, engine:resource-file-exists($script-uri)))
   return 
-  if(response:controller() ne "" and engine:module-file-exists($script-uri)) 
+  if(response:controller() ne "" and engine:resource-file-exists($script-uri)) 
   then element script {
           attribute type{"text/javascript"},
           attribute src {$script-uri},
@@ -187,7 +187,7 @@ declare function engine:transform-application-stylesheet($node)
         if(fn:ends-with($stylesheet-directory,"/")) 
         then () else "/",response:application(),".css")
    return 
-  if(response:controller() ne "" and engine:module-file-exists($stylesheet-uri))  
+  if(response:controller() ne "" and engine:resource-file-exists($stylesheet-uri))  
   then element link {
           attribute type{"text/css"},
           attribute href {$stylesheet-uri},
@@ -214,7 +214,7 @@ declare function engine:transform-javascript-include($node)
         if(fn:ends-with($script-directory,"/")) then () else "/",
         ".js")
   return 
-  if(engine:module-file-exists($script-uri)) 
+  if(engine:resource-file-exists($script-uri)) 
   then element script {
           attribute type{"text/javascript"},
           attribute src {$script-uri},
@@ -374,7 +374,7 @@ declare function engine:transform-stylesheet-include($node)
         config:property("css-path"),
         $resource,".css")
    return 
-  if(engine:module-file-exists($stylesheet-uri))  
+  if(engine:resource-file-exists($stylesheet-uri))  
   then element link {
           attribute type{"text/css"},
           attribute href {$stylesheet-uri},
@@ -394,7 +394,7 @@ declare function engine:transform-image-tag($node)
         "images/",
         $resource,".css")
    return 
-  if(engine:module-file-exists($image-uri))  
+  if(engine:resource-file-exists($image-uri))  
   then element img {
           attribute src {$image-uri},
           text{""}
@@ -440,27 +440,26 @@ declare function engine:transform-resource-include($node)
  :)
 declare function engine:transform-controller-list($node)
 {
-   let $attributes := xdmp:value(fn:concat("<attributes ", fn:data($node),"/>"))
-   return
-   <ul>{
-   if($attributes/@uiclass) then attribute class {$attributes/@uiclass} else (),
-   if($attributes/@id) then $attributes/@id else (),
-   if($attributes/@class) 
-   then
-        for $controller in domain:get-controllers(request:application())[@class = $attributes/@class]
-        return
-          <li>
-            {if($attributes/@itemclass) then attribute class {$attributes/@itemclass} else ()}
-            <a href="/{$controller/@name}/index.html">{(fn:data($controller/@label),fn:data($controller/@name))[1]}</a>
-          </li>   
-   else 
-        for $controller in domain:get-controllers(request:application())
-        return
-          <li>
-            {if($attributes/@itemclass) then attribute class {$attributes/@itemclass} else ()}
-            <a href="/{$controller/@name}/index.html">{(fn:data($controller/@label),fn:data($controller/@name))[1]}</a>
-          </li>
-   }</ul>
+  let $attributes := xdmp:value(fn:concat("<attributes ", fn:data($node),"/>"))
+  return
+  <ul> {
+    if($attributes/@uiclass) then attribute class {$attributes/@uiclass} else (),
+    if($attributes/@id) then $attributes/@id else (),
+    if($attributes/@class) then
+      for $controller in domain:get-controllers(response:application())[@class = $attributes/@class]
+      return
+        <li>
+          {if($attributes/@itemclass) then attribute class {$attributes/@itemclass} else ()}
+          <a href="/{$controller/@name}/index.html">{(fn:data($controller/@label),fn:data($controller/@name))[1]}</a>
+        </li>   
+    else
+      for $controller in domain:get-controllers(response:application())
+      return
+        <li>
+          {if($attributes/@itemclass) then attribute class {$attributes/@itemclass} else ()}
+          <a href="/{$controller/@name}/index.html">{(fn:data($controller/@label),fn:data($controller/@name))[1]}</a>
+        </li>
+   } </ul>
 };
 
 (:~

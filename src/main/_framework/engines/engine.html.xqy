@@ -123,7 +123,7 @@ declare function engine:transform-controller-script($node)
       response:controller(),".js")
   
   return 
-  if(response:controller() ne "" and engine:resource-file-exists($script-uri)) 
+  if(response:controller() ne "" and engine:module-file-exists($script-uri)) 
   then element script {
           attribute type{"text/javascript"},
           attribute src {$script-uri},
@@ -141,7 +141,7 @@ declare function engine:transform-controller-stylesheet($node)
   let $stylesheet-directory := config:application-stylesheet-directory(response:application())
   let $stylesheet-uri := fn:concat($stylesheet-directory,if(fn:ends-with($stylesheet-directory,"/")) then () else "/",response:controller(),".css")
    return 
-  if(response:controller() ne "" and engine:resource-file-exists($stylesheet-uri))  
+  if(response:controller() ne "" and engine:module-file-exists($stylesheet-uri))  
   then element link {
           attribute type{"text/css"},
           attribute href {$stylesheet-uri},

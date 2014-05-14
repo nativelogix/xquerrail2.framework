@@ -105,7 +105,7 @@ declare function engine:transform-title($node as node())
 };
 
 declare function engine:resource-file-exists($path as xs:string) as xs:boolean {
-  (config:property("ignore-missing-resource", "true") eq "true") or base:resource-file-exists($path)
+  (config:property("ignore-missing-resource", "true") eq "true") or base:module-file-exists($path)
 };
 
 (:~

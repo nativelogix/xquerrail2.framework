@@ -4,6 +4,7 @@ import module namespace assert = "http://github.com/robwhitby/xray/assertions" a
 
 import module namespace app = "http://xquerrail.com/application" at "../../../main/_framework/application.xqy";
 import module namespace config = "http://xquerrail.com/config" at "../../../main/_framework/config.xqy";
+declare namespace domain = "http://xquerrail.com/domain";
 
 declare option xdmp:mapping "false";
 
@@ -40,29 +41,29 @@ declare %test:case function test-anonymous-user-by-application() as item()*
   assert:empty(config:anonymous-user($CONFIG, $application))
 };
 
-declare %test:case function test-application-directory() as item()*
+declare %test:case function app-testlication-directory() as item()*
 {
   let $application := config:default-application()
   let $_ := xdmp:log(("config:application-directory", config:application-directory($application)))
   return
-  assert:equal(config:application-directory($application), "/test/_framework/test-config/test-app")
+  assert:equal(config:application-directory($application), "/test/_framework/config-test/app-test")
 };
 
-declare %test:case function test-application-namespace() as item()*
+declare %test:case function app-testlication-namespace() as item()*
 {
   let $application := config:default-application()
   return
-  assert:equal(config:application-namespace($application), "http://xquerrail.com/test-app")
+  assert:equal(config:application-namespace($application), "http://xquerrail.com/app-test")
 };
 
-declare %test:case function test-application-script-directory() as item()*
+declare %test:case function app-testlication-script-directory() as item()*
 {
   let $application := config:default-application()
   return
   assert:equal(config:application-script-directory($application), "resources/js/")
 };
 
-declare %test:case function test-application-stylesheet-directory() as item()*
+declare %test:case function app-testlication-stylesheet-directory() as item()*
 {
   let $application := config:default-application()
   return
@@ -106,7 +107,7 @@ declare %test:case function test-default-action() as item()*
 
 declare %test:case function test-default-application() as item()*
 {
-  assert:equal(config:default-application(), "test-app")
+  assert:equal(config:default-application(), "app-test")
 };
 
 declare %test:case function test-default-controller() as item()*
@@ -182,13 +183,17 @@ declare %test:case function test-get-dispatcher() as item()*
   assert:true(fn:ends-with(config:get-dispatcher(), "/dispatcher.web.xqy"))
 };
 
-(:declare %test:case function test-get-domain() as item()*
+declare %test:case function test-get-domain() as item()*
 {
-  let $_ := app:bootstrap($TEST-APPLICATION)
+  let $domain := config:get-domain()
+  let $_ := xdmp:log($domain)
   return
-  assert:equal(config:get-domain(), "/dispatcher.web.xqy")
+  (
+    assert:not-empty($domain),
+    assert:equal($domain/domain:name/fn:string(.), "app-test")
+  )
 };
-:)
+
 declare %test:case function test-resource-directory() as item()*
 {
   assert:equal(config:resource-directory(), "/resources/")

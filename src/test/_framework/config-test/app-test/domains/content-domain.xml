@@ -1,0 +1,12 @@
+<domain xmlns="http://xquerrail.com/domain"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:search = "http://marklogic.com/appservices/search"
+    xsi:schemaLocation="http://xquerrail.com/domain ../../_framework/schemas/domain.xsd">
+  <name>pippo</name>
+  <model name="model1" persistence="document" label="Model #1" extends="base" namespace-uri="http://marklogic.com/model/model1" key="uuid" keyLabel="id">
+    <document root="templates">/test/model1.xml</document>
+    <element name="id" type="string" label="Id"></element> 
+    <element name="name" type="string" label="Name"/>
+  </model>
+
+</domain>

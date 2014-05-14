@@ -453,22 +453,20 @@ declare function config:anonymous-user($config as element(config:config), $appli
  :  and if changed may need to be initialized to reflect the latest values
  :  @param $application-name - Name of the application to get the domain.
  :)
-declare function config:get-domain($application-name)
+declare function config:get-domain($application-name as xs:string) as element(domain)?
 {
   let $cache-key := fn:concat($DOMAIN-CACHE-KEY, $application-name)
   let $app-path := config:application-directory(fn:substring-after($cache-key, $DOMAIN-CACHE-KEY))
   let $domain-key := fn:concat($app-path, "/domains/application-domain.xml")
   let $_ := xdmp:log(("config:get-domain [" || $application-name || "]", "$cache-key", $cache-key, "$app-path", $app-path, "$domain-key", $domain-key))
   let $domain-config := config:get-resource(fn:concat($app-path,"/domains/application-domain.xml"))
-  let $domain-config := config:_load-domain($domain-config)
+  let $domain := config:_load-domain($domain-config)
   let $config := config:get-config()
-  return (
-    cache:set-domain-cache(config:cache-location($config), $application-name, $domain-config, config:anonymous-user($config)),
-    $domain-config
-  ) 
+  let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config))
+  return $domain
 };
 
-declare function config:get-domain() {
+declare function config:get-domain() as element(domain)? {
    config:get-domain(config:default-application())
 };
 

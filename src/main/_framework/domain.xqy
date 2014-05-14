@@ -177,7 +177,7 @@ declare function domain:get-field-value-cache(
  : @param $model - The model to extract the given identity field
  :)
 declare function domain:get-model-identity-field-name($model as element(domain:model))  {
-   domain:get-model-identity-field($model)/@name
+   domain:get-model-identity-field($model)/fn:string(@name)
 };
 
 (:~

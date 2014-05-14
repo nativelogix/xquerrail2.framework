@@ -161,8 +161,7 @@ declare function config:is-cache-empty() {
  :)
 declare function config:refresh-app-cache() {
   for $application in config:get-applications()
-    let $_ := xdmp:log($application)
-    return config:get-domain($application)
+    return config:get-domain(xs:string($application/@name))
 };
 
 declare function config:cache-location($config as element(config:config)) as xs:string {

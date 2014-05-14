@@ -55,15 +55,16 @@ declare function ml-security:after-request(
              )          
          else fn:false()
      let $_ := xdmp:log(("context:", $context," scope::", $scope))
+     let $authorization := xdmp:get-request-header("Authorization") 
      return 
        if($bypassed) then ()  
        else 
-       if(xdmp:get-request-header("Authorization")) then 
+       if($authorization and fn:starts-with($authorization, "Basic ")) then 
           let $user := xdmp:get-request-username()
           let $password := 
              fn:substring-after(
                 xdmp:base64-decode( 
-                   fn:substring-after( xdmp:get-request-header("Authorization"), "Basic ")
+                   fn:substring-after($authorization, "Basic ")
                 ),
                 fn:concat($user, ":")
              )

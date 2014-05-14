@@ -4,9 +4,9 @@ xquery version "1.0-ml";
  :)
 declare default element namespace "http://www.w3.org/1999/xhtml";
 
-import module namespace form     = "http://xquerrail.com/helper/form" at "/../../helpers/form-helper.xqy";
-import module namespace response = "http://xquerrail.com/response" at "/../../response.xqy";
-import module namespace domain   = "http://xquerrail.com/domain" at "/../../domain.xqy";
+import module namespace form     = "http://xquerrail.com/helper/form" at "../../helpers/form-helper.xqy";
+import module namespace response = "http://xquerrail.com/response" at "../../response.xqy";
+import module namespace domain   = "http://xquerrail.com/domain" at "../../domain.xqy";
 
 declare option xdmp:output "indent-untyped=yes";
 declare variable $response as map:map external;

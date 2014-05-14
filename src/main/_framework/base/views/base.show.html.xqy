@@ -3,9 +3,9 @@ xquery version "1.0-ml";
 
 declare default element namespace "http://www.w3.org/1999/xhtml";
 
-import module namespace form = "http://xquerrail.com/helper/form" at "/../../helpers/form-helper.xqy";
-import module namespace response = "http://xquerrail.com/response" at "/../../response.xqy";
-import module namespace model = "http://xquerrail.com/model" at "/../../model.xqy";
+import module namespace form = "http://xquerrail.com/helper/form" at "../../helpers/form-helper.xqy";
+import module namespace response = "http://xquerrail.com/response" at "../../response.xqy";
+import module namespace model = "http://xquerrail.com/model" at "../../model.xqy";
 
 declare option xdmp:output "indent-untyped=yes";
 declare variable $response as map:map external;

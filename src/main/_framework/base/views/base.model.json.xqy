@@ -1,7 +1,7 @@
 xquery version "1.0-ml";
-import module namespace response = "http://xquerrail.com/response" at "/../../response.xqy";
-import module namespace jsh = "http://xquerrail.com/helper/javascript" at "/../../helpers/javascript-helper.xqy";
-import module namespace domain  = "http://xquerrail.com/domain" at "/../../domain.xqy";
+import module namespace response = "http://xquerrail.com/response" at "../../response.xqy";
+import module namespace jsh = "http://xquerrail.com/helper/javascript" at "../../helpers/javascript-helper.xqy";
+import module namespace domain  = "http://xquerrail.com/domain" at "../../domain.xqy";
 
 declare variable $response as map:map external;
 declare function domain:build-json($context) {

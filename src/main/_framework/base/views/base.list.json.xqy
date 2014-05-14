@@ -1,14 +1,14 @@
 xquery version "1.0-ml";
 
-import module namespace request = "http://xquerrail.com/request" at "/../../request.xqy";
+import module namespace request = "http://xquerrail.com/request" at "../../request.xqy";
    
-import module namespace response = "http://xquerrail.com/response" at "/../../response.xqy";
+import module namespace response = "http://xquerrail.com/response" at "../../response.xqy";
    
-import module namespace model = "http://xquerrail.com/helper/model" at "/../../helpers/model-helper.xqy";
+import module namespace model = "http://xquerrail.com/helper/model" at "../../helpers/model-helper.xqy";
 
-import module namespace domain = "http://xquerrail.com/domain" at "/../../domain.xqy";
+import module namespace domain = "http://xquerrail.com/domain" at "../../domain.xqy";
 
-import module namespace js = "http://xquerrail.com/helper/javascript" at "/../../helpers/javascript-helper.xqy";
+import module namespace js = "http://xquerrail.com/helper/javascript" at "../../helpers/javascript-helper.xqy";
 
 declare variable $response as map:map external;
 

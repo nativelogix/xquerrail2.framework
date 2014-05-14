@@ -1,6 +1,6 @@
 xquery version "1.0-ml";
 
-import module namespace response = "http://xquerrail.com/response" at "/../../response.xqy";
+import module namespace response = "http://xquerrail.com/response" at "../../response.xqy";
 
 declare default element namespace "http://www.w3.org/1999/xhtml";
 

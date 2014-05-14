@@ -2,7 +2,7 @@
 (:@GENERATED@:)
 xquery version "1.0-ml";
 declare default element namespace "http://www.w3.org/1999/xhtml";
-import module namespace response = "http://xquerrail.com/response" at "/../../response.xqy";
+import module namespace response = "http://xquerrail.com/response" at "../../response.xqy";
 
 declare namespace domain = "http://xquerrail.com/domain";
 

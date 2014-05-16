@@ -106,7 +106,7 @@ declare %test:case function build-reference-test() {
   let $model1-reference := model:get-model-references($reference-field, $identity-value)
   (:model:reference($model1, $itentity-map):)
 (:  let $_ := xdmp:log(("$model2", $model2)):)
-  let $_ := xdmp:log(("$identity-value", $identity-value))
+(:  let $_ := xdmp:log(("$identity-value", $identity-value)):)
 (:  let $_ := xdmp:log(("domain:get-model-fields", domain:get-model-fields:)
 (:  let $model2-instance := model:find($model2, map:new((map:entry("id", "model2-id")))):)
   let $map := map:new((
@@ -114,7 +114,7 @@ declare %test:case function build-reference-test() {
       map:entry("name", "model2-name"),
       map:entry("model1", $model1-reference)
     ))
-  let $_ := xdmp:log(("$map", $map))
+(:  let $_ := xdmp:log(("$map", $map)):)
   let $model2-instance := model:create(
     $model2, 
     $map, 

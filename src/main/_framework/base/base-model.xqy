@@ -333,7 +333,23 @@ declare function model:create(
 ) 
 as element()?
 {
-    model:create($model, $params, xdmp:default-collections(),xdmp:default-permissions())
+    model:create($model, $params, xdmp:default-collections())
+};
+
+(:~ 
+ : Creates a model for a given domain
+ : @param - $model - is the model for the given params
+ : @param - $params - parameters of content that pertain to the domain model
+ : @returns element
+ :) 
+declare function model:create(
+    $model as element(domain:model), 
+    $params as item(),
+    $collections as xs:string*
+) 
+as element()?
+{
+    model:create($model, $params, $collections, xdmp:default-permissions())
 };
 
 (:~ 
@@ -523,7 +539,7 @@ declare function model:get(
  :) 
 declare function model:getByReferenceKeyLabel(
    $model as element(domain:model), 
-   $params as map:map
+   $params (:as map:map:)
 ) as element()? {    
     (: Get document identifier from parameters :)
     (: Retrieve document identity and namspace to help build query :)
@@ -1741,25 +1757,28 @@ declare function model:get-references($field as element(), $params as item()) {
  declare function model:get-model-references(
     $reference as element(domain:element), 
     $params as item()
- ) as element()* 
- {
-    let $fieldKey := domain:get-field-id($reference)
-    let $name := fn:data($reference/@name)
-    let $tokens := fn:tokenize($reference/@reference, ":")
-    let $type := $tokens[2]
-    let $path := config:get-base-model-location($type)
-    let $ns   := "http://xquerrail.com/model/base"
-    let $funct := xdmp:function(fn:QName($ns,$tokens[3]),$path)
-    return
-        if(fn:function-available($tokens[3])) then
-            let $model          := domain:get-domain-model($type)
-            let $identity-field := domain:get-model-identity-field($model)
-            let $key-field      := domain:get-model-keyLabel-field($model)
-            return
-              $funct($model,())
-        else fn:error(xs:QName("ERROR"), "No Reference function avaliable.")
+ ) as element()* {
+  let $tokens := fn:tokenize($reference/@reference, ":")
+  let $type := $tokens[2]
+  let $reference-function-name := $tokens[3]
+  let $path := config:get-base-model-location($type)
+  let $ns   := "http://xquerrail.com/model/base"
+  let $funct := xdmp:function(fn:QName($ns, $reference-function-name), $path)
+  return
+    if(fn:function-available($reference-function-name)) then
+      let $model := domain:get-domain-model($type)
+      (: TODO: Temporary fix or maybe not :)
+      let $node-name := xs:string($reference/@name)
+      let $identity-field-name := domain:get-model-identity-field-name($model)
+      let $map := map:new((
+        map:entry($identity-field-name, $params)
+      ))
+      return $funct($node-name, $model, $map)
+    else 
+      fn:error(xs:QName("ERROR"), "No Reference function avaliable.")
  };
- (:~
+
+(:~
   : Returns a reference to a given controller
  ~:)
  declare function model:get-controller-reference($reference as element(domain:element), $params as item()) {
@@ -1780,22 +1799,24 @@ declare function model:get-references($field as element(), $params as item()) {
 (:~ 
  : This function will create a sequence of nodes that represent each
  : model for inlining in other references. 
+ : @node-name reference element attribute name
  : @param $ids a sequence of ids for models to be extracted
  : @return a sequence of packageType
  :)
-declare function model:reference($model as element(domain:model), $params as item()*) 
+declare function model:reference($node-name as xs:string, $model as element(domain:model), $params) 
 as element()?
 {
     let $keyLabel := fn:data($model/@keyLabel)
     let $key := fn:data($model/@key)
     let $modelReference := model:get($model,$params)
+    let $_ := xdmp:log(("model:reference", "$keyLabel", $keyLabel, "$key", $key, "$modelReference", $modelReference))
     let $modelReference := 
         if($modelReference) 
         then $modelReference
         else model:getByReferenceKeyLabel($model,$params)
     let $name := fn:data($model/@name)
     let $ns := $model/@namespace
-    let $qName := fn:QName($ns,$name)
+    let $qName := fn:QName($ns,$node-name(:$name:))
     return
         if($modelReference) then
              element { $qName } {

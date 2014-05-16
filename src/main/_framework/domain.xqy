@@ -176,7 +176,7 @@ declare function domain:get-field-value-cache(
  : Returns the field that is the identity key for a given model.
  : @param $model - The model to extract the given identity field
  :)
-declare function domain:get-model-identity-field-name($model as element(domain:model))  {
+declare function domain:get-model-identity-field-name($model as element(domain:model)) as xs:string {
    domain:get-model-identity-field($model)/fn:string(@name)
 };
 
@@ -282,6 +282,7 @@ declare function domain:get-field-prefix($field as element()) {
                $prefix
             )
 };
+
 (:~
  : Returns the field that matches the given field name or key
  : @param $model - The model to extract the given field
@@ -843,14 +844,15 @@ declare function domain:get-field-reference-model(
 declare function domain:get-field-xpath(
   $field as element()
 ) {
-    fn:string-join(
+  domain:get-field-xpath($field/ancestor::domain:model, domain:get-field-id($field))
+(:    fn:string-join(
     for $path in $field/ancestor-or-self::*[fn:node-name(.) = $DOMAIN-NODE-FIELDS]
     return 
      typeswitch($path)
       case element(domain:attribute) return fn:concat("/@",$path/@name)
       default return  fn:concat("/*:",$path/@name)
     ,"")
-};
+:)};
 
 (:~
  : Returns the xpath expression for a given field by its id/name key
@@ -1621,7 +1623,10 @@ declare function domain:get-field-value(
     $field as element(),
     $value as item()?
     ) as item()* {
-    let $return-value := 
+    if ($field instance of element(domain:model)) then
+      ()
+    else
+      let $return-value := 
         typeswitch($value)
           case json:object          return domain:get-field-json-value($field,$value)
           case json:array           return domain:get-field-json-value($field,$value)
@@ -1633,12 +1638,12 @@ declare function domain:get-field-value(
           case empty-sequence() return ()
           default return (:fn:error((),"Unknown Value Type",$value):)
           $value
-    return (
-      if(fn:exists($return-value) )
-      then ( $return-value )
-      else if($field/@default) then $field/@default
-      else ()
-    )
+      return (
+        if(fn:exists($return-value) )
+        then ( $return-value )
+        else if($field/@default) then $field/@default
+        else ()
+      )
 };
 
 

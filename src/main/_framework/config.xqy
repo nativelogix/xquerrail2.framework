@@ -1,6 +1,6 @@
-(:~ 
- : 
- : Provides access to config and supports retrieving resources from configuration entries 
+(:~
+ :
+ : Provides access to config and supports retrieving resources from configuration entries
  : and general features for accessing resources and values from config.xml
  : @version 2.0
  :)
@@ -9,14 +9,14 @@ xquery version "1.0-ml";
 module namespace config = "http://xquerrail.com/config";
 
 import module namespace response = "http://xquerrail.com/response" at "response.xqy";
-   
+
 import module namespace request  = "http://xquerrail.com/request" at "request.xqy";
 
 import module namespace cache = "http://xquerrail.com/cache" at "cache.xqy";
 
 declare namespace domain = "http://xquerrail.com/domain";
 
-declare namespace routing = "http://xquerrail.com/routing";   
+declare namespace routing = "http://xquerrail.com/routing";
 
 declare option xdmp:mapping "false";
 
@@ -49,7 +49,7 @@ declare variable $DEFAULT-TEMPLATE-PATH    := fn:concat($DEFAULT-BASE-PATH,"/tem
  :)
 declare variable $DEFAULT-CONTROLLER-RESOURCE  := fn:concat($DEFAULT-BASE-PATH,"/base-controller.xqy");
 (:~
- : Defines the Default Model Resource 
+ : Defines the Default Model Resource
  :)
 declare variable $DEFAULT-MODEL-RESOURCE       := fn:concat($DEFAULT-BASE-PATH,"/base-model.xqy");
 (:~
@@ -97,22 +97,22 @@ declare function config:get-config() as element(config:config) {
 };
 
 declare %private function config:set-config($config as element(config:config)) as empty-sequence() {
-  let $_ := cache:set-config-cache(config:cache-location($config), $config, config:anonymous-user($config))  
+  let $_ := cache:set-config-cache(config:cache-location($config), $config, config:anonymous-user($config))
   return ()
 };
 
 declare function config:load-config() as element(config:config) {
-  if(xdmp:modules-database() = 0) 
+  if(xdmp:modules-database() = 0)
   then xdmp:unquote(
           xdmp:binary-decode(
               xdmp:external-binary(fn:concat(
                   xdmp:modules-root(),
-                  if(fn:ends-with(xdmp:modules-root(),"/")) then "" else "/", 
+                  if(fn:ends-with(xdmp:modules-root(),"/")) then "" else "/",
                   fn:concat(config:get-config-path(), "/config.xml"))
               )
           ,"utf8")
        )/element()
-  else 
+  else
     xdmp:eval(fn:concat("fn:doc('", config:get-config-path(), "/config.xml')/element()"),
     (),
     <options xmlns="xdmp:eval">
@@ -150,13 +150,13 @@ declare function config:framework-path() as xs:string {
 declare function config:clear-cache() {
   xdmp:directory-delete($DOMAIN-CACHE-KEY)
 };
- 
+
 declare function config:is-cache-empty() {
   fn:empty(xdmp:directory($DOMAIN-CACHE-KEY))
 };
 
 (:~
- : Initializes the application domains and caches them in the application server. 
+ : Initializes the application domains and caches them in the application server.
  : When using a cluster please ensure you change configuration to cache from database
  :)
 declare function config:refresh-app-cache() {
@@ -169,8 +169,8 @@ declare function config:cache-location($config as element(config:config)) as xs:
 };
 
 (:~
- : Returns a list of applications from the config.xml. 
- : Try to resolve the application path using @uri 
+ : Returns a list of applications from the config.xml.
+ : Try to resolve the application path using @uri
  :)
 declare function config:get-applications() {
   for $application in config:get-config()/config:application
@@ -181,7 +181,7 @@ declare function config:resolve-application (
   $application as element(config:application)
 ) as element(config:application) {
   let $uri := $application/@uri
-  return 
+  return
   element config:application {
     attribute name { $application/@name },
     attribute uri { $uri },
@@ -202,18 +202,18 @@ declare function config:resolve-application (
 };
 
 (:~
- : Function Returns a resource based on 
+ : Function Returns a resource based on
  : how the application server is configured.
  : If the modules are in the filesystem. then it is invoked from the filesystem.  If the modules are in a modules database then it evals the call to the modules database using the uri
  : @param $uri - The URI specifying the resource.  The resource is managed from the filesystem then the file is invoked as an xml file.
  :)
 declare function config:get-resource($uri as xs:string) {
-    if(xdmp:modules-database() = 0 ) 
+    if(xdmp:modules-database() = 0 )
     then xdmp:unquote(
             xdmp:binary-decode(
                 xdmp:external-binary(fn:concat(xdmp:modules-root(),$uri)),"utf8")
          )/element()
-    else 
+    else
       xdmp:eval("fn:doc('" || $uri || "')/element()",
       (),
       <options xmlns="xdmp:eval">
@@ -223,7 +223,7 @@ declare function config:get-resource($uri as xs:string) {
 };
 
 (:~
- : Retrieves the config value from a database.  This is different than accessing 
+ : Retrieves the config value from a database.  This is different than accessing
  : a resource from the modules database
  : @param $uri - The uri to load from the database
  :)
@@ -232,16 +232,16 @@ declare function config:get-dbresource($uri as xs:string) {
 };
 
 (:~
- : Returns a configuration value of the given resource. 
- : @param $node - The node must have at least the @resource or @dbresource or @value to resolve the resource.  
+ : Returns a configuration value of the given resource.
+ : @param $node - The node must have at least the @resource or @dbresource or @value to resolve the resource.
  :                If not present throws INVALID_CONFIGURATION_VALUE  exception.
  :)
 declare function config:get-config-value($node as element()?) {
-   if($node/@dbresource) 
+   if($node/@dbresource)
    then config:get-dbresource(fn:data($node/@dbresource))
-   else if($node/@resource) 
+   else if($node/@resource)
         then config:get-resource(fn:data($node))
-    else if($node/@value) 
+    else if($node/@value)
         then fn:data($node/@value)
    else if(fn:not(fn:exists($node)))
         then ()
@@ -255,15 +255,15 @@ declare function config:get-config-value($node as element()?) {
  :)
  declare function config:default-application() as xs:string
  {
-    if(fn:count(config:get-config()/config:application) = 1) 
-    then config:get-config()/config:application/@name/fn:normalize-space(.) 
+    if(fn:count(config:get-config()/config:application) = 1)
+    then config:get-config()/config:application/@name/fn:normalize-space(.)
     else (config:get-config()/config:default-application/@value/fn:string(),
      "application"
     )[1]
- }; 
+ };
 (:~
  : Returns the default controller for entire application usually default
- : This reads the configuration in the following order: 
+ : This reads the configuration in the following order:
  : config:get-config()/config:application/config:default-controller
  :)
 declare function config:default-controller() as xs:string
@@ -288,7 +288,7 @@ declare function config:default-template($application-name) as xs:string {
 };
 
 (:~
- : Returns the default action specifed by the <config:default-action/> configuration element. 
+ : Returns the default action specifed by the <config:default-action/> configuration element.
  The default action is used to determine any actions that does not pass an action.
  : Reads config:get-config()/config:default-action
 :)
@@ -301,7 +301,7 @@ declare function config:default-action() as xs:string
 };
 
 (:~
- : Returns the default format. The default format specifies that any 
+ : Returns the default format. The default format specifies that any
  :  URI that does not explicitly define its format will use this value.
  :)
 declare function config:default-format() as xs:string
@@ -313,7 +313,7 @@ declare function config:default-format() as xs:string
 };
 
 (:~
- : Returns the default dispatcher for entire framework. By default the only dispatcher defined is the 
+ : Returns the default dispatcher for entire framework. By default the only dispatcher defined is the
   /_framework/displatcher/dispatcher.web.xqy. But if a custom dispatcher is implemented then the configuration will use that value.
  :)
 declare function config:get-dispatcher() as xs:string
@@ -332,15 +332,15 @@ declare function config:get-application($application-name as xs:string) as eleme
 {
   let $application := config:get-config()/config:application[@name eq $application-name]
   return
-    if($application) 
-    then $application 
+    if($application)
+    then $application
     else fn:error(xs:QName("INVALID-APPLICATION"),"Application with '" || $application-name || "' does not-exist",$application-name)
 };
 
 
 (:~
  : Returns the resource directory for framework defined in /_config/config.xml
- : $the value is specifed as 
+ : $the value is specifed as
  : config:get-config()/config:resource-directory
  : "/resources/"
  :)
@@ -349,7 +349,7 @@ declare function config:resource-directory() as xs:string
    if(fn:not(config:get-config()/config:resource-directory))
    then "/resources/"
    else fn:data(config:get-config()/config:resource-directory/@resource)
-}; 
+};
 
 (:~
  : Returns the base-model location as defined in the config.xml
@@ -357,7 +357,7 @@ declare function config:resource-directory() as xs:string
  :)
 declare function config:get-base-model-location($model-name as xs:string) {
   let $model-suffix := config:model-suffix()
-  let $path := fn:concat("/model/", $model-name, $model-suffix, ".xqy") 
+  let $path := fn:concat("/model/", $model-name, $model-suffix, ".xqy")
   return
     if(xdmp:uri-is-file($path))
     then $path
@@ -373,12 +373,12 @@ declare function config:get-base-model-location($model-name as xs:string) {
  :)
 declare function config:base-view-directory() as xs:string {
   let $dir :=  xs:string(config:get-config()/config:base-view-directory/@value)
-  return 
+  return
     if ($dir) then $dir else fn:concat(config:framework-path(), "/base/views")
 };
 
 (:~
- : Get the current application directory defined by the /application/@uri attribute 
+ : Get the current application directory defined by the /application/@uri attribute
  : @param $application - If the passed value is a string then it will lookup the application by name then return the uri.
  : else if the `$application` is an instance of domain:appliation then reads the @uri attribute.
  :)
@@ -449,7 +449,7 @@ declare function config:anonymous-user($config as element(config:config), $appli
 
 
 (:~
- :  Get the domain for a given application. The domain is cached to optimize performance 
+ :  Get the domain for a given application. The domain is cached to optimize performance
  :  and if changed may need to be initialized to reflect the latest values
  :  @param $application-name - Name of the application to get the domain.
  :)
@@ -458,7 +458,7 @@ declare function config:get-domain($application-name as xs:string) as element(do
   let $cache-key := fn:concat($DOMAIN-CACHE-KEY, $application-name)
   let $app-path := config:application-directory(fn:substring-after($cache-key, $DOMAIN-CACHE-KEY))
   let $domain-key := fn:concat($app-path, "/domains/application-domain.xml")
-  let $_ := xdmp:log(("config:get-domain [" || $application-name || "]", "$cache-key", $cache-key, "$app-path", $app-path, "$domain-key", $domain-key))
+  let $_ := xdmp:log(("config:get-domain [" || $application-name || "]", "$cache-key", $cache-key, "$app-path", $app-path, "$domain-key", $domain-key), "debug")
   let $domain-config := config:get-resource(fn:concat($app-path,"/domains/application-domain.xml"))
   let $domain := config:_load-domain($domain-config)
   let $config := config:get-config()
@@ -490,11 +490,11 @@ declare %private function config:_load-domain(
 $domain as element(domain:domain)
 ) {
     let $app-path := config:application-directory($domain/*:name)
-    let $imports := 
+    let $imports :=
         for $import in $domain/domain:import
         return
-        config:get-resource(fn:concat($app-path,"/domains/",$import/@resource))        
-    return 
+        config:get-resource(fn:concat($app-path,"/domains/",$import/@resource))
+    return
         element domain {
          namespace domain {"http://xquerrail.com/domain"},
          attribute xmlns {"http://xquerrail.com/domain"},
@@ -504,7 +504,7 @@ $domain as element(domain:domain)
          ($domain/domain:optionlist,$imports/domain:optionlist),
          ($domain/domain:controller,$imports/domain:controller),
          ($domain/domain:view,$imports/domain:view)
-       } 
+       }
 };
 
 declare function config:resolve-path($base as xs:string, $path as xs:string?) as xs:string? {
@@ -554,7 +554,7 @@ declare function config:get-engine($response as map:map)
 {
    let $_ := response:initialize($response)
    return
-     if(response:format() eq "html") 
+     if(response:format() eq "html")
      then "engine.html"
      else if(response:format() eq "xml")
      then "engine.xml"
@@ -564,12 +564,12 @@ declare function config:get-engine($response as map:map)
 };
 
 (:~
- : Returns the default engine from the configuration at 
+ : Returns the default engine from the configuration at
  : config:get-config()/config:default-engine/@value
  : or "engine.html"
  :)
 declare function config:default-engine() as xs:string
-{ 
+{
   (
     xs:string(config:get-config()/config:default-engine/@value),
     "engine.html"
@@ -577,13 +577,13 @@ declare function config:default-engine() as xs:string
 };
 
 (:~
- : Returns the Error Handler location from the configuration at 
+ : Returns the Error Handler location from the configuration at
  : config:get-config()/config:error-handler/@resource,
  : config:get-config()/config:error-handler/@dbresource
  : "/_framework/error.xqy"
  :)
 declare function config:error-handler() as xs:string
-{ 
+{
   (
     xs:string(config:get-config()/config:error-handler/@resource),
     xs:string(config:get-config()/config:error-handler/@dbresource),
@@ -608,7 +608,7 @@ declare function config:get-interceptors(
   $value as xs:string?
 ){
   (: TODO: use except :)
-  let $interceptors := 
+  let $interceptors :=
     for $interceptor in config:get-config()/config:interceptors/config:interceptor
     return
       element config:interceptor {
@@ -619,15 +619,15 @@ declare function config:get-interceptors(
         attribute after-response { $interceptor/@after-response },
         attribute resource { config:resolve-config-path($interceptor/@resource) }
       }
-  return     
-    switch($value) 
+  return
+    switch($value)
       case "before-request" return $interceptors[@before-request eq "true"]
       case "after-request" return $interceptors[@after-request eq "true"]
       case "before-response" return $interceptors[@before-response eq "true"]
       case "after-response" return $interceptors[@after-response eq "true"]
-      case "all" return $interceptors 
+      case "all" return $interceptors
       default return ()
-  
+
 };
 (:~
  : Returns the default interceptor configuration.  If none is configured will map to the default
@@ -638,7 +638,7 @@ declare function config:interceptor-config() as xs:string?
     config:resolve-config-path(config:get-config()/config:interceptor-config/@value/fn:data(.)),
     config:resolve-config-path("interceptor.xml")
    )[1]
-   
+
 };
 (:~
  : The resource handler is responsible for accepting resource requests and performing specific actions
@@ -649,7 +649,7 @@ declare function config:resource-handler() {
 };
 
 (:~
- :  Defines the default controller suffix as defined by config:get-config()/config:controller-suffix 
+ :  Defines the default controller suffix as defined by config:get-config()/config:controller-suffix
  :)
 declare function config:controller-suffix() as xs:string {
   (
@@ -659,7 +659,7 @@ declare function config:controller-suffix() as xs:string {
 };
 
 (:~
- :  Defines the default model suffix as defined by config:get-config()/config:model-suffix 
+ :  Defines the default model suffix as defined by config:get-config()/config:model-suffix
  :)
 declare function config:model-suffix() as xs:string {
   (
@@ -674,7 +674,7 @@ declare function config:property(
   config:property($name,())
 };
 (:~
- : Returns a property defined in the config:get-config()/config:properties/config:property. 
+ : Returns a property defined in the config:get-config()/config:properties/config:property.
  : The value can be specified by either resource/value or text() attribute
  : @param $name - name of the resource property to return
  :)
@@ -683,9 +683,9 @@ declare function config:property(
   $default as xs:string?
   )  as xs:string?{
       let $value := config:get-config()/config:properties/config:property[@name = $name]/(@resource|@value|text())[1]
-      return 
-      if($value instance of attribute()) 
-      then fn:data($value) 
+      return
+      if($value instance of attribute())
+      then fn:data($value)
       else if($default) then $default
       else fn:error(xs:QName("INVALID-PROPERTY"),"Missing Property Configuration")
 };
@@ -717,5 +717,5 @@ declare function config:controller-base-path()  as xs:string
      (
      xs:string(config:get-config()/config:attribute-prefix/@value),
     "@"
-    )[1]   
+    )[1]
  };

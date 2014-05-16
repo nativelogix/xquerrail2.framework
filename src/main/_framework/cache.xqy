@@ -54,12 +54,12 @@ declare function set-cache($type as xs:string, $key as xs:string, $value) as emp
 };
 
 declare function set-cache($type as xs:string, $key as xs:string, $value, $user as xs:string?) as empty-sequence() {
-  let $_ := xdmp:log(("set-cache [" || $type || "] - [" || $key || "]"))
+  let $_ := xdmp:log(("set-cache [" || $type || "] - [" || $key || "]"), "debug")
   let $_ := (
     validate-cache-location($type)
     ,
     switch($type)
-    case "database" return 
+    case "database" return
       xdmp:eval('
         declare variable $key as xs:string external;
         declare variable $value as node() external;
@@ -93,9 +93,9 @@ declare function get-cache($type as xs:string, $key as xs:string, $user as xs:st
   validate-cache-location($type)
   ,
   switch($type)
-    case $SERVER-FIELD-CACHE-LOCATION 
+    case $SERVER-FIELD-CACHE-LOCATION
       return xdmp:get-server-field($key)
-    default return 
+    default return
       xdmp:eval('
         declare variable $key external;
         function() {
@@ -116,10 +116,10 @@ declare function get-cache-keys($type as xs:string, $path as xs:string?, $user a
   validate-cache-location($type)
   ,
   switch($type)
-    case $SERVER-FIELD-CACHE-LOCATION 
+    case $SERVER-FIELD-CACHE-LOCATION
       return xdmp:get-server-field-names()
     default
-      return 
+      return
       xdmp:eval(
         'declare variable $DOMAIN-CACHE-KEY as xs:string external;
         function() {cts:uris((),(),cts:directory-query($DOMAIN-CACHE-KEY,"infinity"))}()',
@@ -139,10 +139,10 @@ declare function remove-cache($type as xs:string, $key as xs:string, $user as xs
   validate-cache-location($type)
   ,
   switch($type)
-    case $SERVER-FIELD-CACHE-LOCATION 
+    case $SERVER-FIELD-CACHE-LOCATION
       return xdmp:set-server-field($key, ())
     default
-      return 
+      return
       xdmp:eval('
       declare variable $key external;
       function() {
@@ -166,10 +166,10 @@ declare function clear-cache($type as xs:string, $key as xs:string, $user as xs:
   validate-cache-location($type)
   ,
   switch($type)
-    case $SERVER-FIELD-CACHE-LOCATION 
+    case $SERVER-FIELD-CACHE-LOCATION
       return xdmp:set-server-field($key, ())
     default
-      return 
+      return
       xdmp:eval('
       declare variable $CACHE-BASE-KEY external;
       function() {
@@ -193,7 +193,7 @@ declare function is-cache-empty($type as xs:string, $base-key as xs:string, $use
   validate-cache-location($type)
   ,
   switch($type)
-    case $SERVER-FIELD-CACHE-LOCATION 
+    case $SERVER-FIELD-CACHE-LOCATION
       return fn:empty(xdmp:get-server-field($base-key))
     default
       return

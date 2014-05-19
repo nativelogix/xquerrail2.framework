@@ -106,6 +106,8 @@ declare function controller:invoke($action)
        else if($action eq "export") then controller:export()
        else if($action eq "import") then controller:import()
        else if($action eq "suggest") then controller:suggest()
+       else if($action eq "login") then controller:login()
+       else if($action eq "logout") then controller:logout()
        else controller:main()
    else fn:error(xs:QName("CONTROLLER-NOT-EXISTS"),"Controller does not exist",request:controller())
  )
@@ -425,3 +427,53 @@ declare function controller:findAndModify() {
    model:findAndModify(request:params())
 };
 :)
+
+declare function controller:login()
+{
+  let $username   := request:param("username")[1] 
+  let $password   := request:param("password")[1]
+  let $returnUrl  := request:param("returnUrl")
+  return 
+  if($username ne "" or $password ne "") then     
+    let $is-logged-in := xdmp:login($username,$password)
+    return
+    if($is-logged-in) then 
+    (
+      if($returnUrl ne "" and $returnUrl) then 
+        response:redirect($returnUrl)
+      else 
+        response:redirect("/"),
+        response:flush()
+    ) 
+    else 
+    ( 
+      response:set-flash("login","Invalid Username or Password"),
+(:      response:set-controller("base"),:)
+      response:set-template("login"),
+      response:set-view("login"),
+      response:set-title("Login"),
+      response:response()
+    )
+  else 
+  (
+    if(request:param("login") = "login") then
+      response:set-flash("login","Please enter username and password")
+    else 
+      (),
+(:    response:set-controller("base"),:)
+    response:set-template("login"),
+    response:set-view("login"),
+    response:set-title("Login"),
+    response:response()
+  )
+};
+
+declare function controller:logout()
+{
+  (
+    xdmp:logout(),
+    response:redirect("/"),
+    response:flush()
+  )
+};
+

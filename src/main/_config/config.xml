@@ -1,10 +1,10 @@
 <config xmlns="http://xquerrail.com/config" 
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://xquerrail.com/domain file:..schemas/config.xsd"
+    xsi:schemaLocation="http://xquerrail.com/domain file:../_framework/schemas/config.xsd"
     >
     <!--Configurations-->
     <!--Routing Module and Configuration-->
-    <routes-config resource="test-routes.xml"/>
+    <routes-config resource="routes-test.xml"/>
     <routes-module resource="routing.xqy"/>
     
     <!--Interceptor Configuration-->
@@ -31,7 +31,7 @@
     
     <!--Register Default Values for engine-->
 <!--    <default-engine value="engine.html"/>-->
-    <default-application value="test-app"/>
+    <default-application value="app-test"/>
 <!--    <default-controller value="default"/> -->
 <!--    <default-action value="index"/>    -->
 <!--    <default-format value="html"/>-->
@@ -42,7 +42,7 @@
   <!--    <default-view-directory resources="/application/views/"/> -->
     
     <!--Register Your Application(s) Here-->
-    <application name="test-app" namespace="http://xquerrail.com/test-app" uri="/main/test-app">
+    <application name="app-test" namespace="http://xquerrail.com/app-test" uri="/test/mocha/app-test">
       <domain resource="domains/application-domain.xml" />
       <script-directory value="resources/js/"/>
       <stylesheet-directory value="resources/css/"/>

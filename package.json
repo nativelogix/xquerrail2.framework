@@ -30,6 +30,10 @@
     "gulp-util": "^2.2.14",
     "gulp-xray-runner": "https://github.com/rlouapre/gulp-xray-runner/tarball/v0.0.3",
     "yargs": "^1.2.1",
-    "gulp-mocha": "^0.4.1"
+    "gulp-mocha": "^0.4.1",
+    "request": "^2.35.0",
+    "lodash": "^2.4.1",
+    "chai": "^1.9.1",
+    "xml2js": "^0.4.2"
   }
 }

@@ -1364,22 +1364,23 @@ as element(list)?
                  model:filter-list-result($model,$result/node())
             else  $results
         return
-           <list type="{$name}" elapsed="{xdmp:elapsed-time()}">
-             <currentpage>{$page}</currentpage>
-             <pagesize>{$pageSize}</pagesize>
-             <totalpages>{fn:ceiling($total div $pageSize)}</totalpages>
-             <totalrecords>{$total}</totalrecords>
-             {(:Add Additional Debug Arguments:)
-               if(domain:get-param-value($params,"debug") = "true") then (
-                 <debugQuery>{xdmp:describe($predicateExpr,(),())}</debugQuery>,
-                 <searchString>{$search}</searchString>,
-                 <sortString>{$sort}</sortString>,
-                 <expr>{$resultsExpr}</expr>,
-                 <params>{$params}</params>
+          <list type="{$name}" elapsed="{xdmp:elapsed-time()}">
+            { attribute xmlns { domain:get-field-namespace($model) } }
+            <currentpage>{$page}</currentpage>
+            <pagesize>{$pageSize}</pagesize>
+            <totalpages>{fn:ceiling($total div $pageSize)}</totalpages>
+            <totalrecords>{$total}</totalrecords>
+            {(:Add Additional Debug Arguments:)
+              if(domain:get-param-value($params,"debug") = "true") then (
+                <debugQuery>{xdmp:describe($predicateExpr,(),())}</debugQuery>,
+                <searchString>{$search}</searchString>,
+                <sortString>{$sort}</sortString>,
+                <expr>{$resultsExpr}</expr>,
+                <params>{$params}</params>
               ) else ()
-             }
-             {$results}
-           </list>
+            }
+            {$results}
+          </list>
 };
 
 (:~

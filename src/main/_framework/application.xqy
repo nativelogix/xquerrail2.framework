@@ -46,3 +46,7 @@ declare %private function get-base-safe($path as xs:string) as element(config:ap
     ()
   }
 }; 
+
+declare function app:reset() as item()* {
+  config:clear-cache()
+};

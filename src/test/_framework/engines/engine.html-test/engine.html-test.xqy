@@ -3,6 +3,7 @@ xquery version "1.0-ml";
 module namespace test = "http://github.com/robwhitby/xray/test";
 import module namespace assert = "http://github.com/robwhitby/xray/assertions" at "/xray/src/assertions.xqy";
 
+import module namespace setup = "http://xquerrail.com/test/setup" at "../../../../test/_framework/setup.xqy";
 import module namespace app = "http://xquerrail.com/application" at "../../../../main/_framework/application.xqy";
 import module namespace config = "http://xquerrail.com/config" at "../../../../main/_framework/config.xqy";
 import module namespace engine = "http://xquerrail.com/engine" at "../../../../main/_framework/engines/engine.html.xqy";
@@ -24,6 +25,11 @@ declare variable $TEST-APPLICATION-2 :=
 ;
 
 declare variable $CONFIG := ();
+
+declare %test:teardown function teardown() as empty-sequence()
+{
+  setup:teardown()
+};
 
 (:declare %test:before-each function before-test() {
   xdmp:set($CONFIG, app:bootstrap($TEST-APPLICATION))

@@ -13,7 +13,7 @@ declare variable $ANONYMOUS-USER := "xquerrail2-framework-user";
 declare variable $TEST-APPLICATION :=
 <application xmlns="http://xquerrail.com/config">
   <base>/main</base>
-  <config>/test/_framework/test-config/_config</config>
+  <config>/test/_framework/config-test/_config</config>
 </application>
 ;
 

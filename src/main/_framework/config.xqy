@@ -148,6 +148,8 @@ declare function config:framework-path() as xs:string {
 
 (:Removes All Cache Keys:)
 declare function config:clear-cache() {
+  cache:remove-cache($cache:SERVER-FIELD-CACHE-LOCATION, "__base-path__"),
+  cache:remove-cache($cache:SERVER-FIELD-CACHE-LOCATION, "__config-path__"),
   xdmp:directory-delete($DOMAIN-CACHE-KEY)
 };
 

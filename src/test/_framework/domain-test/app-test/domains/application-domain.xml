@@ -1,9 +1,9 @@
 <domain xmlns="http://xquerrail.com/domain"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://xquerrail.com/domain file:/C:/Users/gvidal/workspace64/marklogic_valrico/_framework/schemas/domain.xsd">
-    <name>test-app</name>
-    <content-namespace prefix="test-app" namespace-uri="http://xquerrail.com/test-app"/>
-    <application-namespace prefix="xquerrail" namespace-uri="http://xquerrail.com/test-app"/>
+  <name>app-test</name>
+  <content-namespace prefix="app-test" namespace-uri="http://xquerrail.com/app-test"/>
+  <application-namespace prefix="xquerrail" namespace-uri="http://xquerrail.com/app-test"/>
     <default-collation>http://marklogic.com/collation/codepoint</default-collation>
     <import id="content" resource="content-domain.xml"/>
     <!--Implement a base class to inherit metadata-->

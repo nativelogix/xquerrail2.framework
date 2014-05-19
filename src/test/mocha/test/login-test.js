@@ -41,6 +41,7 @@ describe('Authentication features', function() {
     xquerrail.url = 'http://' + ml.host + ":" + ml.port;
     xquerrail.username = ml.user;
     xquerrail.password = ml.password;
+    console.log('Usgin XQuerrail: %j', xquerrail)
   });
 
   describe('login', function() {

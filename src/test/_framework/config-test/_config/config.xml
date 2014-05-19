@@ -15,7 +15,7 @@
       <domain resource="domains/application-domain.xml" />
       <script-directory value="resources/js/"/>
       <stylesheet-directory value="resources/css/"/>
-      <default-template value="main"/>
+      <default-template value="templates"/>
     </application>
 
     <!--Interceptors-->

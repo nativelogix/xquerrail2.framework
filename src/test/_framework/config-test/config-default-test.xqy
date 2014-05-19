@@ -47,7 +47,7 @@ declare %test:case function test-anonymous-user-by-application() as item()*
   assert:empty(config:anonymous-user($CONFIG, $application))
 };
 
-declare %test:case function app-testlication-directory() as item()*
+declare %test:case function application-directory-test() as item()*
 {
   let $application := config:default-application()
   let $_ := xdmp:log(("config:application-directory", config:application-directory($application)))
@@ -55,25 +55,25 @@ declare %test:case function app-testlication-directory() as item()*
   assert:equal(config:application-directory($application), "/test/_framework/config-test/app-test")
 };
 
-declare %test:case function app-testlication-namespace() as item()*
+declare %test:case function application-namespace-test() as item()*
 {
   let $application := config:default-application()
   return
   assert:equal(config:application-namespace($application), "http://xquerrail.com/app-test")
 };
 
-declare %test:case function app-testlication-script-directory() as item()*
+declare %test:case function application-script-directory-test() as item()*
 {
   let $application := config:default-application()
   return
-  assert:equal(config:application-script-directory($application), "resources/js/")
+  assert:equal(config:application-script-directory($application), "/test/_framework/config-test/app-test/resources/js/")
 };
 
-declare %test:case function app-testlication-stylesheet-directory() as item()*
+declare %test:case function application-stylesheet-directory-test() as item()*
 {
   let $application := config:default-application()
   return
-  assert:equal(config:application-stylesheet-directory($application), "resources/css/")
+  assert:equal(config:application-stylesheet-directory($application), "/test/_framework/config-test/app-test/resources/css/")
 };
 
 declare %test:case function test-attribute-prefix() as item()*
@@ -135,7 +135,7 @@ declare %test:case function test-default-template() as item()*
 {
   let $application := config:default-application()
   return
-  assert:equal(config:default-template($application), "main")
+  assert:equal(config:default-template($application), "/test/_framework/config-test/app-test/templates")
 };
 
 declare %test:case function test-error-handler() as item()*

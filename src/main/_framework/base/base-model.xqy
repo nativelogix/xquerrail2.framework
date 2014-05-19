@@ -661,7 +661,7 @@ declare function model:update(
    let $id := $model//(domain:container|domain:element|domain:attribute)[@identity eq "true"]/@name
    let $identity-field := $model//(domain:element|domain:attribute)[@identity eq "true" or @type eq "identity"]
    let $identity := (domain:get-field-value($identity-field,$current))[1]
-   let $_ := xdmp:log(("model:update", "$model", $model, "$id", $id, "$identity-field", $identity-field, "$identity", $identity))
+   let $_ := xdmp:log(("model:update", "$model", $model, "$id", $id, "$identity-field", $identity-field, "$identity", $identity), "debug")
    let $persistence := fn:data($model/@persistence)
    return
      if($current) then
@@ -1406,7 +1406,6 @@ declare function model:list-params(
                 operator-to-cts($field-elem,$op,$value)
        else if(fn:exists($filters[. ne ""])) then
             let $parsed  := <x>{xdmp:from-json($filters)}</x>/*
-            let $_ := xdmp:log($parsed)
             let $groupOp := ($parsed/json:entry[@key eq "groupOp"]/json:value,"AND")[1]
             let $rules :=
                 for $rule in $parsed//json:entry[@key eq "rules"]/json:value/json:array/json:value/json:object
@@ -1809,7 +1808,6 @@ as element()?
     let $keyLabel := fn:data($model/@keyLabel)
     let $key := fn:data($model/@key)
     let $modelReference := model:get($model,$params)
-    let $_ := xdmp:log(("model:reference", "$keyLabel", $keyLabel, "$key", $key, "$modelReference", $modelReference))
     let $modelReference :=
         if($modelReference)
         then $modelReference

@@ -128,7 +128,6 @@ declare %test:case function model-update-test() as item()*
       )
     }
   )
-  let $_ := xdmp:log(("model-update-test - $update1", $update1))
   let $find := model:find(
     $model1, 
     map:new((

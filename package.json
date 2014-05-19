@@ -29,6 +29,7 @@
     "event-stream": "^3.1.2",
     "gulp-util": "^2.2.14",
     "gulp-xray-runner": "https://github.com/rlouapre/gulp-xray-runner/tarball/v0.0.3",
-    "yargs": "^1.2.1"
+    "yargs": "^1.2.1",
+    "gulp-mocha": "^0.4.1"
   }
 }

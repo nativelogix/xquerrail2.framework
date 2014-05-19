@@ -1,0 +1,18 @@
+{
+  "name": "xquerrail2.framework-mocha-test",
+  "version": "0.0.0",
+  "description": "Unit tests for XQuerrail2 Framework REST api",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "mocha": "^1.19.0",
+    "request": "^2.35.0",
+    "lodash": "^2.4.1",
+    "chai": "^1.9.1",
+    "xml2js": "^0.4.2"
+  }
+}

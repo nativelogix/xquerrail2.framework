@@ -13,6 +13,7 @@ var gitinfo = require('gulp-gitinfo')
 var es   = require('event-stream')
 var xray = require('gulp-xray-runner')
 var argv = require('yargs').argv;
+var mocha = require('gulp-mocha');
 
 var ml;
 try {
@@ -23,6 +24,7 @@ try {
 var version = pkg.version;
 var lastCommit;
 
+module.exports.ml = ml;
 gulp.task('update-xqy', ['copy', 'last-git-commit'], function () {
   gutil.log('version: ' + version + ' - lastcommit: ' + lastCommit);
   return gulp.src(['dist/**/config.xqy'])
@@ -66,6 +68,12 @@ gulp.task('xray', function (cb) {
   xray(options, cb);
 });
 
+gulp.task('mocha', function () {
+  var mochaOptions = {reporter: 'dot'};
+  gulp.src('src/test/mocha/test/*.js')
+    .pipe(mocha(mochaOptions));
+});
+
 gulp.task('clean', function () {
   return gulp.src('./dist', { read: false })
     .pipe(clean());
@@ -81,7 +89,7 @@ gulp.task('tag', ['build'], function (/*cb*/) {
 
   return gulp.src(['./*', '!node_modules/'])
     .pipe(git.commit(message, options))
-    .pipe(git.tag(v, message, 
+    .pipe(git.tag(v, message,
       git.push('origin', 'master', {args: '--tags'})
       .end()
     ));
@@ -112,5 +120,5 @@ gulp.task('release', ['build'], function () {
   // build is complete, release the kraken!
 });
 
-gulp.task('test', ['coverage', 'lint', 'xray']);
+gulp.task('test', ['coverage', 'lint', 'xray', 'mocha']);
 gulp.task('default', ['test', 'clean', 'build']);

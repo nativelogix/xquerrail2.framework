@@ -34,20 +34,20 @@ declare function form:mode($mode as xs:string) {
   xdmp:set($FORM-MODE,$mode)
 };
 (:~
- : Returns the computed identity field in the form of the 
+ : Returns the computed identity field in the form of the
  : fieldname + hashvalue, so it is unique across elements
- : with same name but in different containers 
+ : with same name but in different containers
 ~:)
 declare function form:get-field-name($field as node()) {
-    domain:get-field-name-key($field)  
+    domain:get-field-name-key($field)
 };
 (:~
- : Returns the computed identity field in the form of the 
+ : Returns the computed identity field in the form of the
  : fieldname + hashvalue, so it is unique across elements
- : with same name but in different containers 
+ : with same name but in different containers
 ~:)
 declare function form:get-field-id($field as node()) {
-    domain:get-field-id($field)  
+    domain:get-field-id($field)
 };
 
 (:~
@@ -65,7 +65,7 @@ as item()*
     let $init := response:initialize($response)
     let $_ := xdmp:log(("form:build-form::",response:body()),"debug")
     for $field in $domain-model/(domain:attribute|domain:element|domain:container)
-    return 
+    return
       form:build-form-field($field)
 };
 
@@ -74,7 +74,7 @@ declare function form:form-field(
     $fieldname as xs:string
 ) {
     for $field in $domain-model//(domain:attribute|domain:element|domain:container)[@name = $fieldname]
-    return 
+    return
       form:build-form-field($field)
 };
 
@@ -87,12 +87,12 @@ declare function form:build-form-field(
    return
    typeswitch($field)
      case element(domain:container) return
-       <fieldset> 
+       <fieldset>
         <legend>{fn:data(($field/@label,$field/@name)[1])}</legend>
         {
             for $containerField in $field/(domain:attribute|domain:element|domain:container)
             return
-                form:build-form-field($containerField) 
+                form:build-form-field($containerField)
         }
       </fieldset>
      case element(domain:element) return
@@ -116,7 +116,7 @@ declare function form:control($field,$value)
       case element(grid)           return form:build-child-grid($field,$value)
       case element(instance)       return form:complex($field,$value)
       case element(query)          return form:complex($field,$value)
-      
+
       (:Text Elements:)
       case element(identity)  return form:hidden($field,$value)
       case element(string)    return form:text($field,$value)
@@ -127,25 +127,25 @@ declare function form:control($field,$value)
       case element(anyURI)    return form:text($field,$value)
       case element(yearMonth) return form:text($field,$value)
       case element(monthDay)  return form:text($field,$value)
-      
+
       case element(boolean)   return form:checkbox($field,$value)
       case element(password)  return form:password($field,$value)
       case element(email)     return form:text($field,$value)
-      
+
       (:Choice Elements:)
       case element(list)         return form:list($field,$value)
       case element(radiolist)    return form:list($field,$value)
       case element(checkboxlist) return form:list($field,$value)
       case element(choice)       return form:list($field,$value)
-      
+
       (:Date Time Controls:)
       case element(date)     return form:text($field,$value)
       case element(dateTime) return form:text($field,$value)
       case element(time)     return form:time($field,$value)
-      
-      (:Hidden Controles:)     
+
+      (:Hidden Controles:)
       case element(hidden)  return form:hidden($field,$value)
-       
+
       (:Other Controls:)
       case element(lookup)     return form:lookup($field,$value)
       case element(binary)     return form:binary($field,$value)
@@ -154,7 +154,7 @@ declare function form:control($field,$value)
 
      (:Custom Rendering:)
       case element() return form:custom($field,$value)
-      
+
       default return <div class="error">No Render for field type {$type}.</div>
 };
 
@@ -163,35 +163,35 @@ declare function form:get-value-from-response($field as element()) {
     let $model := $field/ancestor::domain:model
     let $name := fn:data($field/@name)
     let $ns := domain:get-field-namespace($field)
-    
+
     (: Verify you only pull the approprite node just incase the body is a sequence :)
     (:let $node := response:body()/*[fn:local-name(.) = $name]:)
     let $node := domain:get-field-value($field,response:body())
     let $_ := xdmp:log(("field:node::",$node),"debug")
     return
-        if($field/@type = ("reference","binary")) 
+        if($field/@type = ("reference","binary"))
         then $node
-        else if($field/@type = "schema-element") then 
+        else if($field/@type = "schema-element") then
           $node/node()
-        else 
-            if($node) 
+        else
+            if($node)
             then fn:data($node)
             else fn:data($field/@default)
 };
 
 declare function form:get-value-by-name-from-response($name as xs:string) {
     let $value := response:body()//*[fn:string(fn:node-name(.)) = $name]
-    return 
+    return
         $value
 };
 
 declare function form:before($field)
 {
-  if($field/@label and fn:not($field/domain:ui/@type = "hidden")) 
-  then 
+  if($field/@label and fn:not($field/domain:ui/@type = "hidden"))
+  then
     <label for="{form:get-field-name($field)}" class="control-label {$FORM-LABEL-CLASS}">
         {fn:data($field/@label)}
-    </label> 
+    </label>
   else ()
 };
 
@@ -203,7 +203,7 @@ declare function form:after($field)
     return
       typeswitch($qtype)
         case element(html-editor) return ()
-        case element(code-editor) return ()   
+        case element(code-editor) return ()
        default return ()
 };
 
@@ -212,8 +212,8 @@ declare function form:attributes($field)
     if(($field/domain:navigation/@editable = 'false' and $FORM-MODE = "edit")
         or ($field/domain:navigation/@newable = 'false' and $FORM-MODE = "new")
         or ($FORM-MODE = "readonly")
-       ) 
-    then attribute readonly { "readonly" } 
+       )
+    then attribute readonly { "readonly" }
     else if($field/@occurrence = ("*","+")) then
         attribute multiple {"multiple"}
     else (),
@@ -254,7 +254,7 @@ declare function form:values($field,$value)
  let $default  := $field/@default
  let $value    := if($value[. ne ""]) then $value else $default
  let $readonly := $field/domain:navigation/@editable eq 'false'
- return 
+ return
  if($list and fn:not($readonly)) then
     for $option in $list/domain:option
     return
@@ -265,11 +265,11 @@ declare function form:values($field,$value)
                 (fn:data($option/@label),$option/text())[1]
             }
         </option>
-  else 
-    if(fn:data($field/@type = "boolean")) 
-    then (   
+  else
+    if(fn:data($field/@type = "boolean"))
+    then (
             attribute value {$value},
-            if(xs:boolean($value) eq fn:true()) 
+            if(xs:boolean($value) eq fn:true())
             then attribute checked {"checked"}
             else ()
     ) else  attribute value {fn:string-join($value,",")}
@@ -277,7 +277,7 @@ declare function form:values($field,$value)
 
 (:~
  : Custom Rendering of controls
- : Formats : 
+ : Formats :
  :   (application):(helper|model|tag):function-name($field,$value)
  :   The method should take a field and value
 ~:)
@@ -289,33 +289,33 @@ declare function form:custom($field,$value)
   let $type    := $context[2]
   let $action  := $context[3]
   let $apply   := ()
-  return 
+  return
      $apply
 };
 (:~
- : Function binds controls to their respective request data 
+ : Function binds controls to their respective request data
  : from the request map;
 ~:)
 declare function form:text($field,$value)
 {
   <div class="{$FORM-OUTER-CONTAINER-CLASS}">{
        form:before($field),
-       <div class="{$FORM-INNER-CONTAINER-CLASS}">{       
+       <div class="{$FORM-INNER-CONTAINER-CLASS}">{
             if($field/domain:constraint/@inList and fn:not($field/domain:navigation/@editable eq 'false')) then
             <select id="{form:get-field-id($field)}" name="{form:get-field-name($field)}">
             {form:attributes($field)}
             {form:values($field,$value)}
             </select>
-            else 
+            else
             if($field/@occurrence = ("*","+"))
-            then 
+            then
                 for $val at $pos in ($value, if($value) then () else "")
                 return
                   <input id="{form:get-field-name($field)}[{$pos - 1}]" name="{form:get-field-id($field)}" type="text">
                   {form:attributes($field)}
                   {form:values($field,$val)}
                   </input>
-             else 
+             else
                   <input id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" type="text">
                   {form:attributes($field)}
                   {form:values($field,$value)}
@@ -326,19 +326,19 @@ declare function form:text($field,$value)
   }</div>
 };
 (:~
- : Renders a list of radio boxes 
+ : Renders a list of radio boxes
 ~:)
 declare function form:list($field,$value) {
     let $type as xs:string := ($field/domain:ui/@type,$field/@type)[1]
-    let $ui-type := 
-        if($type = ("radio","radiolist")) 
+    let $ui-type :=
+        if($type = ("radio","radiolist"))
         then "radio"
-        else if($type = ("checkbox","checkboxlist")) 
+        else if($type = ("checkbox","checkboxlist"))
         then "checkbox"
-        else fn:error(xs:QName("FIELD-OPTION-TYPE-ERROR"),"Type is not value for renderlist",$type)        
+        else fn:error(xs:QName("FIELD-OPTION-TYPE-ERROR"),"Type is not value for renderlist",$type)
     return (
-       form:before($field), 
-       if($field/domain:constraint/@inList) then 
+       form:before($field),
+       if($field/domain:constraint/@inList) then
          let $optionlist := domain:get-field-optionlist($field)
          for $option in $optionlist/domain:option
          let $label := (fn:data($option/@label),fn:data($option))[1]
@@ -348,20 +348,20 @@ declare function form:list($field,$value) {
            {form:attributes($field)}
            {attribute value {$option/text()}}
            {
-            if($value = fn:data($option)) 
+            if($value = fn:data($option))
             then attribute checked {"checked"}
-            else ()            
+            else ()
            }
            </input>
            {$label}
           </label>
           )
-       else if($field/@type = "reference") then 
+       else if($field/@type = "reference") then
             ()
        else ()
        ,
        form:after($field)
-  )          
+  )
 };
 (:~
  : Renders a value as a checkbox
@@ -370,7 +370,7 @@ declare function form:checkbox-value(
 $field as element(),
 $mode as xs:string,
 $value as item()*
-) {  
+) {
   if($mode eq "true")
   then attribute value { xs:string($value) eq "true"}
   else attribute value {xs:string($value) eq "false"}
@@ -380,14 +380,14 @@ declare function form:checkbox($field,$value)
 {
   <div class="{$FORM-OUTER-CONTAINER-CLASS}">{
    form:before($field),
-    <div class="{$FORM-INNER-CONTAINER-CLASS}">     
+    <div class="{$FORM-INNER-CONTAINER-CLASS}">
       <label class="checkbox inline">
        <input id="{form:get-field-name($field)}" name="{form:get-field-name($field)}" type="radio" value="true">
        {form:attributes($field)}
        {
-        if($value castable as xs:boolean) 
+        if($value castable as xs:boolean)
         then if($value cast as xs:boolean  = fn:true()) then attribute checked{"checked"} else ()
-        else () 
+        else ()
        }
        True
        </input>
@@ -395,13 +395,13 @@ declare function form:checkbox($field,$value)
        <label class="checkbox inline">
        <input name="{form:get-field-name($field)}" type="radio" value="false"  >
        {form:attributes($field)}
-       {if($value castable as xs:boolean) 
+       {if($value castable as xs:boolean)
         then if($value cast as xs:boolean  = fn:false()) then attribute checked{"checked"} else ()
-        else () 
+        else ()
        }
        False
        </input>
-       </label>       
+       </label>
        {form:after($field)}
        </div>
     }</div>
@@ -409,7 +409,7 @@ declare function form:checkbox($field,$value)
 
 declare function form:money($field,$value)
 {(
-           form:before($field), 
+           form:before($field),
            <input id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" type="text">
            {form:attributes($field)}
            {form:values($field,$value)}
@@ -420,7 +420,7 @@ declare function form:money($field,$value)
 declare function form:number($field,$value)
 {
 (
-   form:before($field), 
+   form:before($field),
    <input id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" type="text">
    {form:attributes($field)}
    {form:values($field,$value)}
@@ -431,7 +431,7 @@ declare function form:number($field,$value)
 declare function form:password($field,$value)
 {
  <div class="{$FORM-OUTER-CONTAINER-CLASS}">{(
-   form:before($field), 
+   form:before($field),
    <div class="{$FORM-INNER-CONTAINER-CLASS}">
          <input id="{form:get-field-name($field)}" name="{form:get-field-name($field)}" type="password">
          {form:attributes($field)}
@@ -445,7 +445,7 @@ declare function form:password($field,$value)
 
 declare function form:choice($field,$value)
 {(
-       form:before($field), 
+       form:before($field),
        <select id="{form:get-field-name($field)}" name="{form:get-field-name($field)}">
        {form:attributes($field)}
        {form:values($field,$value)}
@@ -498,13 +498,13 @@ declare function form:hidden($field,$value)
 )};
 declare function form:binary-content-type-icon($value) {
     let $content-type := $value/@content-type
-    return 
+    return
       if($content-type and $content-type ne "")
       then fn:replace(fn:replace($content-type,"/","-"),"\.","")
       else "unknown"
 };
 (:~
- : Returns a url reference for binary instance  
+ : Returns a url reference for binary instance
 ~:)
 declare function form:binary-url($field,$value) {
   let $model := $field/ancestor::domain:model
@@ -520,7 +520,7 @@ declare function form:binary-url($field,$value) {
 declare function form:binary($field,$value) {
   <div class="{$FORM-INNER-CONTAINER-CLASS}">{
        form:before($field),
-       <div class="{$FORM-INNER-CONTAINER-CLASS}">       
+       <div class="{$FORM-INNER-CONTAINER-CLASS}">
             <input id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" type="file">
             {form:attributes($field)}
             {form:values($field,$value)}
@@ -537,11 +537,11 @@ declare function form:binary($field,$value) {
   }</div>
 };
 
-declare function form:schema-element($field,$value) 
+declare function form:schema-element($field,$value)
 {(
  <div class="{$FORM-OUTER-CONTAINER-CLASS}">{
   form:before($field),
-  <div class="{$FORM-INNER-CONTAINER-CLASS}">  
+  <div class="{$FORM-INNER-CONTAINER-CLASS}">
     <textarea name="{form:get-field-name($field)}" id="{form:get-field-id($field)}">
         { form:attributes($field) }
         { if( $value/element() or $value instance of element() and $value) then xdmp:quote($value) else $value}
@@ -551,10 +551,10 @@ declare function form:schema-element($field,$value)
    }</div>
 )};
 
-declare function form:complex($field,$value) 
+declare function form:complex($field,$value)
 {(
-  <div class="{$FORM-OUTER-CONTAINER-CLASS}">{ 
-       form:before($field), 
+  <div class="{$FORM-OUTER-CONTAINER-CLASS}">{
+       form:before($field),
        <div class="{$FORM-INNER-CONTAINER-CLASS}">
         <textarea name="{form:get-field-name($field)}" id="{domain:get-field-id($field)}">
             { form:attributes($field) }
@@ -567,24 +567,24 @@ declare function form:complex($field,$value)
 
 declare function form:build-child-grid($field,$value) {
     let $fieldKey := form:get-field-name($field)
-    
+
 	let $fieldSchema := () (: js:o((
 	   for $item in $field/domain:ui/domain:gridColumns/domain:gridColumn
        let $name := fn:data($item/@name)
        let $type := fn:data($item/@type)
 	   return
-	      js:kv$name, 
+	      js:kv$name,
 	        js:o((js:kv("type", js:string($type))
 	      )))
     )):)
-	
-	let $columnSchema := 
+
+	let $columnSchema :=
 	 js:a(
      	   for $item in $field/domain:ui/domain:gridColumns/domain:gridColumn
      	   let $name := fn:data($item/@name)
          	   let $label := (fn:data($item/@label),fn:data($field/@label),fn:data($field/@name))[1]
      	   let $type :=  (fn:data($item/@type), "string")[1]
-     	   let $visible := 
+     	   let $visible :=
      	      if($item/@type eq "hidden" or $field/@type eq "identity")
      	      then fn:false()
      	      else fn:true()
@@ -598,16 +598,16 @@ declare function form:build-child-grid($field,$value) {
                 js:kv("visible",$visible)
               ))
 	 )
-	 
+
      let $modelData := ()
 
 	return
 	(
-     form:before($field), 
+     form:before($field),
       <div class="complexGridWrapper">
            <div id="{$fieldKey}" class="complexGrid"></div>
            <script type="text/javascript">
-                buildEditGrid('{$fieldKey}', {$modelData},   {$columnSchema}) 
+                buildEditGrid('{$fieldKey}', {$modelData},   {$columnSchema})
            </script>
        </div>,
       form:after($field)
@@ -622,29 +622,29 @@ declare function form:lookup($field,$value) {
     let $refParent   := $refTokens[1]
     let $refType     := $refTokens[2]
     let $refAction   := $refTokens[3]
-    let $value := 
+    let $value :=
         if($value[. ne ""]) then $value else fn:data($field/@default)
     let $fieldName  := form:get-field-name($field)
     let $lookupReference := (
         fn:data($field/domain:ui/@lookup),
         domain:get-model-controller-name($application,$refType)
         )[1]
-    let $refController := 
+    let $refController :=
         let $tokenz := fn:tokenize($lookupReference,":")
         return
-          if(fn:count($tokenz) = 2) 
+          if(fn:count($tokenz) = 2)
           then fn:concat("/",$tokenz[1],"/",$tokenz[2],".xml")
           else if(fn:count($tokenz) = 1) then
-               fn:concat("/",$tokenz[1],"/lookup.xml")      
+               fn:concat("/",$tokenz[1],"/lookup.xml")
           else fn:error(xs:QName("LOOKUP-REFERENCE-ERROR"),"Unable to resolve reference",$tokenz)
     return
       <div class="{$FORM-OUTER-CONTAINER-CLASS}">
-       {form:before($field)}  
+       {form:before($field)}
        <div class="{$FORM-INNER-CONTAINER-CLASS}">
             <input id="{$fieldName}" name="{$fieldName}" type="hidden" data-lookup="{$refController}" value="{$value/@ref-id}">
             {   (:Added validation Rendering:)
                 form:validation($field),
-                if($field/@occurrence = ("*","+")) 
+                if($field/@occurrence = ("*","+"))
                 then (
                     attribute multiple { "multiple" },
                     attribute class {($FORM-INPUT-CLASS, "lookup", $FORM-SIZE-CLASS,$field/@name  )}
@@ -652,10 +652,10 @@ declare function form:lookup($field,$value) {
                  else (
                      attribute class {($FORM-INPUT-CLASS, "lookup", $FORM-SIZE-CLASS,$field/@name )}
                  )
-                   
+
              }
             </input>
-       </div>       
+       </div>
        {form:after($field)}
       </div>
 };
@@ -668,24 +668,24 @@ declare function form:reference($field,$value) {
     let $refParent   := $refTokens[1]
     let $refType     := $refTokens[2]
     let $refAction   := $refTokens[3]
-    let $form-mode := 
-      if($FORM-MODE = "readonly") then "readonly" 
+    let $form-mode :=
+      if($FORM-MODE = "readonly") then "readonly"
       else if($FORM-MODE = "new" and fn:not($field/domain:navigation/@newable = "false"))      then ()
       else if($FORM-MODE = "edit" and fn:not($field/domain:navigation/@editable = "false")) then ()
       else "readonly"
     return
     <div class="{$FORM-OUTER-CONTAINER-CLASS}">
            { form:before($field) }
-       <div class="{$FORM-INNER-CONTAINER-CLASS}">    
-           <select id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" >{   
+       <div class="{$FORM-INNER-CONTAINER-CLASS}">
+           <select id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" >{
                 form:validation($field),
                 if(($field/domain:navigation/@editable = 'false' and $FORM-MODE = "edit")
                     or ($field/domain:navigation/@newable = 'false' and $FORM-MODE = "new")
                     or ($FORM-MODE = "readonly")
-                ) 
-                then attribute readonly { "readonly" } 
+                )
+                then attribute readonly { "readonly" }
                 else (),
-               if($field/@occurrence = ("*","+")) 
+               if($field/@occurrence = ("*","+"))
                then (
                    attribute multiple { "multiple" },
                    attribute class {($FORM-INPUT-CLASS, $FORM-SIZE-CLASS,"select", "multiselect",$field/@name )}
@@ -700,24 +700,24 @@ declare function form:reference($field,$value) {
                 if($refParent = 'model') then
                      let $lookups := base:lookup(domain:get-domain-model($modelName),map:map())
                      return
-                        if($form-mode = "readonly") 
+                        if($form-mode = "readonly")
                         then <option value="{$value/@ref-id}" selected="selected">{fn:string($value)}</option>
-                        else 
+                        else
                            for $lookup in $lookups/*:lookup
                            let $key := fn:normalize-space(fn:string($lookup/*:key))
                            let $label := $lookup/*:label/text()
-                           return 
+                           return
                              element option {
                                   attribute value {$key},
-                                  if($value/@ref-id = $key) 
-                                  then attribute selected { "selected" } 
+                                  if($value/@ref-id = $key)
+                                  then attribute selected { "selected" }
                                   else (),
                                   $label
                              }
-                (: Build Abstract Model References using the base model functions :)       
-                else if($refParent = 'application') then  
+                (: Build Abstract Model References using the base model functions :)
+                else if($refParent = 'application') then
                     if($refParent eq "application" and $refType eq "model")
-                    then 
+                    then
                       let $domains := xdmp:value(fn:concat("domain:model-",$refAction))
                       for $model in $domains
                       let $key := fn:data($model/@name)
@@ -725,7 +725,7 @@ declare function form:reference($field,$value) {
                       return
                           element option {
                               attribute value { $key },
-                              if($value/@ref-id = $key) 
+                              if($value/@ref-id = $key)
                               then attribute selected { "selected" }
                               else (),
                               $label
@@ -733,13 +733,13 @@ declare function form:reference($field,$value) {
                      else ()
                 else ()
              }
-           </select>         
-        </div>           
+           </select>
+        </div>
            { form:after($field) }
     </div>
 };
 (:~
- : Builds a grid column from 
+ : Builds a grid column from
  :)
 declare function form:field-grid-column(
 $field as element()){
@@ -763,22 +763,22 @@ declare function form:field-grid-column(
     let $dataType   := (map:get($options, "type"), fn:data($field/@type))[1]
     let $listable   := (map:get($options, "listable"),$field/domain:navigation/@listable, $field/domain:navigation/@visible,"true")[1]
     let $colWidth   := (map:get($options, "width"), fn:data($field/domain:ui/(@gridWidth|@colWidth)/xs:integer(.)),200) [1]
-    let $align      := 
+    let $align      :=
         if(map:get($options,"align")) then map:get($options,"align")
-        else if($dataType = "boolean") then "center" 
+        else if($dataType = "boolean") then "center"
         else if($dataType = ("decimal","float","double")) then "right"
         else "left"
     let $sortable := ($field/domain:navigation/@sortable,"true")[1]
-    let $formatter :=  
+    let $formatter :=
          if(map:get($options,"formatter"))
          then js:kv("fomatter",map:get($options,"formatter"))
-         else if($field/domain:ui/@formatter ne "" and fn:exists($field/domain:ui/@formatter)) 
+         else if($field/domain:ui/@formatter ne "" and fn:exists($field/domain:ui/@formatter))
          then js:kv("formatter",fn:data($field/domain:ui/@formatter))
-         else if($field/@occurrence = ("+","*")) then js:kv("formatter",js:literal("arrayFormatter"))
-         else if($dataType eq "binary") then js:kv("formatter",js:literal("binaryFormatter"))
+         else if($field/@occurrence = ("+","*")) then js:kv("formatter","arrayFormatter")
+         else if($dataType eq "binary") then js:kv("formatter","binaryFormatter")
          else if($dataType eq "boolean") then (js:kv("formatter","checkbox"),js:kv("align","center"))
          else ()
-    let $hidden := 
+    let $hidden :=
       if(fn:exists(map:get($options,"hidden")))
       then map:get($options,"hidden")
       else $field/domain:ui/@type eq "hidden" or $field/domain:navigation/@listable eq "false"
@@ -789,7 +789,7 @@ declare function form:field-grid-column(
              js:kv("name",$field-name-key),
              js:kv("label",$label),
              js:kv("index",$field-name-key),
-             if($field is $model-identity-field) 
+             if($field is $model-identity-field)
              then js:kv("key",fn:true()) else (),
              js:kv("xmlmap",if($field-type = "attribute") then "[" || $field-name || "]" else $xmlmap-key),
              js:kv("jsonmap", $field-name-key),
@@ -807,7 +807,7 @@ declare function form:field-grid-column(
 };
 
 (:~
- :    Assigns validation constraints to input 
+ :    Assigns validation constraints to input
  :    Assumes the use of bassistance.de jquery.validation.js
 ~:)
 declare function form:build-validation($model) {
@@ -816,14 +816,14 @@ declare function form:build-validation($model) {
         for $f in $model//(domain:element|domain:attribute|domain:container)
         let $constraint := $f/domain:constraint
         return
-          if($constraint) 
+          if($constraint)
           then js:entry(form:get-field-name($f), (
             if($constraint/@required = "true") then js:kv("required",$constraint/@required eq "true") else (),
             if($constraint/@minLength castable as xs:integer) then js:kv("minlength",xs:integer($constraint/@minLength)) else (),
             if($constraint/@maxLength castable as xs:integer) then js:kv("maxlength",xs:integer($constraint/@maxLength)) else (),
             if($constraint/@minValue ne "" )  then js:kv("min",xs:integer($constraint/@minValue)) else (),
             if($constraint/@maxValue ne "")  then js:kv("max",xs:integer($constraint/@maxValue)) else ()
-            
+
           ))
           else ()
     ))
@@ -837,14 +837,14 @@ declare function form:context(
    $response as map:map
 ) {(
    response:initialize($response)[0],
-   js:variable("context", 
+   js:variable("context",
         js:o((
            js:kv("application",response:application()),
            js:kv("controller", response:controller()),
            js:kv("action",response:action()),
            js:kv("view",response:view()),
            if(response:model())
-           then 
+           then
               let $identityField := domain:get-model-identity-field(response:model())
               let $keyLabelField := domain:get-model-keyLabel-field(response:model())
               return (
@@ -855,8 +855,8 @@ declare function form:context(
               js:kv("modelKeyLabel",fn:string(domain:get-model-keyLabel-field(response:model())/@name)),
               js:kv("modelIdSelector",
                let $idField := domain:get-model-identity-field(response:model())
-               return 
-                 if($idField instance of element(domain:attribute)) 
+               return
+                 if($idField instance of element(domain:attribute))
                  then "[" || $idField/@name || "]"
                  else fn:string($idField/@name)
                )

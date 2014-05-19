@@ -1,7 +1,7 @@
 xquery version "1.0-ml";
 
 (:~
- : This request controls all serialization of request map 
+ : This request controls all serialization of request map
  : - All HTTP request elements in a single map:map type.
  :)
 module namespace request = "http://xquerrail.com/request";
@@ -47,9 +47,11 @@ declare private variable $ERROR             := "request:error";
 declare private variable $ERROR-CODE        := "request:error-code";
 declare private variable $ERROR-MESSAGE     := "request:error-message";
 declare private variable $SYS-PARAMS := ("_application","_controller","_action","_view","_context","_format","_url","_route","_partial","_debug");
+declare private variable $IS-MULTIPART      := "request:multipart";
+declare private variable $MULTIPART-BOUNDARY := "request:multipart-boundary";
 
 (:~Global Request Variable  :)
-declare private variable $request as map:map := 
+declare private variable $request as map:map :=
  let $init := map:map()
  return (
     map:put($init,"type", $REQUEST-ID),
@@ -111,20 +113,20 @@ declare function request:initialize($_request as map:map) {
 
 
 (:~
- :  Parses the map pulling all the required information from http request 
+ :  Parses the map pulling all the required information from http request
  :)
 declare function request:parse($parameters) as map:map {
-   
+
    (:Insert all custom headers:)
-   let $headers :=            
+   let $headers :=
         for $i in xdmp:get-request-header-names()
         return
             for $j in xdmp:get-request-header($i)
             return
                map:put($request, fn:concat($HEADER-PREFIX,$i),$j)
    (:Map All common request information:)
-   let $rests := 
-      ( 
+   let $rests :=
+      (
         map:put($request, $APPLICATION,xdmp:get-request-field("_application",config:default-application())),
         map:put($request, $CONTROLLER, xdmp:get-request-field("_controller",config:default-controller())),
         map:put($request, $ACTION,     xdmp:get-request-field("_action",config:default-action())),
@@ -142,7 +144,7 @@ declare function request:parse($parameters) as map:map {
         map:put($request, $USERNAME,   xdmp:get-request-username()),
         map:put($request, $USERID,     xs:unsignedLong(xdmp:get-request-user()))
       )
-   let $fields := 
+   let $fields :=
          for $i in xdmp:get-request-field-names()[fn:not(. = $SYS-PARAMS)]
          let $fieldname := fn:concat($PARAM-PREFIX,$i)
          let $filename := xdmp:get-request-field-filename($i)
@@ -151,13 +153,13 @@ declare function request:parse($parameters) as map:map {
             (:Load All Request Fields:)
             for $j in xdmp:get-request-field($i)
             let $filename-key := fn:concat($PARAM-FILENAME-PREFIX,$i)
-            let $value := 
+            let $value :=
                  if($j castable as xs:string and fn:not($j instance of binary()))
                  then
                     if(fn:contains($j,"\{|\}")) then
                     let $json:= xdmp:from-json(fn:normalize-space($j))
                     return
-                         if($json instance of element(json)) 
+                         if($json instance of element(json))
                          then $json
                          else fn:string($j)
                     else $j
@@ -165,32 +167,40 @@ declare function request:parse($parameters) as map:map {
                  then xs:long($j)
                  else $j
             return (
-                    if(map:get($request,$fieldname)) 
+                    if(map:get($request,$fieldname))
                     then (
-                         if(fn:not(map:get($request,$fieldname) = $j)) 
+                         if(fn:not(map:get($request,$fieldname) = $j))
                          then map:put($request,$fieldname,(map:get($request,$fieldname),$value))
                          else ()
                     )
                     else map:put($request, $fieldname,$value)
-                , (:Write out the filename info:) 
+                , (:Write out the filename info:)
                 if($filename) then (
                    map:put($request,fn:concat($PARAM-FILENAME-PREFIX,$i),$filename),
                    map:put($request,fn:concat($PARAM-CONTENT-TYPE-PREFIX,$i),$content-type)
-                ) 
-                else  ()   
+                )
+                else  ()
             )
     let $_content-type := fn:normalize-space(fn:tokenize(xdmp:get-request-header("Content-Type"), ";")[1])
+    let $is-multipart  := ($_content-type ! fn:normalize-space(.)) = "multipart/form-data"
     let $accept-types := xdmp:uri-format($_content-type)
     let $_ := xdmp:log($_content-type,"debug")
-    let $_ := 
-         if ($_content-type = "application/json" or fn:contains($_content-type,"application/json"))  
-         then if(xdmp:get-request-method() = ("PUT","POST") and xdmp:get-request-body()) 
+    let $_ :=
+        if($is-multipart)
+        then (
+            map:put($request,$IS-MULTIPART,$is-multipart),
+            map:put($request,$MULTIPART-BOUNDARY,$_content-type[fn:contains(.,"boundary")]/fn:substring-after(.,"boundary="))
+        )
+        else ()
+    let $_ :=
+         if ($_content-type = "application/json" or fn:contains($_content-type,"application/json"))
+         then if(xdmp:get-request-method() = ("PUT","POST") and xdmp:get-request-body())
               then map:put($request, $BODY, xdmp:from-json(xdmp:get-request-body())[1])
               else ()
-         else if($_content-type  = ("application/xml","text/xml")) 
+         else if($_content-type  = ("application/xml","text/xml"))
          then map:put($request, $BODY, xdmp:get-request-body("xml"))
          else map:put($request, $BODY, xdmp:get-request-body($accept-types))
-       
+
    return $request
 };
 
@@ -271,7 +281,7 @@ declare function request:protocol() {
 };
 
 (:~
- : Returns the body element of an http:request. Use the request:body-type() 
+ : Returns the body element of an http:request. Use the request:body-type()
  : function to determine the underlying datatype
  :)
 declare function request:body() {
@@ -279,7 +289,7 @@ declare function request:body() {
 };
 
 (:~
- :  Returns the body type of the given request such as (xml, binary, text) 
+ :  Returns the body type of the given request such as (xml, binary, text)
  :)
 declare function request:body-type(){
     map:get($request,$BODY-TYPE)
@@ -292,10 +302,10 @@ declare function request:partial(){
   let $is-partial := map:get($request,$PARTIAL)
   return
     if($is-partial) then
-      if($is-partial eq "true") 
+      if($is-partial eq "true")
       then fn:true()
       else fn:false()
-    else 
+    else
       fn:false()
 };
 
@@ -304,18 +314,18 @@ declare function request:partial(){
  :)
 declare function request:params()  as map:map{
     let $new-map := map:map()
-    let $_ := 
+    let $_ :=
         (
             for $key in map:keys($request)[fn:starts-with(.,$PARAM-PREFIX)]
-            return 
+            return
                 map:put($new-map,fn:substring-after($key,$PARAM-PREFIX),map:get($request,$key)),
-            (:Add param with format $key:filename key:content-type:) 
+            (:Add param with format $key:filename key:content-type:)
             for $key in map:keys($request)[fn:starts-with(.,$PARAM-FILENAME-PREFIX)]
             return map:put($new-map, fn:concat(fn:substring-after($key,$PARAM-FILENAME-PREFIX),"_filename"),map:get($request,$key))
             ,
             for $key in map:keys($request)[fn:starts-with(.,$PARAM-CONTENT-TYPE-PREFIX)]
             return map:put($new-map, fn:concat(fn:substring-after($key,$PARAM-CONTENT-TYPE-PREFIX),"_content-type"),map:get($request,$key))
-        )    
+        )
     return
         $new-map
 };
@@ -334,7 +344,7 @@ declare function request:param-names()
  :)
 declare function request:param($name as xs:string) {
    let $key-name := fn:concat($PARAM-PREFIX,$name)
-   return 
+   return
     map:get($request,$key-name)
 };
 declare function request:params-to-querystring(){
@@ -344,7 +354,7 @@ declare function request:params-to-querystring(){
    order by $k
    return
    for $v in map:get($params,$k)
-   return 
+   return
       fn:concat($k,"=",xdmp:url-encode(fn:string($v)))
   ,"&amp;")
 };
@@ -353,9 +363,9 @@ declare function request:params-to-querystring(){
  : If field does not exist returns default.
  :)
 declare function request:param($name as xs:string,$default as item()*) {
-  let $field := request:param($name) 
+  let $field := request:param($name)
   return
-    if($field) 
+    if($field)
     then $field
     else $default
 };
@@ -370,18 +380,18 @@ declare function request:param-as(
 ) as item()*
 {
     let $value := request:param($name,$default)
-    return 
-      if($type eq "xs:integer" and $value castable as xs:integer) 
+    return
+      if($type eq "xs:integer" and $value castable as xs:integer)
       then $value cast as xs:integer
-      else if($type eq "xs:unsignedInteger" and $value castable as xs:unsignedInt) 
+      else if($type eq "xs:unsignedInteger" and $value castable as xs:unsignedInt)
       then $value cast as xs:unsignedInt
-      else if($type eq "xs:long" and $value castable as xs:long) 
+      else if($type eq "xs:long" and $value castable as xs:long)
       then $value cast as xs:long
-      else if($type eq "xs:unsignedLong" and $value castable as xs:unsignedLong) 
+      else if($type eq "xs:unsignedLong" and $value castable as xs:unsignedLong)
       then $value cast as xs:unsignedLong
       else if($type eq "xs:decimal" and $value castable as xs:decimal)
       then $value cast as xs:decimal
-      else if($type eq "xs:float" and $value castable as xs:float) 
+      else if($type eq "xs:float" and $value castable as xs:float)
       then $value cast as xs:float
       else if($type eq "xs:double" and $value castable as xs:double)
       then $value cast as xs:double
@@ -401,10 +411,10 @@ declare function request:params-as-map()
 {
    let $new-map := map:map()
    let $fields := request:params()
-   let $insert := 
+   let $insert :=
         for $field in map:keys($fields)
         let $value := map:get($fields,$field)
-        return 
+        return
           map:put($new-map,fn:substring-after($value,$PARAM-PREFIX),$value)
   return
     $new-map
@@ -433,21 +443,21 @@ declare function request:param-content-type(
  :)
 declare function request:get-headers() {
     let $new-map := map:map()
-    let $_ := 
+    let $_ :=
         for $key in map:keys($request)[fn:starts-with(.,"request:header::")]
-        return 
+        return
             map:put($new-map,fn:substring-after($key,$HEADER-PREFIX),map:get($request,$key))
     return
         $new-map
 };
 
 (:~
- : Gets a specific header parameter by name 
+ : Gets a specific header parameter by name
  :  @param $name - Name of the header parameter (ie. Content-Length)
  :)
 declare function request:get-header($name as xs:string) {
    let $key-name := fn:concat($HEADER-PREFIX,$name)
-   return 
+   return
      map:get($request,$key-name)
 };
 
@@ -475,7 +485,7 @@ declare function request:locale()
  : Returns the Content-Length header param
  :)
 declare function request:content-length()
-{ 
+{
    map:get($request,fn:concat($HEADER-PREFIX,"Content-Length"))
 };
 (:~
@@ -491,7 +501,7 @@ declare function request:user-agent()
  :)
 declare function request:referer()
 {
-  map:get($request,fn:concat($HEADER-PREFIX,"Referer"))  
+  map:get($request,fn:concat($HEADER-PREFIX,"Referer"))
 };
 
 (:~
@@ -499,7 +509,7 @@ declare function request:referer()
  :)
 declare function request:encoding()
 {
-    map:get($request,fn:concat($HEADER-PREFIX,"Accept-Encoding"))  
+    map:get($request,fn:concat($HEADER-PREFIX,"Accept-Encoding"))
 };
 
 (:~
@@ -507,21 +517,21 @@ declare function request:encoding()
  :)
 declare function request:connection()
 {
-    map:get($request,fn:concat($HEADER-PREFIX,"Connection"))  
+    map:get($request,fn:concat($HEADER-PREFIX,"Connection"))
 };
 (:~
  : Returns the Authorization Header from the request
  :)
 declare function request:authorization()
 {
-    map:get($request,fn:concat($HEADER-PREFIX,"Authorization"))  
+    map:get($request,fn:concat($HEADER-PREFIX,"Authorization"))
 };
 (:~
  : Returns the Cookies from the request
  :)
 declare function request:cookies()
 {
-    map:get($request,fn:concat($HEADER-PREFIX,"Cookie"))     
+    map:get($request,fn:concat($HEADER-PREFIX,"Cookie"))
 };
 
 (:~
@@ -549,8 +559,8 @@ declare function request:user-id()
    map:get($request,$USERID)
 };
 
-(:~ 
- : Returns the current user name 
+(:~
+ : Returns the current user name
  :)
 declare function request:user-name() {
    map:get($request,$USERNAME)
@@ -583,11 +593,11 @@ declare private function request:convert-json-map($map as map:map) {
  :)
 declare function request:build-query($params)
 {
-  let $filters := 
-     if($params instance of element(item)) 
-     then $params 
+  let $filters :=
+     if($params instance of element(item))
+     then $params
      else $params//item
-  let $value-query := 
+  let $value-query :=
     for $item in $filters
     return
       if($item/op eq "eq") then
@@ -609,7 +619,7 @@ declare function request:build-query($params)
        else if($item/op eq "nu") then
          cts:element-query(xs:QName($item/field),cts:and-query(()))
       else if($item/op eq "nn") then
-         cts:element-query(xs:QName($item/field),cts:or-query(()))         
+         cts:element-query(xs:QName($item/field),cts:or-query(()))
       else if($item/op eq "in") then
         cts:element-value-query(xs:QName($item/field),$item/data)
       else if($item/op eq "ni") then
@@ -624,15 +634,15 @@ declare function request:build-query($params)
 };
 
 (:~
- : Returns the parse Query from JQGrid 
+ : Returns the parse Query from JQGrid
  :)
-declare function request:parse-query()  
+declare function request:parse-query()
 {
- let $filters  := 
-  if(request:param("_search", "false") = "true") 
-  then if(request:param("filters",())) 
+ let $filters  :=
+  if(request:param("_search", "false") = "true")
+  then if(request:param("filters",()))
        then xdmp:from-json(request:param($request,"filters"))
-       else 
+       else
         <item>
            <field>{request:param($request,"searchField")}</field>
            <op>{request:param($request,"searchOper")}</op>
@@ -674,7 +684,7 @@ declare function request:redirect()  as xs:string?
 };
 
 (:~
- : Get the redirect code for a given request.  
+ : Get the redirect code for a given request.
  :)
 declare function request:redirect-code()  as xs:integer?
 {
@@ -704,12 +714,12 @@ declare function request:add-params(
 (:~
  : Serializes the request to an xml element definition
  :)
-declare function request:serialize() 
+declare function request:serialize()
 {
     element {"request"} {
-        for $r in request:param-names()        
+        for $r in request:param-names()
         return element{$r} {request:param($r) }
-    }    
+    }
 };
 
 (:~
@@ -729,7 +739,7 @@ declare function request:set-error(
    map:put($request,$ERROR,fn:true()),
    map:put($request,$ERROR-CODE,$code),
    map:put($request,$ERROR-MESSAGE,$message)
-   
+
 };
 (:~
  :  Returns if an error was thrown
@@ -741,6 +751,15 @@ declare function request:error() as xs:boolean {
 declare function request:error-code() as xs:integer? {
    map:get($request,$ERROR-CODE)
 };
+
 declare function request:error-message()  as xs:string {
   map:get($request,$ERROR-MESSAGE)
+};
+
+declare function request:is-multipart() as xs:boolean {
+  fn:string(map:get($request,$IS-MULTIPART)) eq "true"
+};
+
+declare function request:multipart-boundary() {
+  fn:string(map:get($request,$MULTIPART-BOUNDARY))
 };

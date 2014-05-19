@@ -195,7 +195,7 @@ declare function config:resolve-application (
         else ()
         ,
         if (./@value) then
-          attribute resource { config:resolve-path($uri, ./@value) }
+          attribute value { config:resolve-path($uri, ./@value) }
         else ()
       }
     ) else .)
@@ -257,8 +257,10 @@ declare function config:get-config-value($node as element()?) {
  :)
  declare function config:default-application() as xs:string
  {
-    if(fn:count(config:get-config()/config:application) = 1)
-    then config:get-config()/config:application/@name/fn:normalize-space(.)
+  let $applications := config:get-applications()
+  return
+    if(fn:count($applications) = 1)
+    then $applications/@name/fn:normalize-space(.)
     else (config:get-config()/config:default-application/@value/fn:string(),
      "application"
     )[1]
@@ -332,7 +334,7 @@ declare function config:get-dispatcher() as xs:string
  :)
 declare function config:get-application($application-name as xs:string) as element(config:application)
 {
-  let $application := config:get-config()/config:application[@name eq $application-name]
+  let $application := config:get-applications()[@name eq $application-name]
   return
     if($application)
     then $application
@@ -408,7 +410,7 @@ declare function config:application-namespace($application) as xs:string
 declare function config:application-script-directory($application)
 {
   (
-    fn:data(config:get-application($application)/config:script-directory/@value),
+    xs:string(config:get-application($application)/config:script-directory/@value),
     config:resource-directory()
   )[1]
 };
@@ -421,7 +423,7 @@ declare function config:application-script-directory($application)
 declare function config:application-stylesheet-directory($application)
 {
   (
-    fn:data(config:get-application($application)/config:stylesheet-directory/@value),
+    xs:string(config:get-application($application)/config:stylesheet-directory/@value),
     config:resource-directory()
   )[1]
 };

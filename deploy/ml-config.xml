@@ -468,7 +468,7 @@
       <role-names/>
       <permissions/>
       <privileges>
-        <!-- Require to execute xray unit tests -->
+        <!-- Require to execute xray unit tests - xdmp:login must be removed for other scenario -->
         <privilege>
           <privilege-name>xdmp:login</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-login</action>

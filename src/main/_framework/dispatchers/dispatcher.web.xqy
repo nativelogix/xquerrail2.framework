@@ -181,7 +181,7 @@ declare function dispatcher:invoke-controller()
           return 
             $extension-action()
      (:Check if controller exists and a controller is defined:)
-     else if(fn:function-available("base:" || $action ) and fn:exists(domain:get-controller($application,$controller))) then (
+     else if(fn:function-available("base:" || $action )) then (
           base:initialize(request:request()),
           base:invoke($action)
           ) 

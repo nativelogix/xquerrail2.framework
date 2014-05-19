@@ -31,10 +31,10 @@
   </route>
   
   <route id="app-test_login" pattern="^/login(.html)?">
-    <default key="_controller">app-test:default:login:html</default>
+    <default key="_controller">app-test:base:login:html</default>
   </route>
   <route id="app-test_logout" pattern="^/logout(.html)?">
-    <default key="_controller">app-test:default:logout:html</default>
+    <default key="_controller">app-test:base:logout:html</default>
   </route>   
   <route id="app-test_default_index" pattern="^/(\i\c*[^/])/?$">
     <default key="_controller">app-test:$1:index:html</default>      

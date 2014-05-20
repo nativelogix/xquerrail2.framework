@@ -6,6 +6,7 @@ module namespace response = "http://xquerrail.com/response";
 
 import module namespace request = "http://xquerrail.com/request" at "request.xqy";
 import module namespace config  = "http://xquerrail.com/config"  at "config.xqy";
+import module namespace util = "http://xquerrail.com/util" at "lib/util.xqy";
 
 declare namespace domain = "http://xquerrail.com/domain";
 
@@ -553,24 +554,121 @@ declare function response:httpmetas()
 };
 
 (:Cookies:)
-declare function response:add-cookie($name)
+(:~
+ : Returns an RFC 822 compliant date string from the given dateTime,
+ : that is suitable for use in a cookie header.
+ :
+ : @param $date the date and time to convert into a string
+ :
+ : @return the RFC 822 complient date string.
+ :
+ :)
+declare %private function response:get-cookie-date-string($date as xs:dateTime) as xs:string
 {
-  ()
+  let $gmt := xs:dayTimeDuration("PT0H")
+  let $date := fn:adjust-dateTime-to-timezone($date, $gmt)
+  let $day := util:two-digits(fn:day-from-dateTime($date))
+  let $month := fn:month-from-dateTime($date)
+  let $year := fn:string(fn:year-from-dateTime($date))
+  let $hours := util:two-digits(fn:hours-from-dateTime($date))
+  let $minutes := util:two-digits(fn:minutes-from-dateTime($date))
+  let $seconds := util:two-digits(xs:integer(fn:round(fn:seconds-from-dateTime($date))))
+  let $monthNames := ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+  return fn:concat(
+    $day, "-",
+    $monthNames[$month], "-",
+    $year, " ",
+    $hours, ":",
+    $minutes, ":",
+    $seconds, " GMT"
+  )
 };
 
-declare function response:cookies()
-{
-  ()
+declare function response:set-cookie(
+  $name as xs:string, 
+  $value as xs:string, 
+  $max-age as xs:duration?, 
+  $secure-flag as xs:boolean?, 
+  $domain as xs:string?, 
+  $path as xs:string?
+) as xs:string? {
+    fn:string-join(
+      (
+        fn:concat(xdmp:url-encode($name), "=", xdmp:url-encode($value)),
+        "HttpOnly",
+        if (fn:exists($max-age)) then
+          fn:concat("Max-Age=", util:total-seconds-from-duration($max-age))
+        else
+          ()
+        ,
+        if ($secure-flag) then
+          "Secure"
+        else
+          ()
+        ,
+        if ($domain) then
+          fn:concat("Domain=", $domain)
+        else
+          ()
+        ,
+        if ($path) then
+          fn:concat("Path=", $path)
+        else
+          ()
+       )
+       , "; "
+    )
 };
 
-declare function response:cookie($name)
-{
-  ()
+declare function response:add-cookie(
+  $name as xs:string, 
+  $value as xs:string, 
+  $max-age as xs:duration?, 
+  $secure-flag as xs:boolean?, 
+  $domain as xs:string?, 
+  $path as xs:string?
+) as empty-sequence() {
+  xdmp:add-response-header("Set-Cookie", response:set-cookie($name, $value, $max-age, $secure-flag, $domain, $path)
+  )
 };
 
-declare function response:remove-cookie($name)
-{
-  ()
+declare function response:add-cookie(
+  $name as xs:string, 
+  $value as xs:string
+) as empty-sequence() {
+  response:add-cookie($name, $value, (), (), (), ())
+};
+
+declare function response:cookies(
+) as map:map {
+  let $cookies := request:get-header("Cookie")
+  return
+  map:new((
+    for $cookie in fn:tokenize($cookies, "; ")
+    return
+      map:entry(xdmp:url-decode(fn:substring-before($cookie, "=")), xdmp:url-decode(fn:substring-after($cookie, "=")))
+  ))
+};
+
+declare function response:cookie(
+  $name as xs:string
+) as xs:string? {
+  map:get(response:cookies(), $name)
+};
+
+declare function response:remove-cookie(
+  $name as xs:string
+) as empty-sequence() {
+  response:remove-cookie($name, (), (), ())
+};
+
+declare function response:remove-cookie(
+  $name as xs:string,
+  $secure-flag as xs:boolean?, 
+  $domain as xs:string?, 
+  $path as xs:string?
+) as empty-sequence() {
+  response:add-cookie($name, "", xs:dayTimeDuration('PT0S'), $secure-flag, $domain, $path)
 };
 
 (:Javascript Response Functions:)

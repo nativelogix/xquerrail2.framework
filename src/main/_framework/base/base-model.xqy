@@ -815,7 +815,7 @@ declare function model:recursive-build(
         return
           (:Process Complex Types:)
           switch($type)
-            case "reference"      return model:build-reference($context,$current-value,$updates,$partial)
+            case "reference"      return model:build-reference($context, $current-value, $updates, $partial)
             case "binary"         return model:build-binary($context,$current,$updates,$partial)
             case "schema-element" return model:build-schema-element($context,$current,$updates,$partial)
             case "triple"         return model:build-triple($context,$current-value,$updates,$partial)
@@ -1734,7 +1734,7 @@ as xs:string*
 (:~
  :  returns a reference given an id or field value.
  :)
-declare function model:get-references($field as element(), $params as item()) {
+declare function model:get-references($field as element(), $params as item()*) {
     let $refTokens := fn:tokenize(fn:data($field/@reference), ":")
     let $element := $refTokens[1]
     return
@@ -1755,7 +1755,7 @@ declare function model:get-references($field as element(), $params as item()) {
  :)
  declare function model:get-model-references(
     $reference as element(domain:element),
-    $params as item()
+    $params as item()*
  ) as element()* {
   let $tokens := fn:tokenize($reference/@reference, ":")
   let $type := $tokens[2]
@@ -1769,10 +1769,11 @@ declare function model:get-references($field as element(), $params as item()) {
       (: TODO: Temporary fix or maybe not :)
       let $node-name := xs:string($reference/@name)
       let $identity-field-name := domain:get-model-identity-field-name($model)
-      let $map := map:new((
-        map:entry($identity-field-name, $params)
-      ))
-      return $funct($node-name, $model, $map)
+      for $param in $params
+        let $map := map:new((
+          map:entry($identity-field-name, $param)
+        ))
+        return $funct($node-name, $model, $map)
     else
       fn:error(xs:QName("ERROR"), "No Reference function avaliable.")
  };
@@ -1805,27 +1806,27 @@ declare function model:get-references($field as element(), $params as item()) {
 declare function model:reference($node-name as xs:string, $model as element(domain:model), $params)
 as element()?
 {
-    let $keyLabel := fn:data($model/@keyLabel)
-    let $key := fn:data($model/@key)
-    let $modelReference := model:get($model,$params)
-    let $modelReference :=
-        if($modelReference)
-        then $modelReference
-        else model:getByReferenceKeyLabel($model,$params)
-    let $name := fn:data($model/@name)
-    let $ns := $model/@namespace
-    let $qName := fn:QName($ns,$node-name(:$name:))
-    return
-        if($modelReference) then
-             element { $qName } {
-                 attribute ref-type { "model" },
-                 attribute ref-uuid { $modelReference/(@*|*:uuid)/text() },
-                 attribute ref-id   { fn:data($modelReference/(@*|node())[fn:local-name(.) = $key])},
-                 attribute ref      { $name },
-                 fn:data($modelReference/node()[fn:local-name(.) = $keyLabel])
-             }
-        else ()
-         (:fn:error(xs:QName("INVALID-REFERENCE-ERROR"),"Invalid Reference", fn:data($model/@name)):)
+  let $keyLabel := fn:data($model/@keyLabel)
+  let $key := fn:data($model/@key)
+  let $modelReference := model:get($model,$params)
+  let $modelReference :=
+    if($modelReference) then 
+      $modelReference
+    else model:getByReferenceKeyLabel($model,$params)
+  let $name := fn:data($model/@name)
+  let $ns := domain:get-field-namespace($model)
+  let $qname := fn:QName($ns,$node-name)
+  return
+    if($modelReference) then
+      element { $qname } {
+         attribute ref-type { "model" },
+         attribute ref-uuid { $modelReference/(@*|*:uuid)/text() },
+         attribute ref-id   { fn:data($modelReference/(@*|node())[fn:local-name(.) = $key])},
+         attribute ref      { $name },
+         fn:data($modelReference/node()[fn:local-name(.) = $keyLabel])
+      }
+    else ()
+   (:fn:error(xs:QName("INVALID-REFERENCE-ERROR"),"Invalid Reference", fn:data($model/@name)):)
 };
 
 (:~

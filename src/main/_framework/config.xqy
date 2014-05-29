@@ -14,6 +14,8 @@ import module namespace request  = "http://xquerrail.com/request" at "request.xq
 
 import module namespace cache = "http://xquerrail.com/cache" at "cache.xqy";
 
+import module namespace application = "http://xquerrail.com/application" at "application.xqy";
+
 declare namespace domain = "http://xquerrail.com/domain";
 
 declare namespace routing = "http://xquerrail.com/routing";
@@ -162,8 +164,13 @@ declare function config:is-cache-empty() {
  : When using a cluster please ensure you change configuration to cache from database
  :)
 declare function config:refresh-app-cache() {
-  for $application in config:get-applications()
-    return config:get-domain(xs:string($application/@name))
+  let $_ := (
+    application:reset(),
+    application:bootstrap()
+  )
+  return
+    for $application in config:get-applications()
+      return config:get-domain(xs:string($application/@name))
 };
 
 declare function config:cache-location($config as element(config:config)) as xs:string {

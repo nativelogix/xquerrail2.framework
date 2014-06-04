@@ -4,8 +4,5 @@ xquery version "1.0-ml";
    corresponding the the configuration uri.
  :)
 import module namespace config ="http://xquerrail.com/config" at "config.xqy";
-xdmp:set-response-content-type("application/xml"),
-<domains xmlns="http://xquerrail.com/domain">
-{config:refresh-app-cache()}</domains>,
-xdmp:spawn("initialize-taskserver.xqy")
+config:refresh-app-cache()
 

@@ -32,6 +32,13 @@ declare variable $INSTANCE2 :=
 </model2>
 ;
 
+declare variable $INSTANCE4 := 
+<model4 xmlns="http://marklogic.com/model/model4">
+  <id>model4-id</id>
+  <name>model4-name</name>
+</model4>
+;
+
 declare variable $CONFIG := ();
 
 declare %test:setup function setup() {
@@ -68,7 +75,7 @@ declare %test:case function model1-model2-exist-test() as item()*
   )
 };
 
-declare %test:case function model-new-test() as item()*
+declare %test:case function model-document-new-test() as item()*
 {
   let $model1 := domain:get-model("model1")
   let $instance1 := model:new(
@@ -84,6 +91,43 @@ declare %test:case function model-new-test() as item()*
     assert:not-empty($instance1),
     assert:equal("1234", xs:string($value-id)),
     assert:equal("name-1", xs:string($value-name))
+  )
+};
+
+declare %test:case function model-directory-new-test() as item()*
+{
+  let $model4 := domain:get-model("model4")
+  let $instance4 := model:new(
+    $model4,
+    $INSTANCE4
+  )
+  let $value-id := domain:get-field-value(domain:get-model-field($model4, "id"), $instance4)
+  let $value-name := domain:get-field-value(domain:get-model-field($model4, "name"), $instance4)
+  return (
+    assert:not-empty($instance4),
+    assert:equal("model4-id", xs:string($value-id)),
+    assert:equal("model4-name", xs:string($value-name))
+  )
+};
+
+declare %test:case function model-directory-create-test() as item()*
+{
+  let $model4 := domain:get-model("model4")
+  let $instance4 := eval(
+    function() {
+      model:create(
+        $model4, 
+        $INSTANCE4,
+        $TEST-COLLECTION
+      )
+    }
+  )
+  let $value-id := domain:get-field-value(domain:get-model-field($model4, "id"), $instance4)
+  let $value-name := domain:get-field-value(domain:get-model-field($model4, "name"), $instance4)
+  return (
+    assert:not-empty($instance4),
+    assert:equal("model4-id", xs:string($value-id)),
+    assert:equal("model4-name", xs:string($value-name))
   )
 };
 
@@ -104,7 +148,7 @@ declare %private function eval($fn as function(*)) {
 :)
 };
 
-declare %test:case function model-update-test() as item()*
+declare %test:case function model-document-update-test() as item()*
 {
   let $model1 := domain:get-model("model1")
   let $identity-field := domain:get-model-identity-field($model1)
@@ -141,7 +185,7 @@ declare %test:case function model-update-test() as item()*
   )
 };
 
-declare %test:case function model-create-test() as item()*
+declare %test:case function model-document-create-test() as item()*
 {
   let $model1 := domain:get-model("model1")
   let $instance1 := eval(

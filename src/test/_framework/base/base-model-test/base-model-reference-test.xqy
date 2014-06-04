@@ -119,7 +119,7 @@ declare %test:case function build-reference-test() {
     $model2, 
     $map, 
     $TEST-COLLECTION)
-(:  let $_ := xdmp:log(("$model2-instance", $model2-instance)):)
+  let $_ := xdmp:log(("$model2-instance", $model2-instance))
 (:  let $_ := xdmp:log(("model:reference", model:reference($model1, $itentity-map))):)
 (:  let $_ := xdmp:log(("model:get($model1, $identity-value)", model:get($model1, map:new((map:entry("uuid", $identity-value)))))):)
   return assert:not-empty($model2-instance) 

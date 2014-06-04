@@ -508,16 +508,21 @@ declare function model:get(
   if($model/@persistence = "abstract") then fn:error(xs:QName("MODEL-ERROR"), "Cannot Retrieve Model whose persistence is abstract",$model/@name) else (),
   let $identity-field-name := domain:get-model-identity-field-name($model)
   let $identity-field := domain:get-model-identity-field($model)
+  let $keylabel-field := domain:get-model-keyLabel-field($model)
   let $identity-map := map:new((
-    map:entry($identity-field-name, model:get-id-from-params($model,$params))
+    map:entry($identity-field-name, model:get-id-from-params($model,$params)),
+    map:entry($keylabel-field/@name,model:get-id-from-params($model,$params))
   ))
   let $persistence := $model/@persistence
   let $uri := domain:get-param-value($params,"uri")
   let $identity-query :=
     cts:and-query((
       domain:get-base-query($model),
-      domain:get-identity-query($model, $identity-map),
-      if($uri) then cts:or-query(cts:document-query($uri)) else ()
+      cts:or-query((
+         domain:get-identity-query($model, $identity-map),
+         domain:get-keylabel-query($model, $identity-map),
+         if($uri) then cts:document-query($uri) else ()
+      ))
     ))
   let $results :=
     switch($persistence)
@@ -535,7 +540,7 @@ declare function model:get(
 : @param $params the values to pull the id from
 : @return the document
  :)
-declare function model:getByReferenceKeyLabel(
+declare function model:reference-by-keylabel(
    $model as element(domain:model),
    $params (:as map:map:)
 ) as element()? {
@@ -576,13 +581,16 @@ declare function model:getByReferenceKeyLabel(
                     else
                     if($key-field-def instance of element(domain:attribute))
                     then cts:element-attribute-range-query(fn:QName("{$nameSpace}","{$model-name}"),fn:QName("","{$id-field}"),"=","{$value}","exact")
-                    else cts:element-range-query(fn:QName("{$nameSpace}","{$key-field}"),"=","{$value}")
+                    else (
+                        cts:element-range-query(fn:QName("{$nameSpace}","{$key-field}"),"=","{$value}"),
+                        cts:element-range-query(fn:QName("{$nameSpace}","{$id-field}"),"=", "{$value}")
+                    )
                 )), ("filtered"))
         </stmt>))
     let $exprValue := xdmp:value($stmt)
     return (
         (: Execute statement :)
-        xdmp:log(("model:getByReference::",$exprValue),"debug"),
+        xdmp:log(("model:getByReference::",$stmt),"info"),
         $exprValue
         )
 };
@@ -815,7 +823,7 @@ declare function model:recursive-build(
         return
           (:Process Complex Types:)
           switch($type)
-            case "reference"      return model:build-reference($context, $current-value, $updates, $partial)
+            case "reference"      return model:build-reference($context, $current, $updates, $partial)
             case "binary"         return model:build-binary($context,$current,$updates,$partial)
             case "schema-element" return model:build-schema-element($context,$current,$updates,$partial)
             case "triple"         return model:build-triple($context,$current-value,$updates,$partial)
@@ -1809,10 +1817,6 @@ as element()?
   let $keyLabel := fn:data($model/@keyLabel)
   let $key := fn:data($model/@key)
   let $modelReference := model:get($model,$params)
-  let $modelReference :=
-    if($modelReference) then 
-      $modelReference
-    else model:getByReferenceKeyLabel($model,$params)
   let $name := fn:data($model/@name)
   let $ns := domain:get-field-namespace($model)
   let $qname := fn:QName($ns,$node-name)
@@ -1825,8 +1829,7 @@ as element()?
          attribute ref      { $name },
          fn:data($modelReference/node()[fn:local-name(.) = $keyLabel])
       }
-    else ()
-   (:fn:error(xs:QName("INVALID-REFERENCE-ERROR"),"Invalid Reference", fn:data($model/@name)):)
+    else ()(: fn:error(xs:QName("INVALID-REFERENCE-ERROR"),"Invalid Reference", fn:data($model/@name)):)
 };
 
 (:~

@@ -49,6 +49,10 @@ declare %private function cache-location($location as xs:string?) {
   ($location, $DEFAULT-CACHE-LOCATION)[1]
 };
 
+declare function set-cache($key as xs:string, $value as item()*) as empty-sequence(){
+  set-cache("basic", $key, $value)
+};
+
 declare function set-cache($type as xs:string, $key as xs:string, $value) as empty-sequence() {
   set-cache($type, $key, $value, ())
 };

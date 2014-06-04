@@ -220,7 +220,7 @@ declare function engine:transform-javascript-include($node)
           attribute src {$script-uri},
           text{"//"}
           }
-  else ()(:fn:error(xs:QName("INCLUDE-ERROR"),"Invalid path:" || $script-uri):)
+  else if(config:property("ignore-missing-resource") = fn:true()) then () else  fn:error(xs:QName("INCLUDE-ERROR"),"Invalid path:" || $script-uri)
 };
 (:~
  :  Creates a jqGrid Control based on the columns specified

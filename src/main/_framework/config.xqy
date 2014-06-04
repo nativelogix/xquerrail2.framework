@@ -489,7 +489,7 @@ declare function config:register-domain($domain as element(domain:domain)) {
   let $_ := if($application-name) then () else fn:error(xs:QName("DOMAIN-MISSING-NAME"),"Domain must have a name")
   let $cache-key := fn:concat($DOMAIN-CACHE-KEY,$application-name)
   return (
-    xdmp:set-server-field($cache-key,config:_load-domain($domain)),
+    cache:set-cache($cache-key,config:_load-domain($domain)),
     $domain
   )
 };

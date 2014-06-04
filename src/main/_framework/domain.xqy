@@ -1376,6 +1376,31 @@ declare function domain:get-identity-query(
       
 };
 
+declare function domain:get-keylabel-query(
+    $model as element(domain:model),
+    $params as item()
+) {
+    let $key-field := domain:get-model-keyLabel-field($model)
+    return 
+       typeswitch($key-field) 
+         case element(domain:attribute) return
+            cts:element-attribute-range-query(
+                domain:get-field-qname($key-field/..),
+                domain:get-field-qname($key-field),
+                "=",(
+                domain:get-param-value($params,$key-field/@name),
+                domain:get-param-value($params,$key-field/@name)
+            ))
+         case element(domain:element) return
+           cts:element-range-query(
+              domain:get-field-qname($key-field),
+              "=",
+              domain:get-param-value($params,$key-field/@name)
+           )
+         default return fn:error(xs:QName("PERSISTENCE-QUERY-ERROR"),"KeyLabel Error")
+      
+};
+
 (:~
  : Returns the base query for a given model
  : @param $model  name of the model for the given base-query

@@ -1,3 +1,9 @@
+(:
+Copyright 2014 MarkLogic Corporation
+
+XQuerrail - blabla
+:)
+
 xquery version "1.0-ml";
 (:~
 : Model : Base
@@ -509,12 +515,22 @@ declare function model:get(
   let $identity-field-name := domain:get-model-identity-field-name($model)
   let $identity-field := domain:get-model-identity-field($model)
   let $keylabel-field := domain:get-model-keyLabel-field($model)
+  let $id-value :=  
+    if($params instance of map:map or 
+       $params instance of node() or 
+       $params instance of json:object or 
+       $params instance of json:array) 
+    then  model:get-id-from-params($model,$params)
+    else $params
+  let $uri := 
+    if($params instance of xs:anyAtomicType) 
+    then ()
+    else domain:get-param-value($params,"uri")
   let $identity-map := map:new((
-    map:entry($identity-field-name, model:get-id-from-params($model,$params)),
-    map:entry($keylabel-field/@name,model:get-id-from-params($model,$params))
+    map:entry($identity-field-name, $id-value),
+    map:entry($keylabel-field/@name,$id-value)
   ))
   let $persistence := $model/@persistence
-  let $uri := domain:get-param-value($params,"uri")
   let $identity-query :=
     cts:and-query((
       domain:get-base-query($model),

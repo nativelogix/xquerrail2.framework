@@ -1,9 +1,3 @@
-(:
-Copyright 2014 MarkLogic Corporation
-
-XQuerrail - blabla
-:)
-
 xquery version "1.0-ml";
 (:~
 : Model : Base
@@ -377,10 +371,7 @@ as element()?
   return
       (: Check if the document exists  first before trying to create it :)
       if ($current) then
-          fn:error(xs:QName("DOCUMENT-EXISTS"),fn:concat("The document already exists. ID : %1 at %2"),
-            ($current/*[fn:local-name(.) = $id],
-              xdmp:node-uri($current))
-             )
+          fn:error(xs:QName("DOCUMENT-EXISTS"), "The document already exists. ID : "|| $current/*[fn:local-name(.) = $id] ||" at " || xdmp:node-uri($current))
       else
         let $identity := model:generate-uuid()
         (: Validate the parameters before trying to build the document :)
@@ -528,7 +519,8 @@ declare function model:get(
     else domain:get-param-value($params,"uri")
   let $identity-map := map:new((
     map:entry($identity-field-name, $id-value),
-    map:entry($keylabel-field/@name,$id-value)
+    map:entry($keylabel-field/@name,$id-value),
+    map:entry($keylabel-field/@name,domain:get-field-value($keylabel-field,$params))
   ))
   let $persistence := $model/@persistence
   let $identity-query :=
@@ -1130,7 +1122,7 @@ declare function model:build-triple(
 ~:)
 declare function model:delete(
     $model as element(domain:model),
-    $params as map:map
+    $params as item()
 ) as xs:boolean
 {
   let $current := model:get($model,$params)

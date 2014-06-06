@@ -58,7 +58,7 @@ declare function set-cache($type as xs:string, $key as xs:string, $value) as emp
 };
 
 declare function set-cache($type as xs:string, $key as xs:string, $value, $user as xs:string?) as empty-sequence() {
-  let $_ := xdmp:log(("set-cache [" || $type || "] - [" || $key || "]"), "debug")
+  let $_ := xdmp:log(text{"set-cache", $type, $key}, "finest")
   let $_ := (
     validate-cache-location($type)
     ,

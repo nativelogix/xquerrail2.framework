@@ -469,7 +469,7 @@ declare function config:get-domain($application-name as xs:string) as element(do
   let $cache-key := fn:concat($DOMAIN-CACHE-KEY, $application-name)
   let $app-path := config:application-directory(fn:substring-after($cache-key, $DOMAIN-CACHE-KEY))
   let $domain-key := fn:concat($app-path, "/domains/application-domain.xml")
-  let $_ := xdmp:log(("config:get-domain [" || $application-name || "]", "$cache-key", $cache-key, "$app-path", $app-path, "$domain-key", $domain-key), "debug")
+  let $_ := xdmp:log(text{"config:get-domain", $application-name, "$cache-key", $cache-key, "$app-path", $app-path, "$domain-key", $domain-key}, "finest")
   let $domain-config := config:get-resource(fn:concat($app-path,"/domains/application-domain.xml"))
   let $domain := config:_load-domain($domain-config)
   let $config := config:get-config()

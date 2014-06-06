@@ -110,7 +110,8 @@ declare %test:case function model-directory-new-test() as item()*
   )
 };
 
-declare %test:case function model-directory-create-test() as item()*
+(: Require element range index for keyLabel :)
+declare %test:ignore function model-directory-create-test() as item()*
 {
   let $model4 := domain:get-model("model4")
   let $instance4 := eval(

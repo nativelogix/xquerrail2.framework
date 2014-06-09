@@ -604,7 +604,7 @@ declare function model:reference-by-keylabel(
 };
 declare function model:update-partial(
     $model as element(domain:model),
-    $params as map:map
+    $params as item()
 ) {
     model:update-partial($model,$params,())
 };
@@ -613,7 +613,7 @@ declare function model:update-partial(
  :)
 declare function model:update-partial(
     $model as element(domain:model),
-    $params as map:map,
+    $params as item(),
     $collections as xs:string*
 ){
    let $current := model:get($model,$params)
@@ -2083,9 +2083,9 @@ declare function model:convert-to-map(
       for $field in $model//(domain:element|domain:attribute)
         let $field-name := domain:get-field-name-key($field)
         let $xpath := fn:string-join(domain:get-field-xpath($field), "")
-        let $value := xdmp:value("$current" || $xpath || "/text()")
+        let $value := xdmp:value("$current" || $xpath || "/fn:string()")
         return
-          map:put($params, domain:get-field-name-key($field), $value)
+          map:put($params, $field-name, $value)
     return $params
 };
 

@@ -539,9 +539,16 @@ declare function request:cookies()
  : @param $name - name of cookie
  :)
 
-declare function request:cookie($name)
-{
-   request:cookies()
+declare function request:cookie($name
+) as xs:string* {
+  let $cookies := request:cookies()
+  return
+    for $cookie in fn:tokenize(request:cookies(), "; ")
+      return
+        if (xdmp:url-decode(fn:substring-before($cookie, "=")) = $name) then
+          xdmp:url-decode(fn:substring-after($cookie, "="))
+        else
+          ()
 };
 
 (:

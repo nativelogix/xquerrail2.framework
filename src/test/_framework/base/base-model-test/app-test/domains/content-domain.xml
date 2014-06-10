@@ -31,4 +31,16 @@
     <element name="name" type="string" label="Name"/>
     <element name="model1" type="model1" label="Model #1"/>
   </model>
+  <model name="model6" persistence="directory" label="Model #6" extends="base" namespace-uri="http://marklogic.com/model/test" key="uuid" keyLabel="id">
+    <directory>/test/model6/</directory>
+    <attribute name="id" type="string" label="Id"></attribute> 
+    <attribute name="score" type="string" label="Score"></attribute>
+    <element name="name" type="string" label="Name"/>
+  </model>
+  <model name="model7" persistence="directory" label="Model #7" extends="base" namespace-uri="http://marklogic.com/model/test" key="uuid" keyLabel="id">
+    <directory>/test/model7/</directory>
+    <attribute name="id" type="string" label="Id"></attribute> 
+    <attribute name="score" type="integer" label="Score"></attribute>
+    <element name="name" type="string" label="Name"/>
+  </model>
 </domain>

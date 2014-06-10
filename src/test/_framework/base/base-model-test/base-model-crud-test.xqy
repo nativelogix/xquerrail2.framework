@@ -218,6 +218,119 @@ declare %test:case function model-document-create-test() as item()*
   )
 };
 
+declare %test:case function model-document-create-from-xml-with-attribute-test() as item()*
+{
+  let $model6 := domain:get-model("model6")
+  let $instance6 := eval(
+    function() {
+      model:create(
+        $model6, 
+        <model6 xmlns="http://marklogic.com/model/test" score="10" id="666666">
+          <name>name-6</name>
+        </model6>
+        , 
+        $TEST-COLLECTION
+      )
+    }
+  )
+
+  let $value-id := domain:get-field-value(domain:get-model-field($model6, "id"), $instance6)
+  let $value-score := domain:get-field-value(domain:get-model-field($model6, "score"), $instance6)
+  let $value-name := domain:get-field-value(domain:get-model-field($model6, "name"), $instance6)
+  return (
+    assert:not-empty($instance6),
+    assert:equal("666666", xs:string($value-id)),
+    assert:equal(10, xs:integer($value-score)),
+    assert:equal("name-6", xs:string($value-name))
+  )
+};
+
+declare %test:case function model-document-create-from-map-with-attribute-test() as item()*
+{
+  let $model6 := domain:get-model("model6")
+  let $instance6 := eval(
+    function() {
+      model:create(
+        $model6, 
+        map:new((
+          map:entry("id", "66666666"),
+          map:entry("score", 10),
+          map:entry("name", "name-6")
+        )), 
+        $TEST-COLLECTION
+      )
+    }
+  )
+
+  let $_ := xdmp:log(("$instance6", $instance6))
+  let $value-id := domain:get-field-value(domain:get-model-field($model6, "id"), $instance6)
+  let $value-score := domain:get-field-value(domain:get-model-field($model6, "score"), $instance6)
+  let $value-name := domain:get-field-value(domain:get-model-field($model6, "name"), $instance6)
+  return (
+    assert:not-empty($instance6),
+    assert:equal("66666666", xs:string($value-id)),
+    assert:equal(10, xs:integer($value-score)),
+    assert:equal("name-6", xs:string($value-name))
+  )
+};
+
+declare %test:case function model-document-create-from-xml-with-integer-attribute-test() as item()*
+{
+  let $model7 := domain:get-model("model7")
+  let $instance7 := eval(
+    function() {
+      model:create(
+        $model7, 
+        <model7 xmlns="http://marklogic.com/model/test" score="10" id="777777">
+          <name>name-7</name>
+        </model7>
+        , 
+        $TEST-COLLECTION
+      )
+    }
+  )
+
+  let $_ := xdmp:log(("$instance7", $instance7))
+  let $value-id := domain:get-field-value(domain:get-model-field($model7, "id"), $instance7)
+  let $value-score := domain:get-field-value(domain:get-model-field($model7, "score"), $instance7)
+  let $value-name := domain:get-field-value(domain:get-model-field($model7, "name"), $instance7)
+  return (
+    assert:not-empty($instance7),
+    assert:equal("777777", xs:string($value-id)),
+    assert:equal(10, xs:integer($value-score)),
+    assert:equal("name-7", xs:string($value-name))
+  )
+};
+
+declare %test:case function model-document-create-from-map-with-integer-attribute-test() as item()*
+{
+  let $model7 := domain:get-model("model7")
+  let $instance7 := eval(
+    function() {
+      model:create(
+        $model7, 
+        map:new((
+          map:entry("id", "77777777"),
+          map:entry("score", 10),
+          map:entry("name", "name-7")
+        )), 
+        $TEST-COLLECTION
+      )
+    }
+  )
+
+  let $_ := xdmp:log(("$instance6", $instance7))
+  let $value-id := domain:get-field-value(domain:get-model-field($model7, "id"), $instance7)
+  let $value-score := domain:get-field-value(domain:get-model-field($model7, "score"), $instance7)
+  let $value-name := domain:get-field-value(domain:get-model-field($model7, "name"), $instance7)
+  return (
+    assert:not-empty($instance7),
+    assert:equal("77777777", xs:string($value-id)),
+    assert:equal(10, xs:integer($value-score)),
+    assert:equal("name-7", xs:string($value-name))
+  )
+};
+
 (:declare %test:case function get-model-references-test() as item()*
 {
   let $model1 := domain:get-model("model1")

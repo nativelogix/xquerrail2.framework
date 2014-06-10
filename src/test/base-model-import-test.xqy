@@ -5,7 +5,7 @@ import module namespace assert = "http://github.com/robwhitby/xray/assertions" a
 import module namespace domain  = "http://xquerrail.com/domain"      at "../main/_framework/domain.xqy";
 import module namespace model   = "http://xquerrail.com/model/base"  at "../main/_framework/base/base-model.xqy";
 
-declare namespace metadata = "http://marklogic.com/metadata";
+declare namespace metadata = "http://marklogic.com/mdm";
 
 declare option xdmp:mapping "false";
 
@@ -55,7 +55,7 @@ declare variable $TEST-IMPORT :=
   </program>
 </header>
 <body>
-  <program id="1234567890" xmlns="http://marklogic.com/metadata">
+  <program id="1234567890" xmlns="http://marklogic.com/mdm">
     <container1.field1>noah</container1.field1>
   </program>
 </body>

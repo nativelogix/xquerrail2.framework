@@ -307,6 +307,9 @@ declare function model:build-json(
                     else 
                         if($field/@type = "string")
                         then js:kv($field/@name,($field-value)[1])
+                        else if($field/@type = "boolean") then
+                        let $field-value := if($field-value eq "true") then fn:true() else fn:false()
+                        return js:kv($field/@name, $field-value)
                         else js:kv($field/@name, ($field-value,"")[1])
       )
      case element(domain:attribute) return

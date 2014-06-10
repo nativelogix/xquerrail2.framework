@@ -434,12 +434,18 @@ as element()?
                 let $computed-collections :=
                       model:build-collections(($model/domain:collection,$collections),$model,$update)
                 let $base-path := $model/domain:directory/text()
-                let $ext-path := model:generate-uri($base-path,$model,$update)
+                let $sub-path := $model/domain:directory/@subpath
+                let $ext-path := 
+                    if($sub-path) 
+                    then model:generate-uri($sub-path,$model,$update)
+                    else ""
                 let $path :=
-                    fn:concat(
+                    model:normalize-path(fn:concat(
+                        $base-path,
                         $ext-path,
+                        "/",
                         $field-id
-                    , ".xml")
+                    , ".xml"))
                 return (
                     xdmp:document-insert(
                          $path,
@@ -685,7 +691,6 @@ declare function model:update(
    let $id := $model//(domain:container|domain:element|domain:attribute)[@identity eq "true"]/@name
    let $identity-field := $model//(domain:element|domain:attribute)[@identity eq "true" or @type eq "identity"]
    let $identity := (domain:get-field-value($identity-field,$current))[1]
-   let $_ := xdmp:log(("model:update", "$model", $model, "$id", $id, "$identity-field", $identity-field, "$identity", $identity), "debug")
    let $persistence := fn:data($model/@persistence)
    return
      if($current) then
@@ -937,7 +942,9 @@ declare function model:build-reference(
        else ()
    return
      if($map-values) then
-        model:build-value($context, $map-values, $current-value)
+        for $value in model:build-value($context, $map-values, $current-value)
+        return 
+          element {domain:get-field-qname($context)} {($value/(@*|node()))}
      else if($partial and $current) then
         $current-value
      else ()
@@ -957,10 +964,10 @@ declare function model:build-schema-element(
    let $ns := domain:get-field-namespace($context)
    let $name := $context/@name
    return
-     element {fn:QName($ns,$name)} {
-      if($value instance of element()) then xdmp:unquote("<x>" || $value || "</x>")/x/node()
+     element {domain:get-field-qname($context)} {
+      if($value instance of element()) then $value/node()
       else if($value instance of text()) then $value
-      else if($partial and $current) then
+      else if($partial and $current) then 
         $current-value/node()
       else if($default-value) then attribute {(fn:QName($ns,$name))}{
         $default-value
@@ -991,8 +998,8 @@ declare function model:build-binary(
     let $fileType := ($context/@fileType,"auto")[1]
     let $binary := domain:get-param-value($updates,$field-id)
     let $binary := if($binary) then $binary else domain:get-param-value($updates,fn:data($context/@name))
-    let $binaryFile :=
-      if(fn:exists($binary)) then
+    let $binaryFile := 
+      if(fn:exists($binary)) then 
           if($fileType eq "xml") then
               if ($binary instance of binary ()) then
                   xdmp:unquote(xdmp:binary-decode($binary,"utf-8"))
@@ -1057,29 +1064,6 @@ declare function model:build-instance(
   let $current-values := domain:get-field-value($context,$current)
   let $update-values := domain:get-field-value($context,$updates)
   let $occurrence := $context/@occurrence
-  (:return
-  switch($value-type)
-        case "json" return
-          let $values :=
-            for $value in domain:get-field-json-value($context,$updates)
-            let $current-values := domain:get-field-xml-value($context,$current)
-            return
-              element { domain:get-field-qname($context) } {
-                model:recursive-build($model,$current,$value,$partial)/(@*|node())
-              }
-          return
-            if($values) then $values
-            else if($current-values and $partial) then $current-values
-            else ()
-        case "xml" return  (:Implement XML :)
-            for $value in domain:get-field-value($context,$updates)
-            return
-              element {domain:get-field-qname($context) } {
-                 model:recursive-build($model,$current,$value,$partial)/(@*|node())
-              }
-        case "map" return fn:error(xs:QName("INSTANCE-NOT-SUPPORTED"),"Instances are not supported my param(map:map)",$model/@name)
-        default return ()
-  :)
     (:For each value we need to find the matching node by its identity or position:)
     let $values :=
         for $value at $pos in $update-values
@@ -1261,23 +1245,28 @@ declare function model:lookup($model as element(domain:model), $params as map:ma
 declare function model:filter-list-result($field as element(),$result) {
       if($field/domain:navigation/@listable = "false")
       then ()
-      else
-        if($field/(domain:element|domain:container|domain:attribute))
-        then
+      else 
+        if($field/(domain:element|domain:container|domain:attribute|domain:model))
+        then 
           typeswitch($field)
             case element(domain:model) return
                 element {fn:QName(domain:get-field-namespace($field),$field/@name)} {
+                   for $field in $field/(domain:attribute)
+                   return model:filter-list-result($field,$result),
                    for $field in $field/(domain:element|domain:attribute|domain:container)
-                   return
-                     model:filter-list-result($field,$result)
+                   return model:filter-list-result($field,$result)
                 }
             case element(domain:element) return
                 element {fn:QName(domain:get-field-namespace,$field/@name)} {
-                   for $field in $field/(domain:element|domain:attribute|domain:container)
+                   for $field in $field/domain:attribute
+                   return model:filter-list-result($field,$result),
+                   for $field in $field/(domain:element|domain:container)
                    return model:filter-list-result($field,$result)
                 }
             case element(domain:container) return
                   element {fn:QName(domain:get-field-namespace($field),$field/@name)} {
+                     for $field in $field/domain:attribute
+                     return model:filter-list-result($field,$result),
                      for $field in $field/(domain:element|domain:attribute|domain:container)
                      return model:filter-list-result($field,$result)
                   }
@@ -1285,13 +1274,13 @@ declare function model:filter-list-result($field as element(),$result) {
                 attribute {fn:QName("",$field/@name)} {
                   domain:get-field-value($field,$result)
                 }
-            default return ()
+            default return ()                
         else domain:get-field-value($field,$result)
 };
 (:~
 : Returns a list of packageType
 : @return  element(packageType)*
-:)
+:)    
 declare function model:list($model as element(domain:model), $params as item())
 as element(list)?
 {
@@ -1363,10 +1352,14 @@ as element(list)?
                 then fn:concat("($__context__//*:",$model-sort-field,")"," descending")
                 else fn:concat("($__context__//*:",$model-sort-field,")"," ascending")
                 )
-            else ()
-        let $page     := xs:integer((domain:get-param-value($params, 'page'),1)[1])
-        let $pageSize := xs:integer((domain:get-param-value($params,'rows'),50)[1])
-        let $start    := ($page - 1) * $pageSize + 1
+            else ()       
+        (: 'start' is 1-based offset in records from 'page' which is 1-based offset in pages
+         : which is defined by 'rows'. Perfectly fine to give just start and rows :)
+        let $page-size  := $model/domain:navigation/@pageSize/fn:data(.)
+        let $pageSize := xs:integer((domain:get-param-value($params, 'rows'), $page-size, 50)[1])
+        let $page     := xs:integer((domain:get-param-value($params, 'page'),1)[1])    
+        let $start   := xs:integer((domain:get-param-value($params, 'start'),1)[1])
+        let $start    := $start + ($page - 1) * $pageSize
         let $last     :=  $start + $pageSize - 1
         let $end      := if ($total > $last) then $last else $total
         let $all := domain:get-param-value($params,"all") = "true"
@@ -1608,14 +1601,13 @@ declare function model:build-search-options(
                         if ($prop-nav/@facetable eq 'true')
                         then attribute facet { fn:true() }
                         else  attribute facet { fn:false() },
-                        <search:element name="{$prop/@name}" ns="{$ns}" >{
-                            (
-                                if ($prop instance of attribute()) then
-                                  <search:attribute name="{$prop/@name}" ns="{$ns}"/>
-                                else ()
+                        typeswitch($prop)
+                          case element(domain:attribute) return (
+                                  <search:element name="{$prop/../@name}" ns="{domain:get-field-namespace($prop/..)}"/>,
+                                  <search:attribute name="{$prop/@name}" ns=""/>
                             )
-                        }</search:element>,
-                        $facet-options
+                          default return <search:element name="{$prop/@name}" ns="{$ns}" ></search:element>
+                         , $facet-options
                   }
                 }</search:constraint>
       let $suggestOptions :=
@@ -1633,13 +1625,12 @@ declare function model:build-search-options(
                     if ($type eq 'range')
                     then attribute type { "xs:string" }
                     else (),
-                    <search:element name="{$prop/@name}" ns="{$ns}" >{
-                        (
-                            if ($prop instance of attribute()) then
-                              <search:attribute name="{$prop/@name}" ns="{$ns}"/>
-                            else ()
-                        )
-                    }</search:element>,
+                    typeswitch($prop)
+                    case element(domain:attribute) return (
+                          <search:element name="{$prop/../@name}" ns="{domain:get-field-namespace($prop/..)}"/>,
+                          <search:attribute name="{$prop/@name}" ns=""/>
+                    )
+                    default return <search:element name="{$prop/@name}" ns="{$ns}" ></search:element>,     
                     $facet-options
               }
             }</search:suggestion-source>
@@ -1669,7 +1660,21 @@ declare function model:build-search-options(
          for $prop in $properties[domain:navigation/@metadata = "true"]
          let $ns := domain:get-field-namespace($prop)
          return
-            (<search:qname elem-ns="{$ns}" elem-name="{$prop/@name}"></search:qname>)
+            (<search:qname>{
+              typeswitch($prop)
+                case element(domain:element) return
+                  (attribute elem-ns{$ns}, attribute elem-name {$prop/@name})
+                case element(domain:container) return 
+                   (attribute elem-ns{$ns}, attribute elem-name {$prop/@name})
+                case element(domain:attribute) return
+                    (
+                        attribute elem-ns{domain:get-field-namespace($prop/..)}, 
+                        attribute elem-name {$prop/../@name},
+                        attribute attr-ns {""}, 
+                        attribute attr-name {$prop/@name}
+                    )
+                default return ()
+            }</search:qname>)
 
        (:Implement a base query:)
        let $persistence := fn:data($model/@persistence)
@@ -1680,10 +1685,10 @@ declare function model:build-search-options(
                 cts:directory-query($model/domain:directory/text())
             else ()
        let $addQuery := cts:and-query((
-          $baseQuery,
-          domain:get-param-value($params,"_query")
-          (:Need to allow to pass additional query through params:)
-       ))
+            $baseQuery,
+            domain:get-param-value($params,"_query")
+            (:Need to allow to pass additional query through params:)
+          ))
        let $options :=
             <search:options>
                 <search:return-query>{fn:true()}</search:return-query>
@@ -1714,7 +1719,7 @@ declare function model:build-search-options(
  : @param $params the values to fill into the search
  : @return search response element
  :)
-declare function model:search($model as element(domain:model), $params as map:map)
+declare function model:search($model as element(domain:model), $params as item())
 as element(search:response)
 {
    let $query as xs:string* := domain:get-param-value($params, "query")
@@ -1743,7 +1748,7 @@ as element(search:response)
  : @param $params the values to fill into the search
  : @return search response element
  :)
-declare function model:suggest($model as element(domain:model), $params as map:map)
+declare function model:suggest($model as element(domain:model), $params as item())
 as xs:string*
 {
    let $options := model:build-search-options($model,$params)
@@ -1827,7 +1832,33 @@ declare function model:get-references($field as element(), $params as item()*) {
  : @param $ids a sequence of ids for models to be extracted
  : @return a sequence of packageType
  :)
-declare function model:reference($node-name as xs:string, $model as element(domain:model), $params)
+declare function model:reference(
+    $model as element(domain:model), 
+    $params as item()*) 
+as element()?
+{
+  let $keyLabel := fn:data($model/@keyLabel)
+  let $key := fn:data($model/@key)
+  let $modelReference := model:get($model,$params)
+  let $name := fn:data($model/@name)
+  return
+    if($modelReference) then
+      element {domain:get-field-namespace($model)} {
+         attribute ref-type { "model" },
+         attribute ref-uuid { $modelReference/(@*|*:uuid)/text() },
+         attribute ref-id   { fn:data($modelReference/(@*|node())[fn:local-name(.) = $key])},
+         attribute ref      { $name },
+         fn:data($modelReference/node()[fn:local-name(.) = $keyLabel])
+      }
+    else ()(: fn:error(xs:QName("INVALID-REFERENCE-ERROR"),"Invalid Reference", fn:data($model/@name)):)
+};
+(:~
+ : This function will create a reference of an existing element
+ : @node-name reference element attribute name
+ : @param $ids a sequence of ids for models to be extracted
+ : @return a sequence of packageType
+ :)
+declare function model:instance($node-name as xs:string, $model as element(domain:model), $params)
 as element()?
 {
   let $keyLabel := fn:data($model/@keyLabel)
@@ -2543,3 +2574,12 @@ declare function build-simple(
             }
         default return fn:error(xs:QName("UNSUPPORTED-FIELD-TYPE"),"Cannot Support field Type",fn:node-name($context))
  };
+ (:Normalizes the path to ensure // are removed:)
+ declare function model:normalize-path($path as xs:string) {
+     let $computed := fn:string-join(fn:tokenize($path,"/+")[. ne ""],"/")
+     return
+      if(fn:starts-with($computed,"/"))
+      then $computed
+      else fn:concat("/",$computed)
+    
+ }; 

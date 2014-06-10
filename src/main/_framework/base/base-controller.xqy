@@ -185,7 +185,11 @@ declare function controller:info() {
  :)
 declare function controller:create() {(
   xdmp:log(("controller:create::",request:params()),"debug"),
-  model:create(controller:model(),request:params())
+  let $params := 
+     if(fn:exists(request:body())) then request:body()
+     else request:params()
+  return
+    model:create(controller:model(),$params)
 )};
 
 (:~

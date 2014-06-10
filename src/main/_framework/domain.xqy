@@ -188,13 +188,30 @@ declare function domain:get-model-identity-field($model as element(domain:model)
   let $key := fn:concat($model/@name , ":identity")
   let $cache := domain:get-identity-cache($key)
   return
-    if($cache) then fn:exactly-one($cache)
+    if($cache) then $cache[1]
     else 
     let $id-field := $model//(domain:element|domain:attribute)[fn:node-name(.) = $DOMAIN-NODE-FIELDS][@identity eq "true" or @type =( "identity","id")]
     return 
      (
      domain:set-identity-cache($key,$id-field),
-     fn:exactly-one($id-field)
+     $id-field[1]
+    )
+};
+(:~
+ : Returns the field that is the identity key for a given model.
+ : @param $model - The model to extract the given identity field
+ :)
+declare function domain:get-model-keylabel-field($model as element(domain:model)) {
+  let $key := fn:concat($model/@name , ":keyLabel")
+  let $cache := domain:get-identity-cache($key)
+  return
+    if($cache) then fn:exactly-one($cache)
+    else 
+    let $key-field := $model//(domain:element|domain:attribute)[fn:local-name(.) = $model/@keyLabel][1]
+    return 
+     (
+     domain:set-identity-cache($key,$key-field),
+     fn:exactly-one($key-field)
     )
 };
 (:~
@@ -282,7 +299,6 @@ declare function domain:get-field-prefix($field as element()) {
                $prefix
             )
 };
-
 (:~
  : Returns the field that matches the given field name or key
  : @param $model - The model to extract the given field
@@ -844,15 +860,14 @@ declare function domain:get-field-reference-model(
 declare function domain:get-field-xpath(
   $field as element()
 ) {
-  domain:get-field-xpath($field/ancestor::domain:model, domain:get-field-id($field))
-(:    fn:string-join(
+    fn:string-join(
     for $path in $field/ancestor-or-self::*[fn:node-name(.) = $DOMAIN-NODE-FIELDS]
     return 
      typeswitch($path)
       case element(domain:attribute) return fn:concat("/@",$path/@name)
       default return  fn:concat("/*:",$path/@name)
     ,"")
-:)};
+};
 
 (:~
  : Returns the xpath expression for a given field by its id/name key
@@ -1064,21 +1079,19 @@ declare function domain:get-model-reference-key(
 declare function domain:get-model-references(
     $domain-model as element(domain:model)
 ) {
-  let $domain-name := ($domain-model/ancestor::domain:domain/domain:name)[1]
-  let $domain := config:get-domain($domain-name)
-  (: let $domain := config:get-domain($domain-model/ancestor::domain:domain/domain:name) :)
-  let $reference-key := domain:get-model-reference-key($domain-model)
-  let $reference-models := 
-      $domain/domain:model
-      (:[//cts:element/@reference = $reference-key]:)
-      [cts:contains(.,
-          cts:element-attribute-value-query(
-              xs:QName("domain:element"),
-              xs:QName("reference"),
-              $reference-key)
-      )]
-  return
-    $reference-models
+    let $domain := config:get-domain($domain-model/ancestor::domain:domain/domain:name[1])
+    let $reference-key := domain:get-model-reference-key($domain-model)
+    let $reference-models := 
+        $domain/domain:model
+        (:[//cts:element/@reference = $reference-key]:)
+        [cts:contains(.,
+            cts:element-attribute-value-query(
+                xs:QName("domain:element"),
+                xs:QName("reference"),
+                $reference-key)
+        )]
+    return
+      $reference-models
 };
 
 (:~
@@ -1375,7 +1388,6 @@ declare function domain:get-identity-query(
          default return fn:error(xs:QName("PERSISTENCE-QUERY-ERROR"),"Identity Error")
       
 };
-
 declare function domain:get-keylabel-query(
     $model as element(domain:model),
     $params as item()
@@ -1400,7 +1412,6 @@ declare function domain:get-keylabel-query(
          default return fn:error(xs:QName("PERSISTENCE-QUERY-ERROR"),"KeyLabel Error")
       
 };
-
 (:~
  : Returns the base query for a given model
  : @param $model  name of the model for the given base-query
@@ -1636,7 +1647,7 @@ $base-path as xs:string?
                     case "model" return 
                       if($include-root) then "/json:object"
                       else ""
-                    case "container" return fn:concat("json:entry[@key = '",$path/@name,"']/json:value/json:object")
+                    case "container" return fn:concat("json:entry[@key = '",$key,"']/json:value/json:object")
                     default return fn:error(xs:QName("JSON-PATH-ERROR"),"Unknown Path Type",$base-type)
      ) ,"/")
 };
@@ -1648,10 +1659,8 @@ declare function domain:get-field-value(
     $field as element(),
     $value as item()?
     ) as item()* {
-    if ($field instance of element(domain:model)) then
-      ()
-    else
-      let $return-value := 
+    if ($field instance of element(domain:model)) then () else
+    let $return-value := 
         typeswitch($value)
           case json:object          return domain:get-field-json-value($field,$value)
           case json:array           return domain:get-field-json-value($field,$value)
@@ -1660,6 +1669,7 @@ declare function domain:get-field-value(
           case element(map:map)     return domain:get-field-param-value($field,map:map($value))
           case map:map              return domain:get-field-param-value($field,$value)
           case element()            return domain:get-field-xml-value($field,$value) 
+          case document-node()      return domain:get-field-xml-value($field,$value/element())
           case empty-sequence() return ()
           default return (:fn:error((),"Unknown Value Type",$value):)
           $value
@@ -1805,10 +1815,14 @@ declare function domain:get-param-value(
     $key as xs:string*
 ) {
   switch(domain:get-value-type($params))
-    case "json" return if($params instance of json:object) then <x>{$params}</x>//json:entry[@key = $key]//json:value/node() else $params//json:entry[@key = $key]//json:value/node()
+    case "json" return 
+        if($params instance of json:object) 
+        then <x>{$params}</x>//json:entry[@key = $key]//json:value/node() 
+        else $params//json:entry[@key = $key]//json:value/node()
     case "param" return map:get($params,$key)
-    case "xml" return  $params//*[@local-name = $key]/node()
+    case "xml" return  $params//*[fn:local-name(.) = $key]/node()
     default return ()
+
 };
 (:~
  : 
@@ -1829,3 +1843,113 @@ declare function domain:model-exists(
    fn:exists(config:get-domain($application-name)//domain:model[@name = $model-name])
 };
 
+(:~
+ : Returns whether the module exists or not.
+ :)
+declare function domain:module-exists(
+    $module-location as xs:string
+) as xs:boolean {
+	if (xdmp:modules-database() ne 0) then
+		xdmp:eval(fn:concat('fn:doc-available("', $module-location, '")'), (),
+			<options xmlns="xdmp:eval">
+				<database>{xdmp:modules-database()}</database>
+			</options>
+		)
+	else
+		xdmp:uri-is-file($module-location)
+};
+
+(:~
+ : Checks that a given module function exists or not
+ : $function-arity is optional
+ :)
+declare function domain:module-function-exists(
+$module-namespace as xs:string,
+$module-location as xs:string,
+$function-name as xs:string,
+$function-arity as xs:integer?
+) as xs:boolean {
+   let $eval := 
+      <node>import module namespace func = '{$module-namespace}' at '{$module-location}';
+      { if( fn:empty( $function-arity ) )
+       then <call>fn:function-available("func:{$function-name}")</call>
+       else <call>fn:function-available("func:{$function-name}", {$function-arity})</call>
+      }
+     </node>
+   return      
+    try { xdmp:eval( $eval ) }
+    catch($ex) {(
+       if($ex//error:code = (("XDMP-IMPMODNS","SVC-FILOPN")))
+         then xdmp:log(fn:concat("action-not-exist::",$module-location,"({",$module-namespace,"}:",$function-name,"::",$ex//error:format-string),"debug")
+         else xdmp:rethrow() 
+       ,fn:false()
+    )}
+};
+
+(:
+ : get a module function  (generic)
+ : this should be refactored along with the module code in domain.xqy
+ : @author jjl
+ :)
+ declare function domain:get-module-function(
+    $module-namespace as xs:string,
+    $module-location as xs:string,
+    $function-name as xs:string,
+    $function-arity as xs:integer?
+ ) as xdmp:function? {
+    if( domain:module-exists( $module-location ) 
+        and domain:module-function-exists( $module-namespace, $module-location, $function-name, $function-arity ) )
+    then xdmp:function( fn:QName( $module-namespace, $function-name ), $module-location )
+    else ()    
+ };
+
+(:
+ : get a model-module-specific model function
+ : @author jjl
+ :)
+ declare function domain:get-model-module-function(
+    $application-name as xs:string?,
+    $model-name as xs:string,
+    $action as xs:string
+ ) as xdmp:function? {
+    let $application := config:get-application( ($application-name, config:default-application())[1] )
+    let $module-namespace := fn:concat($application/@namespace,'/model/', $model-name)
+    let $module-location  := fn:concat($application/@uri,'/models/', $model-name,'-model.xqy')
+    return
+        domain:get-module-function( $module-namespace, $module-location, $action, 2 )
+ };
+ 
+ (:
+  : This needs to figure in any _extension/model.extension.xqy
+  : Perhaps a better name than get-base-model-function would be get-model-default-function
+  : Either that or we add get-model-extension-function and put that in the sequence in 
+  : get-model-function
+  :)
+ declare function domain:get-model-base-function(
+     $action as xs:string
+ ) as xdmp:function? {
+    let $module-namespace := "http://xquerrail.com/model/base"
+    let $module-location  := config:get-base-model-location('')
+    return
+        domain:get-module-function( $module-namespace, $module-location, $action, 2 )
+ };
+ 
+ (:
+ : get a model function, either from model-module or base-module
+ :
+ :)
+ declare function domain:get-model-function(
+    $application-name as xs:string?,
+    $model-name as xs:string,
+    $action as xs:string,
+    $fatal as xs:boolean?
+ ) as xdmp:function? {
+    (
+        domain:get-model-module-function( $application-name, $model-name, $action ),
+        (: domain:get-model-extension-function(..), :)
+        domain:get-model-base-function( $action ),
+        if( $fatal )
+            then fn:error(xs:QName("ACTION-NOT-EXISTS"), "The action '" || $action || "' for model '" || $model-name || "' does not exist")
+            else ()
+    )[1]
+};

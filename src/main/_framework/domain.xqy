@@ -1165,7 +1165,7 @@ declare function domain:get-model-reference-query(
            case "directory" return cts:directory-query($reference-model/domain:directory,"infinity")
            case "document" return cts:document-query($reference-model/domain:document)
            case "singleton" return cts:document-query($reference-model/domain:document)
-           default return fn:error(xs:QName("PERSISTENCE-NOT-QUERYABLE"),"Cannot query against persistence",$reference-model/@persistence)
+           default return ()
     return 
       cts:and-query((
         $base-constraint,

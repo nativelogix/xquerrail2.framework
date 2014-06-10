@@ -25,4 +25,10 @@
     <element name="id" type="string" label="Id"></element> 
     <element name="name" type="string" label="Name"/>
   </model>
+  <model name="model5" persistence="directory" label="Model #5" extends="base" namespace-uri="http://marklogic.com/model/model5" key="uuid" keyLabel="id">
+    <directory>/test/model5/</directory>
+    <element name="id" type="string" label="Id"></element> 
+    <element name="name" type="string" label="Name"/>
+    <element name="model1" type="model1" label="Model #1"/>
+  </model>
 </domain>

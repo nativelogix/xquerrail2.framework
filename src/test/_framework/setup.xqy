@@ -15,3 +15,17 @@ declare function teardown() as item()*
 {
   app:reset()
 };
+
+declare function eval($fn as function(*)) {
+  xdmp:invoke-function(
+    function() {
+      xdmp:apply($fn)
+      ,
+      xdmp:commit()
+    },
+    <options xmlns="xdmp:eval">
+      <transaction-mode>update</transaction-mode>
+    </options>
+  )
+};
+

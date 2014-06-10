@@ -14,6 +14,8 @@ var es   = require('event-stream')
 var xray = require('gulp-xray-runner')
 var argv = require('yargs').argv;
 var mocha = require('gulp-mocha');
+var watch = require('gulp-watch');
+var plumber = require('gulp-plumber');
 
 var ml;
 try {
@@ -99,6 +101,14 @@ gulp.task('bump', function () {
   return gulp.src(['./package.json'])
     .pipe(bump())
     .pipe(gulp.dest('./'));
+});
+
+gulp.task('watch-update-xqy', function()  {
+  gulp.src(['src/main/**/*.xqy'])
+    .pipe(watch())
+    .pipe(plumber()) // This will keeps pipes working after error event
+    .pipe(header(fs.readFileSync('header.txt', 'utf8')))
+    .pipe(gulp.dest('./dist'));
 });
 
 // gulp.task('npm', function (done) {

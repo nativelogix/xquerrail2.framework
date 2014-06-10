@@ -1,9 +1,3 @@
-(:
-Copyright 2014 MarkLogic Corporation
-
-XQuerrail - blabla
-:)
-
 xquery version "1.0-ml";
 (:~
 : Model : Base
@@ -377,10 +371,7 @@ as element()?
   return
       (: Check if the document exists  first before trying to create it :)
       if ($current) then
-          fn:error(xs:QName("DOCUMENT-EXISTS"),fn:concat("The document already exists. ID : %1 at %2"),
-            ($current/*[fn:local-name(.) = $id],
-              xdmp:node-uri($current))
-             )
+          fn:error(xs:QName("DOCUMENT-EXISTS"), "The document already exists. ID : "|| $current/*[fn:local-name(.) = $id] ||" at " || xdmp:node-uri($current))
       else
         let $identity := model:generate-uuid()
         (: Validate the parameters before trying to build the document :)
@@ -534,7 +525,8 @@ declare function model:get(
     else domain:get-param-value($params,"uri")
   let $identity-map := map:new((
     map:entry($identity-field-name, $id-value),
-    map:entry($keylabel-field/@name,$id-value)
+    map:entry($keylabel-field/@name,$id-value),
+    map:entry($keylabel-field/@name,domain:get-field-value($keylabel-field,$params))
   ))
   let $persistence := $model/@persistence
   let $identity-query :=
@@ -618,7 +610,7 @@ declare function model:reference-by-keylabel(
 };
 declare function model:update-partial(
     $model as element(domain:model),
-    $params as map:map
+    $params as item()
 ) {
     model:update-partial($model,$params,())
 };
@@ -627,7 +619,7 @@ declare function model:update-partial(
  :)
 declare function model:update-partial(
     $model as element(domain:model),
-    $params as map:map,
+    $params as item(),
     $collections as xs:string*
 ){
    let $current := model:get($model,$params)
@@ -1114,7 +1106,7 @@ declare function model:build-triple(
 ~:)
 declare function model:delete(
     $model as element(domain:model),
-    $params as map:map
+    $params as item()
 ) as xs:boolean
 {
   let $current := model:get($model,$params)
@@ -2122,9 +2114,9 @@ declare function model:convert-to-map(
       for $field in $model//(domain:element|domain:attribute)
         let $field-name := domain:get-field-name-key($field)
         let $xpath := fn:string-join(domain:get-field-xpath($field), "")
-        let $value := xdmp:value("$current" || $xpath || "/text()")
+        let $value := xdmp:value("$current" || $xpath || "/fn:string()")
         return
-          map:put($params, domain:get-field-name-key($field), $value)
+          map:put($params, $field-name, $value)
     return $params
 };
 

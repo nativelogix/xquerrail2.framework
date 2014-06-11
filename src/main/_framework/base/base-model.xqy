@@ -1794,7 +1794,7 @@ declare function model:get-references($field as element(), $params as item()*) {
         let $map := map:new((
           map:entry($identity-field-name, $param)
         ))
-        return $funct($node-name, $model, $map)
+        return $funct($model, $map)
     else
       fn:error(xs:QName("ERROR"), "No Reference function avaliable.")
  };
@@ -1835,7 +1835,7 @@ as element()?
   let $name := fn:data($model/@name)
   return
     if($modelReference) then
-      element {domain:get-field-namespace($model)} {
+      element {domain:get-field-qname($model)} {
          attribute ref-type { "model" },
          attribute ref-uuid { $modelReference/(@*|*:uuid)/text() },
          attribute ref-id   { fn:data($modelReference/(@*|node())[fn:local-name(.) = $key])},

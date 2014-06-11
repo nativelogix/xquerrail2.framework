@@ -75,7 +75,7 @@ declare %test:case function model-reference-test() as item()*
   let $identity-field := domain:get-model-identity-field($model1)
   let $identity-value := xs:string(domain:get-field-value($identity-field, $model1-instance))
   let $itentity-map := map:new((map:entry(domain:get-model-identity-field-name($model1), $identity-value)))
-  let $reference := model:reference("model1", $model1, $itentity-map)
+  let $reference := model:reference($model1, $itentity-map)
   return (
     assert:not-empty($reference)
   )
@@ -119,7 +119,6 @@ declare %test:case function build-reference-test() {
     $model2, 
     $map, 
     $TEST-COLLECTION)
-  let $_ := xdmp:log(("$model2-instance", $model2-instance))
 (:  let $_ := xdmp:log(("model:reference", model:reference($model1, $itentity-map))):)
 (:  let $_ := xdmp:log(("model:get($model1, $identity-value)", model:get($model1, map:new((map:entry("uuid", $identity-value)))))):)
   return assert:not-empty($model2-instance) 
@@ -133,6 +132,29 @@ declare %test:case function build-reference-different-name-test() {
   let $identity-field := domain:get-model-identity-field($model1)
   let $identity-value := xs:string(domain:get-field-value($identity-field, $model1-instance))
   let $reference-field := domain:get-model-field($model3, $reference-field-name)
+  let $model3-instance := 
+    model:new(
+      $model3,
+      <model3 xmlns="http://marklogic.com/model/model3">
+        <dummyModel>{$identity-value}</dummyModel>
+      </model3>
+    )
+  let $reference-field := domain:get-model-field($model3, "dummyModel")
+  return 
+  (
+    assert:not-empty($model3-instance/*:dummyModel, "model3 should have dummyModel element name"),
+    assert:equal(domain:get-field-value(domain:get-model-field($model3, "dummyModel"), $model3-instance)/fn:string(), domain:get-field-value(domain:get-model-keylabel-field($model1), $model1-instance)/fn:string())
+  )
+};
+
+declare %test:case function reference-function-test() {
+  let $reference-field-name := "dummyModel"
+  let $model1 := domain:get-model("model1")
+  let $model3 := domain:get-model("model3")
+  let $model1-instance := model:find($model1, map:new((map:entry("id", "model1-id"))))
+  let $identity-field := domain:get-model-identity-field($model1)
+  let $identity-value := xs:string(domain:get-field-value($identity-field, $model1-instance))
+  let $reference-field := domain:get-model-field($model3, $reference-field-name)
   let $model1-reference := model:get-model-references($reference-field, $identity-value)
-  return assert:equal(fn:local-name($model1-reference), $reference-field-name) 
+  return assert:equal(fn:local-name($model1-reference), "model1") 
 };

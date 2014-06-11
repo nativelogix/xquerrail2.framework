@@ -1,3 +1,19 @@
+(:
+: Copyright 2011 - NativeLogix
+:
+: Licensed under the Apache License, Version 2.0 (the "License");
+: you may not use this file except in compliance with the License.
+: You may obtain a copy of the License at
+:
+: http://www.apache.org/licenses/LICENSE-2.0
+:
+: Unless required by applicable law or agreed to in writing, software
+: distributed under the License is distributed on an "AS IS" BASIS,
+: WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+: See the License for the specific language governing permissions and
+: limitations under the License.
+:)
+
 xquery version "1.0-ml";
 (:~
  : The base controller is responsible for all domain controller functions.
@@ -185,8 +201,10 @@ declare function controller:info() {
  :)
 declare function controller:create() {(
   xdmp:log(("controller:create::",request:params()),"debug"),
+  let $body := request:body()
   let $params := 
-     if(fn:exists(request:body())) then request:body()
+     if(fn:exists(request:body())) 
+     then if($body instance of binary() and xdmp:binary-size($body) gt 0) then  request:body() else request:params()
      else request:params()
   return
     model:create(controller:model(),$params)

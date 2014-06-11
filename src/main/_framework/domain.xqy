@@ -1970,3 +1970,19 @@ $function-arity as xs:integer?
             else ()
     )[1]
 };
+
+declare function domain:get-models (
+) as element(domain:model)* {
+   domain:get-models(domain:get-default-application(), fn:false())
+};
+
+declare function domain:get-models (
+  $application as xs:string,
+  $include-abstract as xs:boolean
+) as element(domain:model)* {
+  if ($include-abstract) then
+    config:get-domain($application)/domain:model
+  else
+    config:get-domain($application)/domain:model[@persistence != 'abstract']
+};
+

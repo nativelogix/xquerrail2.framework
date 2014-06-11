@@ -1242,24 +1242,23 @@ declare function model:filter-list-result($field as element(),$result) {
         then 
           typeswitch($field)
             case element(domain:model) return
-                element {fn:QName(domain:get-field-namespace($field),$field/@name)} {
+                element {domain:get-field-qname($field)} {
                    for $field in $field/(domain:attribute)
-                   return model:filter-list-result($field,$result),
-                   for $field in $field/(domain:element|domain:attribute|domain:container)
-                   return model:filter-list-result($field,$result)
-                }
-            case element(domain:element) return
-                element {fn:QName(domain:get-field-namespace,$field/@name)} {
-                   for $field in $field/domain:attribute
                    return model:filter-list-result($field,$result),
                    for $field in $field/(domain:element|domain:container)
                    return model:filter-list-result($field,$result)
                 }
+            case element(domain:element) return
+                element {domain:get-field-qname($field)} {
+                   for $field in $field/domain:attribute
+                   return model:filter-list-result($field,$result),
+                   domain:get-field-value($field,$result)/node()
+                }
             case element(domain:container) return
-                  element {fn:QName(domain:get-field-namespace($field),$field/@name)} {
+                  element {domain:get-field-qname($field)} {
                      for $field in $field/domain:attribute
                      return model:filter-list-result($field,$result),
-                     for $field in $field/(domain:element|domain:attribute|domain:container)
+                     for $field in $field/(domain:element|domain:container)
                      return model:filter-list-result($field,$result)
                   }
             case element(domain:attribute) return
@@ -1269,6 +1268,7 @@ declare function model:filter-list-result($field as element(),$result) {
             default return ()                
         else domain:get-field-value($field,$result)
 };
+
 (:~
 : Returns a list of packageType
 : @return  element(packageType)*

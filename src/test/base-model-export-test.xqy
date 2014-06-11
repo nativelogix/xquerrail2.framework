@@ -5,7 +5,7 @@ import module namespace assert = "http://github.com/robwhitby/xray/assertions" a
 import module namespace domain  = "http://xquerrail.com/domain"      at "../main/_framework/domain.xqy";
 import module namespace model   = "http://xquerrail.com/model/base"  at "../main/_framework/base/base-model.xqy";
 
-declare namespace metadata = "http://marklogic.com/metadata";
+declare namespace mdm = "http://marklogic.com/mdm";
 
 declare option xdmp:mapping "false";
 
@@ -71,13 +71,13 @@ declare %test:ignore function test-export-all-fields() as item()*
   return 
   (
     assert:not-empty($table),
-    assert:true(fn:exists($table/header/metadata:program[1]/metadata:field1)),
-    assert:false(fn:exists($table/header/metadata:program[1]/metadata:field2)),
-    assert:true(fn:exists($table/header/metadata:program[1]/metadata:field3)),
-    assert:true(fn:exists($table/body/metadata:program[1]/metadata:field1)),
-    assert:false(fn:exists($table/body/metadata:program[1]/metadata:field2)),
-    assert:true(fn:exists($table/body/metadata:program[1]/metadata:field3)),
-    assert:equal(fn:count($table/body/metadata:program), fn:count($TEST-DOCUMENTS))
+    assert:true(fn:exists($table/header/mdm:program[1]/mdm:field1)),
+    assert:false(fn:exists($table/header/mdm:program[1]/mdm:field2)),
+    assert:true(fn:exists($table/header/mdm:program[1]/mdm:field3)),
+    assert:true(fn:exists($table/body/mdm:program[1]/mdm:field1)),
+    assert:false(fn:exists($table/body/mdm:program[1]/mdm:field2)),
+    assert:true(fn:exists($table/body/mdm:program[1]/mdm:field3)),
+    assert:equal(fn:count($table/body/mdm:program), fn:count($TEST-DOCUMENTS))
   )
 };
 
@@ -89,13 +89,13 @@ declare %test:ignore function test-export-with-fields-filter() as item()*
   return 
   (
     assert:not-empty($table),
-    assert:true(fn:exists($table/header/metadata:program[1]/metadata:field1)),
-    assert:false(fn:exists($table/header/metadata:program[1]/metadata:field2)),
-    assert:false(fn:exists($table/header/metadata:program[1]/metadata:field3)),
-    assert:true(fn:exists($table/body/metadata:program[1]/metadata:field1)),
-    assert:false(fn:exists($table/body/metadata:program[1]/metadata:field2)),
-    assert:false(fn:exists($table/body/metadata:program[1]/metadata:field3)),
-    assert:equal(fn:count($table/body/metadata:program), fn:count($TEST-DOCUMENTS))
+    assert:true(fn:exists($table/header/mdm:program[1]/mdm:field1)),
+    assert:false(fn:exists($table/header/mdm:program[1]/mdm:field2)),
+    assert:false(fn:exists($table/header/mdm:program[1]/mdm:field3)),
+    assert:true(fn:exists($table/body/mdm:program[1]/mdm:field1)),
+    assert:false(fn:exists($table/body/mdm:program[1]/mdm:field2)),
+    assert:false(fn:exists($table/body/mdm:program[1]/mdm:field3)),
+    assert:equal(fn:count($table/body/mdm:program), fn:count($TEST-DOCUMENTS))
   )
 };
 
@@ -109,15 +109,15 @@ declare %test:ignore function test-export-with-convert-attributes-true() as item
   return 
   (
     assert:not-empty($table),
-    assert:true(fn:exists($table/header/metadata:program[1]/metadata:id)),
-    assert:true(fn:exists($table/header/metadata:program[1]/metadata:field1)),
-    assert:false(fn:exists($table/header/metadata:program[1]/metadata:field2)),
-    assert:true(fn:exists($table/header/metadata:program[1]/metadata:field3)),
-    assert:true(fn:exists($table/body/metadata:program[1]/metadata:id)),
-    assert:true(fn:exists($table/body/metadata:program[1]/metadata:field1)),
-    assert:false(fn:exists($table/body/metadata:program[1]/metadata:field2)),
-    assert:true(fn:exists($table/body/metadata:program[1]/metadata:field3)),
-    assert:equal(fn:count($table/body/metadata:program), fn:count($TEST-DOCUMENTS))
+    assert:true(fn:exists($table/header/mdm:program[1]/mdm:id)),
+    assert:true(fn:exists($table/header/mdm:program[1]/mdm:field1)),
+    assert:false(fn:exists($table/header/mdm:program[1]/mdm:field2)),
+    assert:true(fn:exists($table/header/mdm:program[1]/mdm:field3)),
+    assert:true(fn:exists($table/body/mdm:program[1]/mdm:id)),
+    assert:true(fn:exists($table/body/mdm:program[1]/mdm:field1)),
+    assert:false(fn:exists($table/body/mdm:program[1]/mdm:field2)),
+    assert:true(fn:exists($table/body/mdm:program[1]/mdm:field3)),
+    assert:equal(fn:count($table/body/mdm:program), fn:count($TEST-DOCUMENTS))
   )
 };
 
@@ -131,15 +131,15 @@ declare %test:ignore function test-export-with-convert-attributes-false() as ite
   return 
   (
     assert:not-empty($table),
-    assert:true(fn:exists($table/header/metadata:program[1]/metadata:id)),
-    assert:true(fn:exists($table/header/metadata:program[1]/metadata:field1)),
-    assert:false(fn:exists($table/header/metadata:program[1]/metadata:field2)),
-    assert:true(fn:exists($table/header/metadata:program[1]/metadata:field3)),
-    assert:true(fn:exists($table/body/metadata:program[1]/@id)),
-    assert:false(fn:exists($table/body/metadata:program[1]/metadata:id)),
-    assert:true(fn:exists($table/body/metadata:program[1]/metadata:field1)),
-    assert:false(fn:exists($table/body/metadata:program[1]/metadata:field2)),
-    assert:true(fn:exists($table/body/metadata:program[1]/metadata:field3)),
-    assert:equal(fn:count($table/body/metadata:program), fn:count($TEST-DOCUMENTS))
+    assert:true(fn:exists($table/header/mdm:program[1]/mdm:id)),
+    assert:true(fn:exists($table/header/mdm:program[1]/mdm:field1)),
+    assert:false(fn:exists($table/header/mdm:program[1]/mdm:field2)),
+    assert:true(fn:exists($table/header/mdm:program[1]/mdm:field3)),
+    assert:true(fn:exists($table/body/mdm:program[1]/@id)),
+    assert:false(fn:exists($table/body/mdm:program[1]/mdm:id)),
+    assert:true(fn:exists($table/body/mdm:program[1]/mdm:field1)),
+    assert:false(fn:exists($table/body/mdm:program[1]/mdm:field2)),
+    assert:true(fn:exists($table/body/mdm:program[1]/mdm:field3)),
+    assert:equal(fn:count($table/body/mdm:program), fn:count($TEST-DOCUMENTS))
   )
 };

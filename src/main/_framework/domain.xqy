@@ -231,8 +231,9 @@ declare function domain:get-model-identity-query(
         cts:element-range-query(
           fn:QName($id-ns,$id-field/@name),
           "=",
-          $value)
-        
+          $value,
+          ("collation="  || domain:get-field-collation($id-field))
+        )
       case element(domain:attribute) return 
         let $parent-elem := $id-field/parent::*[domain:element|domain:model]
         let $parent-ns   := domain:get-field-namespace($parent-elem)
@@ -241,7 +242,8 @@ declare function domain:get-model-identity-query(
               fn:QName($parent-ns,$parent-elem/@name),
               fn:QName("",$id-field/@name),
               "=",
-              $value
+              $value,
+              ("collation="  || domain:get-field-collation($id-field))
           )
       default return 
         fn:error(
@@ -1378,13 +1380,15 @@ declare function domain:get-identity-query(
                 domain:get-field-qname($identity-field/..),
                 domain:get-field-qname($identity-field),
                 "=",
-                domain:get-param-value($params,$identity-field/@name)
+                domain:get-param-value($params,$identity-field/@name),
+                ("collation="  || domain:get-field-collation($identity-field))
             )
          case element(domain:element) return
            cts:element-range-query(
               domain:get-field-qname($identity-field),
               "=",
-              domain:get-param-value($params,$identity-field/@name)
+              domain:get-param-value($params,$identity-field/@name),
+              ("collation="  || domain:get-field-collation($identity-field))
            )
          default return fn:error(xs:QName("PERSISTENCE-QUERY-ERROR"),"Identity Error")
       
@@ -1403,12 +1407,15 @@ declare function domain:get-keylabel-query(
                 "=",(
                 domain:get-param-value($params,$key-field/@name),
                 domain:get-param-value($params,$key-field/@name)
-            ))
+                ),
+                ("collation="  || domain:get-field-collation($key-field))
+            )
          case element(domain:element) return
            cts:element-range-query(
               domain:get-field-qname($key-field),
               "=",
-              domain:get-param-value($params,$key-field/@name)
+              domain:get-param-value($params,$key-field/@name),
+              ("collation="  || domain:get-field-collation($key-field))
            )
          default return fn:error(xs:QName("PERSISTENCE-QUERY-ERROR"),"KeyLabel Error")
       

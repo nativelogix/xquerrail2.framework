@@ -1850,23 +1850,21 @@ as element()?
  : @param $ids a sequence of ids for models to be extracted
  : @return a sequence of packageType
  :)
-declare function model:instance($node-name as xs:string, $model as element(domain:model), $params)
-as element()?
-{
-  let $keyLabel := fn:data($model/@keyLabel)
+declare function model:instance(
+  $model as element(domain:model), 
+  $params as item()*
+) {
   let $key := fn:data($model/@key)
   let $modelReference := model:get($model,$params)
   let $name := fn:data($model/@name)
-  let $ns := domain:get-field-namespace($model)
-  let $qname := fn:QName($ns,$node-name)
   return
     if($modelReference) then
-      element { $qname } {
+      element { domain:get-field-qname($model) } {
          attribute ref-type { "model" },
          attribute ref-uuid { $modelReference/(@*|*:uuid)/text() },
          attribute ref-id   { fn:data($modelReference/(@*|node())[fn:local-name(.) = $key])},
          attribute ref      { $name },
-         fn:data($modelReference/node()[fn:local-name(.) = $keyLabel])
+         $modelReference/node()
       }
     else ()(: fn:error(xs:QName("INVALID-REFERENCE-ERROR"),"Invalid Reference", fn:data($model/@name)):)
 };

@@ -1055,7 +1055,7 @@ declare function model:build-instance(
   let $model := domain:get-model($context/@type)
   let $current-values := domain:get-field-value($context,$current)
   let $update-values := domain:get-field-value($context,$updates)
-  let $occurrence := $context/@occurrence
+  let $occurrence := ($context/@occurrence,"?")
     (:For each value we need to find the matching node by its identity or position:)
     let $values :=
         for $value at $pos in $update-values
@@ -1071,7 +1071,7 @@ declare function model:build-instance(
           }
    return
      if($values) then
-        if($context/@occurrence = ("?","*"))
+        if($occurrence = ("?","*"))
         then $values
         else ()
      else if(fn:exists($current-values) and $partial) then $current-values
@@ -2112,7 +2112,7 @@ declare function model:convert-to-map(
       for $field in $model//(domain:element|domain:attribute)
         let $field-name := domain:get-field-name-key($field)
         let $xpath := fn:string-join(domain:get-field-xpath($field), "")
-        let $value := xdmp:value("$current" || $xpath || "/fn:string()")
+        let $value := xdmp:value("$current" || $xpath || "/fn:data()")
         return
           map:put($params, $field-name, $value)
     return $params

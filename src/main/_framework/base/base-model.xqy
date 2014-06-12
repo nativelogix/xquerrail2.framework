@@ -371,7 +371,7 @@ as element()?
   return
       (: Check if the document exists  first before trying to create it :)
       if ($current) then
-          fn:error(xs:QName("DOCUMENT-EXISTS"), "The document already exists. ID : "|| $current/*[fn:local-name(.) = $id] ||" at " || xdmp:node-uri($current))
+          fn:error(xs:QName("DOCUMENT-EXISTS"), text{"The document already exists.", "model:", $model/@name, "- key:", domain:get-field-value(domain:get-model-keyLabel-field($model), $current)})
       else
         let $identity := model:generate-uuid()
         (: Validate the parameters before trying to build the document :)

@@ -82,6 +82,8 @@ declare function engine:render()
      if(response:content-type())
      then xdmp:set-response-content-type(response:content-type())
      else xdmp:set-response-content-type("text/xml"),
+     if(response:response-code()) then xdmp:set-response-code(response:response-code()[1], response:response-code()[2])
+     else (),
      let $view := response:view()
      let $exists := engine:view-exists($view)
      return

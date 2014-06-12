@@ -43,4 +43,17 @@
     <attribute name="score" type="integer" label="Score"></attribute>
     <element name="name" type="string" label="Name"/>
   </model>
+  <model name="abstract1" persistence="abstract" label="Abstract" extends="base" key="uuid" keyLabel="id">
+    <directory>/test/model7/</directory>
+    <attribute name="id" type="id"/> 
+    <attribute name="flag2" type="boolean" label="Flag #2"></attribute>
+    <attribute name="score" type="integer" label="Score"></attribute>
+    <element name="flag" type="boolean" label="Flag"/>
+    <element name="name" type="string" label="Name"/>
+  </model>
+  <model name="model8" persistence="directory" label="Model #8" extends="base" key="uuid" keyLabel="id">
+    <directory>/test/model8/</directory>
+    <attribute name="id" type="string" label="Id"></attribute> 
+    <element name="abstract" type="abstract1" label="Abstract"/>
+  </model>
 </domain>

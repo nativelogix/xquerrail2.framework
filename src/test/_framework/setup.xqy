@@ -11,11 +11,36 @@ declare function setup() as empty-sequence()
   ()
 };
 
-declare function teardown() as item()*
+declare function teardown() as empty-sequence()
 {
+  teardown(())
+};
+
+declare function teardown($collection as xs:string?) as empty-sequence()
+{
+  if ($collection) then
+    xdmp:invoke-function(
+      function() {
+        xdmp:collection-delete($collection)
+        , xdmp:commit() 
+      },
+      <options xmlns="xdmp:eval">
+        <transaction-mode>update</transaction-mode>
+      </options>
+    )
+  else
+    ()
+  ,
+  xdmp:directory-delete("/test/")
+  ,
   app:reset()
 };
 
+(:declare function teardown() as item()*
+{
+  app:reset()
+};
+:)
 declare function eval($fn as function(*)) {
   xdmp:invoke-function(
     function() {

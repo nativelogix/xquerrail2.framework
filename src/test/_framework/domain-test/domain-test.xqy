@@ -40,3 +40,13 @@ declare %test:case function get-model-identity-field-name-test() as item()*
   return
   assert:equal(domain:get-model-identity-field-name($model1), "uuid")
 };
+
+declare %test:case function app-get-setting-test() as item()*
+{
+  (
+    assert:equal(xs:string(app:get-setting("key1")), "value2"),
+    assert:equal(fn:count(app:get-setting("key2")/items/item), 2),
+    assert:equal(fn:data(app:get-setting("key2")/items/item[1]), 123)
+  )
+};
+

@@ -50,3 +50,13 @@ declare %private function get-base-safe($path as xs:string) as element(config:ap
 declare function app:reset() as item()* {
   config:clear-cache()
 };
+
+declare function app:get-setting($name as xs:string) {
+  app:get-setting(config:default-application(), $name)
+};
+
+declare function app:get-setting($application-name as xs:string, $name as xs:string) {
+  let $settings := config:resolve-path(config:application-directory($application-name), "settings.xml")
+  return
+    config:get-resource($settings)/*:setting[*:name/fn:string(.) = $name]/*:value
+};

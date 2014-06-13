@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+  <setting>
+    <name>key1</name>
+    <value>value2</value>
+  </setting>
+  <setting>
+    <name>key2</name>
+    <value>
+      <items>
+        <item>123</item>
+        <item>456</item>
+      </items>
+    </value>
+  </setting>
+</settings>

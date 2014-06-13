@@ -477,7 +477,7 @@ as element()?
  :)
 declare function model:exists(
   $model as element(domain:model),
-  $params as map:map
+  $params as item()
 ) {
    let $namespace := domain:get-field-namespace($model)
    let $localname   := fn:data($model/@name)

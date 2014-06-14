@@ -399,7 +399,7 @@ declare function config:application-directory($application) as xs:string
   else xs:string(config:get-application($application)/@uri)
 };
 (:~
- : Get the current application namespace defined by config:get-config()/config:application/@namespace
+ : Get the current application namespace defined by config:get-config()set-domain-cache/config:application/@namespace
  : @param $application - If the passed value is a string then it will lookup the application by name then return the @namespace.
  : else if the `$application` is an instance of domain:appliation then reads the @namespace attribute.
  :)
@@ -466,15 +466,11 @@ declare function config:anonymous-user($config as element(config:config), $appli
  :)
 declare function config:get-domain($application-name as xs:string) as element(domain)?
 {
-  let $cache-key := fn:concat($DOMAIN-CACHE-KEY, $application-name)
-  let $app-path := config:application-directory(fn:substring-after($cache-key, $DOMAIN-CACHE-KEY))
-  let $domain-key := fn:concat($app-path, "/domains/application-domain.xml")
-  let $_ := xdmp:log(text{"config:get-domain", $application-name, "$cache-key", $cache-key, "$app-path", $app-path, "$domain-key", $domain-key}, "finest")
-  let $domain-config := config:get-resource(fn:concat($app-path,"/domains/application-domain.xml"))
-  let $domain := config:_load-domain($domain-config)
   let $config := config:get-config()
-  let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config))
-  return $domain
+  let $domain := cache:get-domain-cache(config:cache-location($config), $application-name, config:anonymous-user($config))/domain
+  return 
+    if ($domain) then $domain
+    else fn:error(xs:QName("NO-DOMAIN-FOUND"))
 };
 
 declare function config:get-domain() as element(domain)? {
@@ -485,38 +481,15 @@ declare function config:get-domain() as element(domain)? {
  : Registers a dynamic domain for inclusion in application domain
 ~:)
 declare function config:register-domain($domain as element(domain:domain)) {
-  let $application-name := $domain/domain:name
+  fn:error(xs:QName("NOT-IMPLEMENTED"))
+(:  let $application-name := $domain/domain:name
   let $_ := if($application-name) then () else fn:error(xs:QName("DOMAIN-MISSING-NAME"),"Domain must have a name")
   let $cache-key := fn:concat($DOMAIN-CACHE-KEY,$application-name)
   return (
     cache:set-cache($cache-key,config:_load-domain($domain)),
     $domain
   )
-};
-
-(:~
- : Function loads the domain internally and resolves import references
- :)
-declare %private function config:_load-domain(
-$domain as element(domain:domain)
-) {
-    let $app-path := config:application-directory($domain/*:name)
-    let $imports :=
-        for $import in $domain/domain:import
-        return
-        config:get-resource(fn:concat($app-path,"/domains/",$import/@resource))
-    return
-        element domain {
-         namespace domain {"http://xquerrail.com/domain"},
-         attribute xmlns {"http://xquerrail.com/domain"},
-         $domain/@*,
-         $domain/(domain:name|domain:content-namespace|domain:application-namespace|domain:description|domain:author|domain:version|domain:declare-namespace|domain:default-collation),
-         ($domain/domain:model,$imports/domain:model),
-         ($domain/domain:optionlist,$imports/domain:optionlist),
-         ($domain/domain:controller,$imports/domain:controller),
-         ($domain/domain:view,$imports/domain:view)
-       }
-};
+:)};
 
 declare function config:resolve-path($base as xs:string, $path as xs:string?) as xs:string? {
   if ($path) then

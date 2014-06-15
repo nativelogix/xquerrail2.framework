@@ -84,7 +84,7 @@ return
                 url: '/{response:controller()}/list.xml',
                 pager: '#{response:controller()}_table_pager',
                 id : "{domain:get-model-identity-field-name(response:model())}",
-                colModel: JSON.parse(decodeURIComponent('{fn:encode-for-uri($gridCols)}')),
+                colModel: eval(decodeURIComponent('{fn:encode-for-uri($gridCols)}')),
                 sortname: '{$domain-model/element[@identity eq 'true']/@name}',
                 emptyrecords: "No {$modelLabel}s Found",
                 loadtext: "Loading {$modelLabel}s",

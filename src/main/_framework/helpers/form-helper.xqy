@@ -774,7 +774,7 @@ declare function form:field-grid-column(
          then js:kv("fomatter",map:get($options,"formatter"))
          else if($field/domain:ui/@formatter ne "" and fn:exists($field/domain:ui/@formatter))
          then js:kv("formatter",fn:data($field/domain:ui/@formatter))
-         else if($field/@occurrence = ("+","*")) then js:kv("formatter","arrayFormatter")
+         else if($field/@occurrence = ("+","*")) then js:kv("formatter",js:literal("arrayFormatter"))
          else if($dataType eq "binary") then js:kv("formatter","binaryFormatter")
          else if($dataType eq "boolean") then (js:kv("formatter","checkbox"),js:kv("align","center"))
          else ()

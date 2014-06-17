@@ -235,6 +235,24 @@
 -->
       </range-element-indexes>
       <range-element-attribute-indexes>
+        <range-element-attribute-index>
+          <scalar-type>string</scalar-type>
+          <parent-namespace-uri>http://marklogic.com/model/test</parent-namespace-uri>
+          <parent-localname>model6</parent-localname>
+          <namespace-uri/>
+          <localname>id</localname>
+          <collation>http://marklogic.com/collation/codepoint</collation>
+          <range-value-positions>false</range-value-positions>
+        </range-element-attribute-index>
+        <range-element-attribute-index>
+          <scalar-type>string</scalar-type>
+          <parent-namespace-uri>http://marklogic.com/model/test</parent-namespace-uri>
+          <parent-localname>model7</parent-localname>
+          <namespace-uri/>
+          <localname>id</localname>
+          <collation>http://marklogic.com/collation/codepoint</collation>
+          <range-value-positions>false</range-value-positions>
+        </range-element-attribute-index>
 <!--
         Sample for:
           <person name="bob" xmlns="http://marklogic.com/ns/sample"/>

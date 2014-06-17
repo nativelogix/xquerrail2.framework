@@ -116,7 +116,7 @@ gulp.task('watch-update-xqy', function()  {
 //     .on('close', done);
 // });
 
-gulp.task('build', ['test', 'clean', 'update-xqy'], function (cb) {
+gulp.task('build', ['update-xqy'], function (cb) {
   cb();
   // return gulp.src('./src/contra.js')
   //   .pipe(gulp.dest('./dist'))

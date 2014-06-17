@@ -2,5 +2,5 @@
   "user": "admin",
   "password": "xxxxx",
   "host": "localhost",
-  "port": 9300
+  "port": 9305
 }

@@ -33,7 +33,7 @@ declare function json:jsonToXML(
         then 1
         else $typeEndLocation
     let $xmlString := string-join((json:typeToElement("json", $type), json:dispatch($location), "</json>"), "")
-    let $debug := if($json:DEBUG) then xdmp:log($xmlString) else ()
+    let $debug := if($json:DEBUG) then xdmp:log($xmlString, "debug") else ()
     return xdmp:unquote($xmlString)
 };
 

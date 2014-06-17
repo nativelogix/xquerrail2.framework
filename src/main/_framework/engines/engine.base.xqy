@@ -289,7 +289,7 @@ declare function engine:transform-slot($node as node())
   let $is_closed := if($endslot) then () else fn:error(xs:QName("MISSING-END-TAG"),"slot tag is missing end tag <?endslot?>")
   let $slotcontent := $node/following-sibling::node()[. << $endslot]
   let $setslot := response:slot($slot)
-  let $log := xdmp:log(("slot:",$setslot))
+  let $log := xdmp:log(("slot:",$setslot), "debug")
   return
   (  engine:consume($endslot),
      if(fn:exists($setslot)) 
@@ -503,12 +503,11 @@ declare function engine:transform-role($node) {
   let $rolecontent := $node/following-sibling::node()[. << $endrole]
   let $admin-role := xdmp:role("admin")
   let $sys-roles :=  engine:get-role-names()
-  let $_ := xdmp:log(($sys-roles,"rolenames:",$role-names))
+  let $_ := xdmp:log(($sys-roles,"rolenames:",$role-names), "debug")
   return
   (  engine:consume($endrole),
      if($sys-roles = $role-names) 
      then (     
-        xdmp:log("Is in Role"),
         for $n in $rolecontent return (engine:transform($n),engine:consume($n))
      )
      else for $content in $rolecontent return engine:consume($content)

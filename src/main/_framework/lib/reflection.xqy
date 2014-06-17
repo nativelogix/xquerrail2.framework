@@ -2149,7 +2149,7 @@ declare function p:reduce($state as item()+,$name as xs:string,$count as xs:inte
        fn:concat("name:",$name),
        $state[$count - 1][1]
        ,"E====="
-     )) 
+     ), "debug") 
      else ()
    return
   (: if(

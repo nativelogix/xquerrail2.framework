@@ -604,7 +604,7 @@ declare function model:reference-by-keylabel(
     let $exprValue := xdmp:value($stmt)
     return (
         (: Execute statement :)
-        xdmp:log(("model:getByReference::",$stmt),"info"),
+        xdmp:log(("model:getByReference::",$stmt),"debug"),
         $exprValue
         )
 };
@@ -1145,7 +1145,7 @@ declare function model:delete-binary-dependencies(
       if(fn:doc-available($value)) then
         xdmp:document-delete($value)
       else (
-         xdmp:log(fn:concat("DELETE-FILE-MISSING::field=",$field/@name," value=",$value),"log")
+         xdmp:log(fn:concat("DELETE-FILE-MISSING::field=",$field/@name," value=",$value),"debug")
       )
       else ()(:Binary not set so dont do anything:)
 };
@@ -2130,7 +2130,7 @@ declare function model:build-value(
   let $type := $context/@type
   return
     switch($type)
-    case "id" return (xdmp:log(("Current::",$current)),
+    case "id" return (xdmp:log(("Current::",$current), "debug"),
         if(fn:data($current))
         then fn:data($current)
         else model:generate-fnid(($value,<x>{xdmp:random()}</x>)[1])

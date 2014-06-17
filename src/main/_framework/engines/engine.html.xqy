@@ -129,7 +129,7 @@ declare function engine:transform-controller-script($node)
           attribute src {$script-uri},
           text{"//"}
           }
-  else xdmp:log(("No controller-script::" || $script-uri))
+  else xdmp:log(("No controller-script::" || $script-uri), "debug")
 };
 (:~
  : Generates a script element for the given controller.  If a controller 
@@ -164,7 +164,7 @@ declare function engine:transform-application-script($node)
       if(fn:ends-with($script-directory,"/")) then () else "/",
       response:application(),".js"
     )
-  let $_ := xdmp:log(($script-uri, engine:resource-file-exists($script-uri)))
+  let $_ := xdmp:log(($script-uri, engine:resource-file-exists($script-uri)), "debug")
   return 
   if(response:controller() ne "" and engine:resource-file-exists($script-uri)) 
   then element script {

@@ -48,8 +48,8 @@ declare function test:before-response(
   $configuration as element()?
 ) as item()* {
    let $_ := (
-       xdmp:log(("after-request::",request:param("test-before-response"))),
-       xdmp:log(("after-request::",request:param("test-after-response"))),
+       xdmp:log(("after-request::",request:param("test-before-response")), "debug"),
+       xdmp:log(("after-request::",request:param("test-after-response")), "debug"),
         if($response instance of map:map)
        then map:put($response,"profile:report",prof:report(xdmp:request()))
        else ()

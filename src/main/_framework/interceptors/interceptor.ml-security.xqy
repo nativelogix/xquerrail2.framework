@@ -54,7 +54,7 @@ declare function ml-security:after-request(
                  $configuration/config:bypass-credentials/config:password
              )          
          else fn:false()
-     let $_ := xdmp:log(("context:", $context," scope::", $scope))
+     let $_ := xdmp:log(("context:", $context," scope::", $scope), "debug")
      let $authorization := xdmp:get-request-header("Authorization") 
      return 
        if($bypassed) then ()  

@@ -6,6 +6,7 @@ import module namespace app = "http://xquerrail.com/application" at "../../../..
 import module namespace config = "http://xquerrail.com/config" at "../../../../main/_framework/config.xqy";
 import module namespace domain = "http://xquerrail.com/domain" at "../../../../main/_framework/domain.xqy";
 import module namespace model = "http://xquerrail.com/model/base" at "../../../../main/_framework/base/base-model.xqy";
+import module namespace setup = "http://xquerrail.com/test/setup" at "../../../../test/_framework/setup.xqy";
 
 declare option xdmp:mapping "false";
 
@@ -107,6 +108,55 @@ declare %test:case function model-directory-new-test() as item()*
     assert:not-empty($instance4),
     assert:equal("model4-id", xs:string($value-id)),
     assert:equal("model4-name", xs:string($value-name))
+  )
+};
+
+declare %test:case function model-document-new-keep-identity-test() as item()*
+{
+  let $random := setup:random()
+  let $model1 := domain:get-model("model1")
+  let $instance1 := model:new(
+    $model1, 
+    map:new((
+      map:entry("uuid", $random),
+      map:entry("id", "id-" || $random),
+      map:entry("name", "name-" || $random)
+    ))
+  )
+  let $identity-value := xs:string(domain:get-field-value(domain:get-model-identity-field($model1), $instance1))
+  
+  return (
+    assert:not-empty($instance1),
+    assert:equal($identity-value, $random, "uuid must be equal to " || $random)
+  )
+};
+
+declare %test:case function model-document-new-create-keep-identity-test() as item()*
+{
+  let $random := setup:random()
+  let $model1 := domain:get-model("model1")
+  let $new-instance1 := model:new(
+    $model1, 
+    map:new((
+      map:entry("id", "id-" || $random),
+      map:entry("name", "name-" || $random)
+    ))
+  )
+  let $identity-value := xs:string(domain:get-field-value(domain:get-model-identity-field($model1), $new-instance1))
+  
+  let $instance1 := eval(
+    function() {
+      model:create(
+        $model1, 
+        $new-instance1,
+        $TEST-COLLECTION
+      )
+    }
+  )
+
+  return (
+    assert:not-empty($instance1),
+    assert:equal($identity-value, xs:string(domain:get-field-value(domain:get-model-identity-field($model1), $instance1)))
   )
 };
 

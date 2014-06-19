@@ -36,11 +36,10 @@ declare function teardown($collection as xs:string?) as empty-sequence()
   app:reset()
 };
 
-(:declare function teardown() as item()*
-{
-  app:reset()
+declare function random() as xs:string {
+  fn:string(xdmp:random(1000000))
 };
-:)
+
 declare function eval($fn as function(*)) {
   xdmp:invoke-function(
     function() {

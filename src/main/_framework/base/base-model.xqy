@@ -275,8 +275,8 @@ declare function model:get-model-params(
  :)
 declare function model:new(
   $model as element(domain:model)
-){
-   model:recursive-create($model,map:map())
+) {
+   model:new($model,map:map())
 };
 
 (:~
@@ -285,8 +285,9 @@ declare function model:new(
 declare function model:new(
   $model as element(domain:model),
   $params as item()
-){
-     model:recursive-create($model,$params)
+) {
+  let $identity := model:generate-uuid()
+  return model:recursive-create($model,$params)
 };
 
 (:~
@@ -296,7 +297,7 @@ declare function model:create-binary-dependencies(
   $identity as xs:string,
   $instance as element()
 ) {
-     model:create-binary-dependencies($identity,$instance,xdmp:default-permissions(),xdmp:default-collections())
+  model:create-binary-dependencies($identity,$instance,xdmp:default-permissions(),xdmp:default-collections())
 };
 
 (:~
@@ -308,17 +309,16 @@ declare function model:create-binary-dependencies(
   $permissions as element(sec:permission)*,
   $collections as xs:string*
 ) {
-        xdmp:log(fn:concat("Creating Binary::",map:count($binary-dependencies)),"debug"),
-        for $k in map:keys($binary-dependencies)
-        return (
-            xdmp:document-insert(
-                      $k,
-                      domain:get-param-value($binary-dependencies,$k),
-                      xdmp:default-permissions(),
-                      $identity
-            ), (:~Cleanup map :)
-            map:delete($binary-dependencies,$k)
-            )
+  for $k in map:keys($binary-dependencies)
+  return (
+    xdmp:document-insert(
+      $k,
+      domain:get-param-value($binary-dependencies,$k),
+      xdmp:default-permissions(),
+      $identity
+    ), (:~Cleanup map :)
+    map:delete($binary-dependencies,$k)
+  )
 };
 
 (:~
@@ -359,13 +359,11 @@ as element()?
  : @returns element
  :)
 declare function model:create(
-    $model as element(domain:model),
-    $params as item()*,
-    $collections as xs:string*,
-    $permissions as element(sec:permission)*
-)
-as element()?
-{
+  $model as element(domain:model),
+  $params as item()*,
+  $collections as xs:string*,
+  $permissions as element(sec:permission)*
+) as element()? {
   let $id := () (:model:get-id-from-params($model,$params):)
   let $current := model:get($model,$params)
   return
@@ -373,7 +371,10 @@ as element()?
       if ($current) then
           fn:error(xs:QName("DOCUMENT-EXISTS"), text{"The document already exists.", "model:", $model/@name, "- key:", domain:get-field-value(domain:get-model-keyLabel-field($model), $current)})
       else
-        let $identity := model:generate-uuid()
+        let $identity := xs:string(domain:get-field-value(domain:get-model-identity-field($model), $params))
+        let $identity := 
+          if ($identity) then $identity 
+          else model:generate-uuid()
         (: Validate the parameters before trying to build the document :)
         let $validation :=  () (:model:validate-params($model,$params,"create"):)
         return
@@ -717,10 +718,14 @@ declare function model:update(
        fn:error(xs:QName("UPDATE-NOT-EXISTS"), "Trying to update a document that does not exist.")
 };
 
-declare function model:create-or-update($model as element(domain:model),$params as map:map) {
+declare function model:create-or-update(
+  $model as element(domain:model),
+  $params as item()
+) {
    if(model:get($model,$params)) then model:update($model,$params)
    else model:create($model,$params)
-   };
+};
+
 (:~
  :  Returns all namespaces from domain:model and inherited from domain
  :)
@@ -741,10 +746,10 @@ declare function model:get-namespaces($model as element(domain:model)) {
  :  Function allows for partial updates
  :)
 declare function model:recursive-update-partial(
-$context as element(),
-$current as node()?,
-$updates as map:map)
-{
+  $context as element(),
+  $current as node()?,
+  $updates as map:map
+) {
   let $current := ()
   return $current
 };
@@ -753,10 +758,10 @@ $updates as map:map)
  :  Entry for recursive updates
  :)
 declare function model:recursive-create(
-   $context as node(),
-   $updates as item()?
-){
-    model:recursive-build($context, (), $updates)
+  $context as node(),
+  $updates as item()?
+) {
+  model:recursive-build($context, (), $updates)
 };
 
 
@@ -764,13 +769,13 @@ declare function model:recursive-create(
  :
  :)
 declare function model:recursive-update(
-   $context as node(),
-   $current as node(),
-   $updates as item()?,
-   $partial as xs:boolean
+  $context as node(),
+  $current as node(),
+  $updates as item()?,
+  $partial as xs:boolean
 )
 {
-    model:recursive-build( $context, $current, $updates,$partial)
+  model:recursive-build( $context, $current, $updates,$partial)
 };
 
 
@@ -778,20 +783,19 @@ declare function model:recursive-update(
  :
  :)
 declare function model:recursive-update(
-   $context as node(),
-   $current as node()?,
-   $updates as item()?
-)
-{
-    model:recursive-build( $context, $current, $updates)
+  $context as node(),
+  $current as node()?,
+  $updates as item()?
+) {
+  model:recursive-build( $context, $current, $updates)
 };
 
 declare function model:recursive-build(
-   $context as node(),
-   $current as node()?,
-   $updates as item()?
+  $context as node(),
+  $current as node()?,
+  $updates as item()?
 ) {
-   model:recursive-build($context,$current,$updates,fn:false())
+  model:recursive-build($context, $current, $updates, fn:false())
 };
 
 (:~
@@ -2130,7 +2134,7 @@ declare function model:build-value(
   let $type := $context/@type
   return
     switch($type)
-    case "id" return (xdmp:log(("Current::",$current), "debug"),
+    case "id" return (
         if(fn:data($current))
         then fn:data($current)
         else model:generate-fnid(($value,<x>{xdmp:random()}</x>)[1])
@@ -2140,6 +2144,8 @@ declare function model:build-value(
     case "identity" return
         if(fn:data($current))
         then fn:data($current)
+        else if (fn:data($value)) 
+        then fn:data($value)
         else model:get-identity()
     case "update-timestamp" return
         fn:current-dateTime()

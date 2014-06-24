@@ -1891,7 +1891,7 @@ declare  function model:get-application-reference($field,$params){
         let $domains := xdmp:value(fn:concat("domain:model-",$ref-action))
         let $key := domain:get-field-id($field)
         return
-            for $value in domain:get-param-value($params, $key)
+            for $value in $params
             let $domain := $domains[@name = $value]
             return
                 if($domain) then

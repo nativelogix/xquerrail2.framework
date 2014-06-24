@@ -158,3 +158,24 @@ declare %test:case function reference-function-test() {
   let $model1-reference := model:get-model-references($reference-field, $identity-value)
   return assert:equal(fn:local-name($model1-reference), "model1") 
 };
+
+declare %test:case function build-application-reference-test() {
+  let $model9 := domain:get-model("model9")
+  let $model9-instance := 
+    model:new(
+      $model9,
+      map:new((
+        map:entry("id", "model9-id"),
+        map:entry("type", "country")
+      ))
+    )
+  let $reference-field := domain:get-model-field($model9, "type")
+  return 
+  (
+    assert:not-empty($model9-instance/*:type, "model9 should have type element name"),
+    assert:equal(domain:get-field-value($reference-field, $model9-instance)/@ref-type/fn:string(), "application"),
+    assert:equal(domain:get-field-value($reference-field, $model9-instance)/@ref/fn:string(), "type"),
+    assert:equal(domain:get-field-value($reference-field, $model9-instance)/@ref-id/fn:string(), "country")
+  )
+};
+

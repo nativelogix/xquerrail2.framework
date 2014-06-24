@@ -6,6 +6,7 @@
     <application-namespace prefix="xquerrail" namespace-uri="http://xquerrail.com/app-test"/>
     <default-collation>http://marklogic.com/collation/codepoint</default-collation>
     <import id="content" resource="content-domain.xml"/>
+    <import id="lookups" resource="lookup-domain.xml"/>
     <!--Implement a base class to inherit metadata-->
     <model name="base" description="Base Extension Class" persistence="abstract">
         <element name="uuid" type="identity" identity="true" label="Globally Unique Identifier">

@@ -56,4 +56,9 @@
     <attribute name="id" type="string" label="Id"></attribute> 
     <element name="abstract" type="abstract1" label="Abstract"/>
   </model>
+  <model name="model9" persistence="directory" label="Model #8" extends="base" key="uuid" keyLabel="id">
+    <directory>/test/model9/</directory>
+    <attribute name="id" type="string" label="Id"></attribute> 
+    <element name="type" type="reference" reference="application:model:selector('lookup')" label="Reference Type"/>
+  </model>
 </domain>

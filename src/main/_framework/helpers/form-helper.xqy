@@ -381,7 +381,7 @@ declare function form:checkbox($field,$value)
   <div class="{$FORM-OUTER-CONTAINER-CLASS}">{
    form:before($field),
     <div class="{$FORM-INNER-CONTAINER-CLASS}">
-      <label class="checkbox inline">
+      <label class="checkbox radio-inline  inline">
        <input id="{form:get-field-name($field)}" name="{form:get-field-name($field)}" type="radio" value="true">
        {form:attributes($field)}
        {
@@ -392,7 +392,7 @@ declare function form:checkbox($field,$value)
        True
        </input>
        </label>
-       <label class="checkbox inline">
+       <label class="checkbox radio-inline inline">
        <input name="{form:get-field-name($field)}" type="radio" value="false"  >
        {form:attributes($field)}
        {if($value castable as xs:boolean)

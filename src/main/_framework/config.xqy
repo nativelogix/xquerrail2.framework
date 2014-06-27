@@ -375,6 +375,9 @@ declare function config:get-base-model-location($model-name as xs:string) {
     else fn:concat(config:framework-path(), "/base/base", $model-suffix, ".xqy")
 };
 
+declare function config:default-view-directory() {
+   fn:concat(config:framework-path(), "/base/views")
+};
 (:~
  : Returns the base-view-directory defined in the configuration
  : The following order is defined for reading this value.
@@ -385,7 +388,7 @@ declare function config:get-base-model-location($model-name as xs:string) {
 declare function config:base-view-directory() as xs:string {
   let $dir :=  xs:string(config:get-config()/config:base-view-directory/@value)
   return
-    if ($dir) then $dir else fn:concat(config:framework-path(), "/base/views")
+    if ($dir) then $dir else config:default-view-directory()
 };
 
 (:~

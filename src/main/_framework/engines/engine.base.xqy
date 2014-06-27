@@ -360,18 +360,26 @@ declare function engine:view-uri($controller,$action,$format)
 declare function engine:view-uri($controller,$action,$format,$checked as xs:boolean)
 {
 
-  let $view-uri := fn:concat(config:application-directory(response:application()),"/views/",$controller,"/",$controller,".",$action,".",$format,".xqy")
-  return 
+  let $view-uri := engine:normalize-uri(fn:concat(config:application-directory(response:application()),"/views/",$controller,"/",$controller,".",$action,".",$format,".xqy"))
+  let $final-view-uri :=  
   if(engine:view-exists($view-uri)) 
   then $view-uri
   else 
-    let $base-view-uri := fn:concat(config:base-view-directory(), "/base.", $action, ".",$format, ".xqy")
+    let $base-view-uri := engine:normalize-uri(fn:concat(config:base-view-directory(), "/base.", $action, ".",$format, ".xqy"))
     return
       if(engine:view-exists($base-view-uri)) then 
          $base-view-uri
-      else if($checked) then 
-        fn:error(xs:QName("ERROR"),"View Does not exist",$base-view-uri)
-      else $view-uri
+      else 
+        let $framework-view-uri := engine:normalize-uri(fn:concat(config:default-view-directory(), "/base.", $action, ".",$format, ".xqy"))
+        return 
+            if(engine:view-exists($framework-view-uri)) then $framework-view-uri 
+            else if($checked) then 
+                fn:error(xs:QName("ERROR"),"View Does not exist",$base-view-uri)
+           else ()  
+    return (
+        xdmp:log(("final-view-uri::",$final-view-uri),"fine"),
+        $final-view-uri
+       )
 };
 declare function engine:render-template($response)
 {

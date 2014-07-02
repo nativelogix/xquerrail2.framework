@@ -12,6 +12,9 @@ import module namespace search = "http://marklogic.com/appservices/search" at "/
 import module namespace domain = "http://xquerrail.com/domain" at "../domain.xqy";
 
 import module namespace config = "http://xquerrail.com/config" at "../config.xqy";
+
+import module namespace functx = "http://www.functx.com" at "/MarkLogic/functx/functx-1.0-doc-2007-01.xqy";
+
 (:
 import module namespace sem = "http://marklogic.com/semantics" at "/MarkLogic/semantics.xqy";
 :)
@@ -408,13 +411,15 @@ declare function model:create(
                      return
                        if($root) then
                           (: create the instance of the model in the document :)
-                           xdmp:node-insert-child($root,$update)
+                           (xdmp:node-insert-child($root,$update),
+                            xdmp:document-set-permissions(xdmp:node-uri($root),functx:distinct-deep((domain:get-permissions($model),$permissions)))
+                           )
                        else fn:error(xs:QName("ROOT-MISSING"),"Missing Root Node",$doc)
                    else (
                        xdmp:document-insert(
                          $path,
                          element { fn:QName($root-namespace,$root-node) } { $update },
-                         $permissions,
+                         functx:distinct-deep((domain:get-permissions($model),$permissions)),
                          fn:distinct-values(($computed-collections,$collections))
                       )
                   ),
@@ -442,7 +447,7 @@ declare function model:create(
                     xdmp:document-insert(
                          $path,
                          $update,
-                         $permissions,
+                         functx:distinct-deep((domain:get-permissions($model),$permissions)),
                          fn:distinct-values(($computed-collections,$collections))
                     ),
                     model:create-binary-dependencies($identity,$update)
@@ -524,10 +529,12 @@ declare function model:get(
     if($params instance of xs:anyAtomicType) 
     then ()
     else domain:get-param-value($params,"uri")
-  let $identity-map := map:new((
-    map:entry($identity-field-name, $id-value),
-    map:entry($keylabel-field/@name,$id-value),
-    map:entry($keylabel-field/@name,domain:get-field-value($keylabel-field,$params))
+  let $identity-map := map:map()
+  let $identity-map := ((
+    map:put($identity-map,$identity-field-name, $id-value),
+    map:put($identity-map,$keylabel-field/@name,$id-value),
+    map:put($identity-map,$keylabel-field/@name,domain:get-field-value($keylabel-field,$params)),
+    $identity-map
   ))
   let $persistence := $model/@persistence
   let $identity-query :=
@@ -639,7 +646,7 @@ declare function model:update-partial(
                 xdmp:document-insert(
                     xdmp:node-uri($current),
                     $build,
-                    xdmp:document-get-permissions(xdmp:node-uri($current)),
+                    functx:distinct-deep((xdmp:document-get-permissions(xdmp:node-uri($current)),domain:get-permissions($model))),
                     fn:distinct-values(($collections,$computed-collections,xdmp:document-get-collections(xdmp:node-uri($current))))
                 ),
                 model:create-binary-dependencies($identity,$current)
@@ -706,7 +713,7 @@ declare function model:update(
                   xdmp:document-insert(
                     xdmp:node-uri($current),
                     $build,
-                    xdmp:document-get-permissions(xdmp:node-uri($current)),
+                    functx:distinct-deep((xdmp:document-get-permissions(xdmp:node-uri($current)),domain:get-permissions($model))),
                     fn:distinct-values(($collections,$computed-collections,xdmp:document-get-collections(xdmp:node-uri($current))))
                 )
              else fn:error(xs:QName("UPDATE-NOT-PERSISTABLE"),"Cannot Update Model with persistence: " || $persistence,$persistence),

@@ -7,7 +7,7 @@ xquery version "1.0-ml";
 module namespace domain = "http://xquerrail.com/domain";
 
 import module namespace config = "http://xquerrail.com/config" at "config.xqy";
-
+import module namespace functx = "http://www.functx.com" at "/MarkLogic/functx/functx-1.0-doc-2007-01.xqy"; 
 declare namespace qry = "http://marklogic.com/cts/query";
 
 declare option xdmp:mapping "false";
@@ -18,6 +18,7 @@ declare option xdmp:mapping "false";
 declare variable $DOMAIN-FIELDS := 
    xdmp:eager(for  $fld in ("domain:model","domain:container","domain:element","domain:attribute") 
    return  xs:QName($fld));
+
 (:~
  : A list of QName's that define model node fields excluding the model
  :)   
@@ -605,16 +606,17 @@ declare function domain:get-domain-model(
           let $extends := 
               if($model/@extends) then
                   let $extendedDomain := $domain/domain:model[cts:contains(.,
-                cts:element-attribute-value-query(
-                    xs:QName("domain:model"),
-                    xs:QName("name"), 
-                    $model/@extends))]
+                    cts:element-attribute-value-query(
+                       xs:QName("domain:model"),
+                       xs:QName("name"), 
+                       $model/@extends))
+                ]
                   return
                       if(fn:not($extendedDomain)) then fn:error(xs:QName("NO-EXTENDS-MODEL"),"Missing Extension Model",fn:data($model/@extends))
                       else
                          element { fn:node-name($model) } {
                          $model/@*,
-                         for $f in  $extendedDomain/(domain:element | domain:container | domain:attribute| domain:triple)
+                         for $f in  $extendedDomain/(domain:element | domain:container | domain:attribute| domain:triple|domain:permission)
                          return 
                             element { fn:node-name($f) } {
                                 if($f/@namespace) 
@@ -625,7 +627,7 @@ declare function domain:get-domain-model(
                             }
                         , $model/node()
                      }
-            else $model
+            else $model 
          return ($extends,domain:set-model-cache($cache-key,$extends))
     return 
         if($models) 
@@ -1962,11 +1964,18 @@ $function-arity as xs:integer?
     )[1]
 };
 
+(:~
+ : Returns all models for all domains
+~:)
 declare function domain:get-models (
 ) as element(domain:model)* {
    domain:get-models(domain:get-default-application(), fn:false())
 };
-
+(:~
+ : Returns all models for a given application including abstract
+ : @param $application - Name of the application
+ : @param $include-abstract - Determines if to include abstract models.
+ :)
 declare function domain:get-models (
   $application as xs:string,
   $include-abstract as xs:boolean
@@ -1977,3 +1986,25 @@ declare function domain:get-models (
     config:get-domain($application)/domain:model[@persistence != 'abstract']
 };
 
+(:~
+ : Returns all in scope permissions associated with a model.
+ : @param $model for a given permission set
+~:)
+declare function domain:get-permissions(
+    $model as element(domain:model)
+ ) {
+  let $permset := (
+    $model/domain:permission,
+    $model/ancestor::domain:domain/domain:permission
+  )
+  return
+    functx:distinct-deep(
+     for $perm in $permset
+     return
+       (
+        if($perm/@read = "true") then xdmp:permission($perm/@role,"read") else (),
+        if($perm/@insert = "true") then xdmp:permission($perm/@role,"insert") else (),
+        if($perm/@update = "true") then xdmp:permission($perm/@role,"update") else (),
+        if($perm/@execute = "true") then xdmp:permission($perm/@role,"execute") else ()
+       ))
+};

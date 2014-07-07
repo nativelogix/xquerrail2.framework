@@ -159,7 +159,7 @@ declare %test:case function reference-function-test() {
   return assert:equal(fn:local-name($model1-reference), "model1") 
 };
 
-declare %test:case function build-application-reference-test() {
+declare %test:case function application-reference-from-map-test() {
   let $model9 := domain:get-model("model9")
   let $model9-instance := 
     model:new(
@@ -179,3 +179,22 @@ declare %test:case function build-application-reference-test() {
   )
 };
 
+declare %test:case function application-reference-from-xml-test() {
+  let $model9 := domain:get-model("model9")
+  let $model9-instance := 
+    model:new(
+      $model9,
+      <model9 xmlns="http://marklogic.com/model/test">
+        <id>model9-id</id>
+        <type>country</type>
+      </model9>
+    )
+  let $reference-field := domain:get-model-field($model9, "type")
+  return 
+  (
+    assert:not-empty($model9-instance/*:type, "model9 should have type element name"),
+    assert:equal(domain:get-field-value($reference-field, $model9-instance)/@ref-type/fn:string(), "application"),
+    assert:equal(domain:get-field-value($reference-field, $model9-instance)/@ref/fn:string(), "type"),
+    assert:equal(domain:get-field-value($reference-field, $model9-instance)/@ref-id/fn:string(), "country")
+  )
+};

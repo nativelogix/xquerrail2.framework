@@ -64,7 +64,7 @@ declare function set-cache($type as xs:string, $key as xs:string, $value, $user 
     ,
     switch($type)
       case $SERVER-FIELD-CACHE-LOCATION
-        return xdmp:get-server-field($key)
+        return xdmp:set-server-field($key, $value)
       default return
         xdmp:eval('
           declare variable $key as xs:string external;

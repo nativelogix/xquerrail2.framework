@@ -50,7 +50,7 @@ declare %private function cache-location($location as xs:string?) {
 };
 
 declare function set-cache($key as xs:string, $value as item()*) as empty-sequence(){
-  set-cache("basic", $key, $value)
+  set-cache($DEFAULT-CACHE-LOCATION, $key, $value)
 };
 
 declare function set-cache($type as xs:string, $key as xs:string, $value) as empty-sequence() {
@@ -63,30 +63,34 @@ declare function set-cache($type as xs:string, $key as xs:string, $value, $user 
     validate-cache-location($type)
     ,
     switch($type)
-    case "database" return
-      xdmp:eval('
-        declare variable $key as xs:string external;
-        declare variable $value as node() external;
-        declare variable $CACHE-PERMISSIONS external;
-        declare variable $CACHE-COLLECTION external;
-        function() {
-           xdmp:document-insert($key,$value,$CACHE-PERMISSIONS/*,($CACHE-COLLECTION)),
-           xdmp:commit()
-        }()',
-        (xs:QName("key"),$key,
-        xs:QName("value"),$value,
-        xs:QName("CACHE-PERMISSIONS"),<x>{$CACHE-PERMISSIONS}</x>,
-        xs:QName("CACHE-COLLECTION"),$CACHE-COLLECTION),
-        <options xmlns="xdmp:eval">
-         <isolation>different-transaction</isolation>
-         <transaction-mode>update</transaction-mode>
-         <user-id>{get-user-id($user)}</user-id>
-        </options>
-      )
-    default return
-        xdmp:set-server-field($key, $value)
+      case $SERVER-FIELD-CACHE-LOCATION
+        return xdmp:get-server-field($key)
+      default return
+        xdmp:eval('
+          declare variable $key as xs:string external;
+          declare variable $value as node() external;
+          declare variable $CACHE-PERMISSIONS external;
+          declare variable $CACHE-COLLECTION external;
+          function() {
+             xdmp:document-insert($key,$value,$CACHE-PERMISSIONS/*,($CACHE-COLLECTION)),
+             xdmp:commit()
+          }()',
+          (xs:QName("key"),$key,
+          xs:QName("value"),$value,
+          xs:QName("CACHE-PERMISSIONS"),<x>{$CACHE-PERMISSIONS}</x>,
+          xs:QName("CACHE-COLLECTION"),$CACHE-COLLECTION),
+          <options xmlns="xdmp:eval">
+           <isolation>different-transaction</isolation>
+           <transaction-mode>update</transaction-mode>
+           <user-id>{get-user-id($user)}</user-id>
+          </options>
+        )
   )
   return ()
+};
+
+declare function get-cache($key as xs:string) {
+  get-cache($DEFAULT-CACHE-LOCATION, $key, ())
 };
 
 declare function get-cache($type as xs:string, $key as xs:string) {
@@ -160,6 +164,10 @@ declare function remove-cache($type as xs:string, $key as xs:string, $user as xs
        <user-id>{get-user-id($user)}</user-id>
       </options>
       )
+};
+
+declare function clear-cache($key as xs:string) as empty-sequence() {
+  clear-cache($DEFAULT-CACHE-LOCATION, $key, ())
 };
 
 declare function clear-cache($type as xs:string, $key as xs:string) as empty-sequence() {

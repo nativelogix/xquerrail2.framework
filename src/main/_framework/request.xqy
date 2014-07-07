@@ -574,6 +574,20 @@ declare function request:user-name() {
 };
 
 (:~
+ : Returns the unique key of the current request.
+ :)
+declare function request:session-id() as xs:string {
+   request:cookie("SessionID")[1]
+};
+
+(:~
+ : Returns the unique key of the current request.
+ :)
+declare function request:request-id() {
+   xdmp:request()
+};
+
+(:~
  : Returns the anonymous users name
  :)
 declare function request:anonymous-user()

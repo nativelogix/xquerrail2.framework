@@ -529,12 +529,10 @@ declare function model:get(
     if($params instance of xs:anyAtomicType) 
     then ()
     else domain:get-param-value($params,"uri")
-  let $identity-map := map:map()
-  let $identity-map := ((
-    map:put($identity-map,$identity-field-name, $id-value),
-    map:put($identity-map,$keylabel-field/@name,$id-value),
-    map:put($identity-map,$keylabel-field/@name,domain:get-field-value($keylabel-field,$params)),
-    $identity-map
+  let $identity-map := map:new((
+    map:entry($identity-field-name, $id-value),
+    map:entry($keylabel-field/@name,$id-value),
+    map:entry($keylabel-field/@name,domain:get-field-value($keylabel-field,$params))
   ))
   let $persistence := $model/@persistence
   let $identity-query :=

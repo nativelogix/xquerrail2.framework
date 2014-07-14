@@ -284,7 +284,9 @@ try {
          let $request := request:parse($init)
          let $request  := interceptor:after-request(request:request())
          return
-           if(request:redirect()) then xdmp:redirect-response(request:redirect())
+          if (response:has-error()) then
+            fn:error(xs:QName("RESPONSE-HAS-ERROR"))
+           else if(request:redirect()) then xdmp:redirect-response(request:redirect())
            else 
                let $response := 
                   if(fn:normalize-space(request:redirect()) ne ""  and fn:exists(request:redirect()))

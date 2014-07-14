@@ -75,7 +75,7 @@ declare variable $ERROR-DOMAIN-CONFIGURATION   := xs:QName("ERROR-DOMAIN-CONFIGU
 
 (:Cache Keys:)
 declare variable $CONFIG-CACHE-KEY := "http://xquerrail.com/cache/config" ;
-declare variable $DOMAIN-CACHE-KEY := "http://xquerrail.com/cache/domain/" ;
+declare variable $DOMAIN-CACHE-KEY := "http://xquerrail.com/cache/domains/" ;
 declare variable $DOMAIN-CACHE-TS := "application-domains:timestamp::";
 declare variable $CACHE-COLLECTION := "cache:domain";
 

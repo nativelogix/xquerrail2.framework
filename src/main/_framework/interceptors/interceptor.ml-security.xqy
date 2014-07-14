@@ -3,6 +3,7 @@ xquery version "1.0-ml";
 module namespace ml-security = "http://xquerrail.com/interceptor";
 
 import module namespace interceptor = "http://xquerrail.com/interceptor" at "../interceptor.xqy";
+import module namespace response = "http://xquerrail.com/response" at "../response.xqy";
 import module namespace request = "http://xquerrail.com/request" at "../request.xqy";
 import module namespace config  = "http://xquerrail.com/config"  at "../config.xqy";
 
@@ -77,11 +78,19 @@ declare function ml-security:after-request(
           xdmp:log(("Not-Redirecting::",xdmp:get-current-user(), $context,$scope),"debug"):)
        )
        else (
+        if (request:format() eq "html") then (
           if(request:param("returnUrl") and request:param("returnUrl") !="") 
           then request:set-redirect(request:param("returnUrl"))
           else request:set-redirect(
-                  fn:concat($configuration/config:login-url/@url,"?returnUrl=",xdmp:url-encode(request:origin()))
-               ),
-               xdmp:log(("Redirecting::",request:redirect(),$context,$scope),"debug")
+            fn:concat($configuration/config:login-url/@url,"?returnUrl=",xdmp:url-encode(request:origin()))
+          )
+          ,
+          xdmp:log(("Redirecting::",request:redirect(),$context,$scope),"debug")
+        )
+        else if (request:format() eq "json") then (
+          response:set-error(401, "Unauthorized")
+        )
+        else 
+          ()
        )
 };

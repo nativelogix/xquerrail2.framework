@@ -15,9 +15,8 @@ import module namespace config = "http://xquerrail.com/config" at "../config.xqy
 
 import module namespace functx = "http://www.functx.com" at "/MarkLogic/functx/functx-1.0-doc-2007-01.xqy";
 
-(:
 import module namespace sem = "http://marklogic.com/semantics" at "/MarkLogic/semantics.xqy";
-:)
+
 declare namespace as = "http://www.w3.org/2005/xpath-functions";
 
 declare default collation "http://marklogic.com/collation/codepoint";
@@ -30,6 +29,9 @@ declare variable $binary-dependencies := map:map();
 declare variable $reference-dependencies := map:map();
 declare variable $current-identity := ();
 
+(:Stores a cache of any references resolved :)
+declare variable $REFERENCE-CACHE := map:map();
+declare variable $FUNCTION-CACHE  := map:map();
 (:~
  : Returns the current-identity field for use when instance does not have an existing identity
  :)
@@ -172,7 +174,7 @@ declare function model:generate-iri(
   let $is-curied := fn:matches($expanded,"\i\c*:\i\c")
   return
      if($is-curied)
-     then  ()(: sem:curie-expand($expanded,domain:declared-namespaces-map($model)):)
+     then  sem:curie-expand($expanded,domain:declared-namespaces-map($model))
      else  $expanded
 };
 (:~
@@ -1099,13 +1101,15 @@ declare function model:build-triple(
   let $subject := $context/@subject
   let $predicate := $context/@predicate
   let $object := $context/@object
+  let $graph  := $context/@graph
+  
   return
    element {domain:get-field-qname($context)} {
-    (:sem:triple(
+    xdmp:function(xs:QName("sem:triple"))(
        model:generate-iri($subject,  $context/ancestor-or-self::domain:model,$updates),
        model:generate-iri($predicate,$context/ancestor-or-self::domain:model,$updates),
        model:generate-iri($object,   $context/ancestor-or-self::domain:model,$updates)
-    ):)()}
+    )}
 };
 (:~
  : Deletes the model document
@@ -1538,7 +1542,7 @@ declare private function model:operator-to-cts(
            else if($op eq "ne") then
              if($ranged)
              then cts:element-range-query($field,"!=",$value)
-             else cts:not-query( cts:element-value-query($field,$value))
+             else cts:not-query(cts:element-value-query($field,$value))
            else if($op eq "bw") then
               cts:element-value-query($field,fn:concat($value,"*"),("wildcarded"))
            else if($op eq "bn") then
@@ -1776,6 +1780,18 @@ declare function model:get-references($field as element(), $params as item()*) {
         case "extension"   return model:get-extension-reference($field,$params)
         default return ()
 };
+declare function model:get-function-cache(
+  $function as function(*)
+) {
+  let $func-hash := xdmp:hmac-md5("function",xdmp:describe($function,(),()))
+  let $func := map:get($FUNCTION-CACHE,$func-hash)
+  return
+    if(fn:exists($func)) then $func 
+    else (
+        map:put($FUNCTION-CACHE,$func-hash,$function),
+        $function
+    )
+};
 
 (:~
  : This function will call the appropriate reference type model to build
@@ -1792,7 +1808,7 @@ declare function model:get-references($field as element(), $params as item()*) {
   let $reference-function-name := $tokens[3]
   let $path := config:get-base-model-location($type)
   let $ns   := "http://xquerrail.com/model/base"
-  let $funct := xdmp:function(fn:QName($ns, $reference-function-name), $path)
+  let $funct := model:get-function-cache(xdmp:function(fn:QName($ns, $reference-function-name)))
   return
     if(fn:function-available($reference-function-name)) then
       let $model := domain:get-domain-model($type)
@@ -1826,6 +1842,13 @@ declare function model:get-references($field as element(), $params as item()*) {
  declare function model:get-extension-reference($reference as element(domain:element),$params as item()) {
    ()
  };
+
+declare function model:set-cache-reference($model as element(domain:model),$keys as xs:string*,$values as item()*) {
+    $keys ! map:put($REFERENCE-CACHE,fn:concat(xdmp:hash64($model),"::", .),$values)
+};
+declare function model:get-cache-reference($model as element(domain:model),$keys as xs:string) {
+     $keys ! map:get($REFERENCE-CACHE,fn:concat(xdmp:hash64($model),"::", .))
+};
 (:~
  : This function will create a sequence of nodes that represent each
  : model for inlining in other references.
@@ -1840,18 +1863,65 @@ as element()?
 {
   let $keyLabel := fn:data($model/@keyLabel)
   let $key := fn:data($model/@key)
-  let $modelReference := model:get($model,$params)
-  let $name := fn:data($model/@name)
+  let $key-field := $model//(domain:element|domain:attribute)[@name = $key]
+  let $keyLabel-field := $model//(domain:element|domain:attribute)[@name = $keyLabel]
+  let $key-value := domain:get-field-value($key-field,$params)
+  let $keyField-value := domain:get-field-value($keyLabel-field,$params)
+  let $cached := model:get-cache-reference($model,($key-value,$keyField-value))
   return
-    if($modelReference) then
-      element {domain:get-field-qname($model)} {
-         attribute ref-type { "model" },
-         attribute ref-uuid { $modelReference/(@*|*:uuid)/text() },
-         attribute ref-id   { fn:data($modelReference/(@*|node())[fn:local-name(.) = $key])},
-         attribute ref      { $name },
-         fn:data($modelReference/node()[fn:local-name(.) = $keyLabel])
-      }
-    else ()(: fn:error(xs:QName("INVALID-REFERENCE-ERROR"),"Invalid Reference", fn:data($model/@name)):)
+    if($cached) then (xdmp:log(("cached::",$cached),"debug"),$cached)
+    else 
+        let $query := 
+          cts:and-query((
+               cts:or-query((
+                   typeswitch($key-field)
+                      case element(domain:attribute) return (
+                           domain:get-field-query($keyLabel-field,($key-value,$keyField-value)),
+                           domain:get-field-query($key-field, ($key-value,$keyField-value))
+                      )
+                      default return (
+                           domain:get-field-query($key-field, ($key-value,$keyField-value)),
+                           domain:get-field-query($keyLabel-field,($key-value,$keyField-value))
+                      )
+               )),
+               domain:get-base-query($model)
+           ))
+     let $values := 
+         if($model/@persistence = "directory") then
+               cts:value-tuples((
+                  domain:get-field-tuple-reference($key-field),
+                  domain:get-field-tuple-reference($keyLabel-field)
+                  ),
+                  ("limit=1"),
+                  $query
+               )
+          else (
+             model:get($model,$params)
+          )
+     let $modelReference := 
+        if(fn:exists($values) and $model/@persistence = "directory") 
+        then json:array-values($values) 
+        else (
+           domain:get-field-value($keyLabel-field,$params),
+           domain:get-field-value($key-field,$params)
+        )
+     let $name := fn:data($model/@name)
+     let $reference := element {domain:get-field-qname($model)} {
+            attribute ref-type { "model" },
+            attribute ref-id   {fn:data($modelReference[1])},
+            attribute ref      { $name },
+            text {fn:data($modelReference[2])}
+         }
+     return
+       if(fn:exists($modelReference)) then (
+          model:set-cache-reference($model,($keyField-value,$key-value),$reference),
+          $reference
+       )  
+       else if(fn:exists($keyField-value) or fn:exists($key-value)) then  
+           fn:error(xs:QName("INVALID-REFERENCE-ERROR"),"Invalid Reference", 
+               fn:string-join(("fieldname:",fn:data($model/@name),"values:",$keyField-value,$key-value)," ")
+           )
+       else ()
 };
 (:~
  : This function will create a reference of an existing element
@@ -1888,7 +1958,7 @@ declare  function model:get-application-reference($field,$params){
    let $ref-type     := $ref-tokens[2]
    let $ref-action   := $ref-tokens[3]
    let $localName := fn:data($field/@name)
-   let $ns := ($field/@namespace,$field/ancestor::domain:model/@namespace)[1]
+   let $ns := domain:get-field-namespace($field)
    let $qName := fn:QName($ns,$localName)
    return
       if($ref-parent eq "application" and $ref-type eq "model")

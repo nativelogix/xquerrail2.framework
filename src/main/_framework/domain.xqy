@@ -8,7 +8,9 @@ module namespace domain = "http://xquerrail.com/domain";
 
 import module namespace config = "http://xquerrail.com/config" at "config.xqy";
 import module namespace functx = "http://www.functx.com" at "/MarkLogic/functx/functx-1.0-doc-2007-01.xqy"; 
+
 declare namespace qry = "http://marklogic.com/cts/query";
+declare namespace sem = "http://marklogic.com/semantcis";
 
 declare option xdmp:mapping "false";
 
@@ -757,19 +759,25 @@ declare function domain:get-field-name-key($field as node()) {
  :  @return The unique identifier representing the field
  :)
 declare function domain:get-field-id($field as node()) {
-    let $items := $field/ancestor-or-self::*[fn:node-name(.) = $DOMAIN-FIELDS]
-    let $ns := domain:get-field-namespace($field)
-    let $path := 
-        fn:string-join(
-            for $item in $items
-            return
-                fn:concat("{" , $ns, "}", $item/@name)
-            ,"/"    
-        )
-    let $path := fn:concat($field/@name,"__", xdmp:md5($path))
-    return  (
-        $path
-    )    
+    let $key   := fn:concat("field-id::",xdmp:hash64($field))
+    let $cache := domain:get-identity-cache($key)
+    return
+         if($cache) then $cache
+         else
+         let $items := $field/ancestor-or-self::*[fn:node-name(.) = $DOMAIN-FIELDS]
+         let $ns := domain:get-field-namespace($field)
+         let $path := 
+             fn:string-join(
+                 for $item in $items
+                 return
+                     fn:concat("{" , $ns, "}", $item/@name)
+                 ,"/"    
+             )
+         let $path := fn:concat($field/@name,"__", xdmp:md5($path))
+         return  (
+             domain:set-identity-cache($key,$path),
+             $path
+         )    
 };
 
 (:~
@@ -782,12 +790,12 @@ declare function domain:get-field-namespace(
 $field as element()
 ) as xs:string?
 {
-    let $key   := xs:string(xdmp:hash64($field))
+    let $key   := fn:concat("field-namespace::",xdmp:hash64($field))
     let $cache := domain:get-identity-cache($key)
     return
     if($cache) then $cache
-    else 
-    let $field-namespace := fn:head(
+    else
+    let $field-namespace := (
         if($field/(@namespace-uri|@namespace) )
         then $field/(@namespace-uri|@namespace)/fn:string()
         else if($field/ancestor::domain:model/(@namespace-uri|@namespace))
@@ -795,7 +803,7 @@ $field as element()
         else if($field/ancestor::domain:domain/domain:content-namespace/(@namespace-uri|text()))
         then $field/ancestor::domain:domain/domain:content-namespace/(@namespace-uri|/text())
         else (domain:get-content-namespace-uri(),"")
-    )
+    )[1]
     return (
         domain:set-identity-cache($key,$field-namespace),
         $field-namespace
@@ -921,7 +929,7 @@ declare function domain:get-field-qname($field as element()) {
      case element(domain:element)     return fn:QName(domain:get-field-namespace($field),$field/@name)
      case element(domain:attribute)   return fn:QName("",$field/@name)
      case element(domain:container)   return fn:QName(domain:get-field-namespace($field),$field/@name)
-     case element(domain:triple)      return xs:QName("domain:triple")
+     case element(domain:triple)      return xs:QName("sem:triple")
      default return fn:error(xs:QName("QNAME-ERROR"),"Cannot create qname from field",fn:local-name($field))
 };
 
@@ -1504,7 +1512,9 @@ declare function domain:model-root-query($model as element(domain:model)) {
 (:~
  : 
 ~:)
-declare function domain:get-field-query($field as element(),$value as xs:anyAtomicType) {
+declare function domain:get-field-query(
+$field as element(),
+$value as xs:anyAtomicType*) {
     let $name := $field/@name
     let $ns := domain:get-field-namespace($field)
     let $index := $field/domain:navigation/@searchType
@@ -1525,6 +1535,35 @@ declare function domain:get-field-query($field as element(),$value as xs:anyAtom
         default return
             fn:error(xs:QName("FIELD-QUERY-ERROR"), "Unable to resolve query for",$field/@name)
 };
+declare function domain:get-field-tuple-reference(
+$field as element()
+) {
+   domain:get-field-tuple-reference($field,())
+};
+(:~
+ : Returns a field reference to be used in xxx-value-calls
+ :)
+declare function domain:get-field-tuple-reference( 
+   $field as element(),
+   $add-options as xs:string*
+) {
+    let $options := 
+        (
+          if($field/@type = ("string","reference","identity","id"))
+          then "collation=" || domain:get-field-collation($field)
+          else if($field/@type = ("integer","decimal","double","float","long","unsignedLong","unsignedInt","int"))
+          then "type=" || $field/@type
+          else ()   
+     )
+    return
+        typeswitch($field)
+            case element(domain:element) return 
+                cts:element-reference(domain:get-field-qname($field),($options,$add-options))
+            case element(domain:attribute) return
+                cts:element-attribute-reference(domain:get-field-qname($field),($options,$add-options))
+            default return fn:error(xs:QName("NOT-REFERENCABLE"),"Cannot reference type of " || fn:local-name($field),$field)
+};
+
 (:~
  : Return as list of all prefixes and their respective namespaces
 ~:)
@@ -1536,6 +1575,7 @@ declare function domain:declared-namespaces(
      $model/../domain:declare-namespace ! (./@prefix, ./(@namespace|@namespace-uri)[1])
    )
 };
+
 declare function domain:declared-namespaces-map($model) {
    let $nses := domain:declared-namespaces($model)
    let $map := map:map()
@@ -1667,7 +1707,7 @@ $base-path as xs:string?
 ~:)
 declare function domain:get-field-value(
     $field as element(),
-    $value as item()?
+    $value as item()*
     ) as item()* {
     if ($field instance of element(domain:model)) then () else
     let $return-value := 

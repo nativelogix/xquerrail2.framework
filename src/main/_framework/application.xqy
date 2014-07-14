@@ -27,7 +27,7 @@ declare function app:bootstrap($application as element(config:application)?) as 
       config:set-config-path((xs:string(get-base()/config:config), "/_config")[1])
     )
   ,
-  xdmp:log(("Bootstrap XQuerrail Application [" || config:version() || "] - [" || config:last-commit() || "]", "base [" || config:get-base-path() || "] - config [" || config:get-config-path() || "] - framework [" || config:framework-path() || "]"), "info")
+  xdmp:log(("Bootstrap XQuerrail Application - version [" || config:version() || "] - commit [" || config:last-commit() || "]", "base [" || config:get-base-path() || "] - config [" || config:get-config-path() || "] - framework [" || config:framework-path() || "] - ML version [" || xdmp:version() || "]"), "info")
   ,
   config:get-config()
   ,

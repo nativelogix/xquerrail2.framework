@@ -203,8 +203,11 @@ declare function response:error()
    map:get($response,$ERROR)
 }; 
 
-declare function response:set-error($code as xs:string,$ex as element()){
-   map:get($response,$ERROR)
+declare function response:set-error(
+  $code as xs:integer, 
+  $error as item()
+) {
+  map:put($response,$ERROR,($code,$error))
 };
 
 declare function response:has-error()

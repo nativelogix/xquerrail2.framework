@@ -1,6 +1,7 @@
 xquery version "1.0-ml";
 
 import module namespace json = "http://marklogic.com/xdmp/json" at "/MarkLogic/json/json.xqy";
+import module namespace response    = "http://xquerrail.com/response"    at "response.xqy";
     
 declare namespace local = "urn:local";
 
@@ -217,38 +218,46 @@ declare function local:render-json-response($request) {
     )
     return $obj
 }; 
-xdmp:set-response-code(500,<e>{map:get($ERROR,"error")}</e>//error:format-string),
-let $request := map:get($ERROR,"request")
-let $format  := map:get($request,"request:format")
+let $_response := map:get($ERROR,"response")
+let $error-response := map:get($_response, $response:ERROR)
 return
-if($format = "xml") then (
-    xdmp:set-response-content-type("text/xml"), 
-    map:get($ERROR,"error")
-)
-else if($format = "json") then (
-    xdmp:set-response-content-type("application/json"), 
-    let $obj := json:object()
-    let $json-error := local:render-json-error(map:get($ERROR,"error"))
-    let $_ := (
-        map:put($obj,"error",$json-error),
-        map:put($obj,"request",local:render-json-request(map:get($ERROR,"request"))),
-        map:put($obj,"response",local:render-json-response(map:get($ERROR,"response")))
+  if (fn:exists($error-response) and fn:count($error-response) = 2) then (
+    xdmp:set-response-code($error-response[1],$error-response[2])
+  )
+  else (
+    xdmp:set-response-code(500,<e>{map:get($ERROR,"error")}</e>//error:format-string),
+    let $request := map:get($ERROR,"request")
+    let $format  := map:get($request,"request:format")
+    return
+    if($format = "xml") then (
+        xdmp:set-response-content-type("text/xml"), 
+        map:get($ERROR,"error")
     )
-    return 
-        xdmp:to-json($obj)
-)
-else (
-    xdmp:set-response-content-type("text/html"), 
-    <html xmlns="http://www.w3.org/1999/xhtml">
-      <head>    
-         <title>Application Error</title>
-      </head>
-      <body>
-         <h1 class="error-header">Application Error!</h1>
-         {local:render-html-error(map:get($ERROR,"error"))}
-         <h2>Request Variables</h2>
-         {local:render-html-request(map:get($ERROR,"request"))}
-         <h2>Response Variables</h2>
-         {local:render-html-request(map:get($ERROR,"response"))}
-      </body>
-    </html>)
+    else if($format = "json") then (
+        xdmp:set-response-content-type("application/json"), 
+        let $obj := json:object()
+        let $json-error := local:render-json-error(map:get($ERROR,"error"))
+        let $_ := (
+            map:put($obj,"error",$json-error),
+            map:put($obj,"request",local:render-json-request(map:get($ERROR,"request"))),
+            map:put($obj,"response",local:render-json-response(map:get($ERROR,"response")))
+        )
+        return 
+            xdmp:to-json($obj)
+    )
+    else (
+        xdmp:set-response-content-type("text/html"), 
+        <html xmlns="http://www.w3.org/1999/xhtml">
+          <head>    
+             <title>Application Error</title>
+          </head>
+          <body>
+             <h1 class="error-header">Application Error!</h1>
+             {local:render-html-error(map:get($ERROR,"error"))}
+             <h2>Request Variables</h2>
+             {local:render-html-request(map:get($ERROR,"request"))}
+             <h2>Response Variables</h2>
+             {local:render-html-request(map:get($ERROR,"response"))}
+          </body>
+        </html>)
+   )

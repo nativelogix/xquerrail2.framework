@@ -99,17 +99,13 @@
       <rewrite-resolves-globally>@ml.rewrite-resolves-globally</rewrite-resolves-globally>
       <!-- <ssl-certificate-template>@ml.ssl-certificate-template</ssl-certificate-template> -->
 
-<!--       <module-locations>
-  <module-location>
-    <namespace-uri>http://github.com/robwhitby/xray/assertions</namespace-uri>
-    <location>/xray/src/assertions.xqy</location>
-  </module-location>
-  <module-location>
-    <namespace-uri>http://github.com/robwhitby/xray</namespace-uri>
-    <location>/xray/src/xray.xqy</location>
-  </module-location>
-</module-locations>
- -->
+      <module-locations>
+        <module-location>
+          <namespace-uri>http://xquerrail.com/test/setup</namespace-uri>
+          <location>/test/_framework/setup.xqy</location>
+        </module-location>
+      </module-locations>
+
     </http-server>
     @ml.test-appserver
     @ml.rest-appserver

@@ -130,5 +130,5 @@ gulp.task('release', ['build'], function () {
   // build is complete, release the kraken!
 });
 
-gulp.task('test', ['coverage', 'lint', 'xray', 'mocha']);
+gulp.task('test', ['coverage', 'lint', 'mocha', 'xray']);
 gulp.task('default', ['test', 'clean', 'build']);

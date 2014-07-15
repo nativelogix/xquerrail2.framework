@@ -96,7 +96,7 @@ declare function config:last-commit() as xs:string {
   "${ lastcommit }"
 };
 
-declare function config:get-config() as element(config:config) {
+declare function config:get-config() as element(config:config)? {
   cache:get-config-cache($cache:SERVER-FIELD-CACHE-LOCATION)
 };
 
@@ -132,13 +132,13 @@ declare function config:clear-cache() {
   if (fn:exists($config)) then (
     for $application in config:get-applications()
       return cache:remove-domain-cache(config:cache-location($config), xs:string($application/@name), config:anonymous-user($config))
-    ,
-    cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION),
-    cache:remove-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY),
-    cache:remove-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)
   )
   else
     ()
+  ,
+  cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION),
+  cache:remove-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY),
+  cache:remove-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)
 };
 
 (:~

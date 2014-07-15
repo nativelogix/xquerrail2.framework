@@ -29,7 +29,7 @@ declare function app:bootstrap($application as element(config:application)?) as 
   ,
   xdmp:log(("Bootstrap XQuerrail Application - version [" || config:version() || "] - commit [" || config:last-commit() || "]", "base [" || config:get-base-path() || "] - config [" || config:get-config-path() || "] - framework [" || config:framework-path() || "] - ML version [" || xdmp:version() || "]"), "info")
   ,
-  config:get-config()
+  app:load-config()
   ,
   for $application in config:get-applications()
     return load-application(xs:string($application/@name))
@@ -40,9 +40,6 @@ declare %private function app:load-application(
   $application-name as xs:string
 ) as element(domain)?
 {
-(:  let $cache-key := fn:concat($DOMAIN-CACHE-KEY, $application-name):)
-(:  let $app-path := config:application-directory(fn:substring-after($cache-key, $DOMAIN-CACHE-KEY)):)
-(:  let $domain-key := fn:concat($app-path, "/domains/application-domain.xml"):)
   let $application-path := fn:concat(config:application-directory($application-name), "/domains/application-domain.xml")
   let $_ := xdmp:log(text{"config:load-domain", $application-name, "$application-path", $application-path}, "debug")
   let $domain-config := config:get-resource($application-path)
@@ -50,6 +47,30 @@ declare %private function app:load-application(
   let $config := config:get-config()
   let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config))
   return $domain
+};
+
+declare %private function app:load-config(
+) as element(config:config) {
+  let $config := 
+    if(xdmp:modules-database() = 0)
+    then xdmp:unquote(
+            xdmp:binary-decode(
+                xdmp:external-binary(fn:concat(
+                    xdmp:modules-root(),
+                    if(fn:ends-with(xdmp:modules-root(),"/")) then "" else "/",
+                    fn:concat(config:get-config-path(), "/config.xml"))
+                )
+            ,"utf8")
+         )/element()
+    else
+      xdmp:eval(fn:concat("fn:doc('", config:get-config-path(), "/config.xml')/element()"),
+      (),
+      <options xmlns="xdmp:eval">
+         <database>{xdmp:modules-database()}</database>
+      </options>
+      )
+  let $_ := cache:set-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $config)
+  return $config
 };
 
 declare %private function app:load-domain(

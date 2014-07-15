@@ -210,11 +210,11 @@ declare function domain:get-model-keylabel-field($model as element(domain:model)
   return
     if($cache) then fn:exactly-one($cache)
     else 
-    let $key-field := $model//(domain:element|domain:attribute)[fn:local-name(.) = $model/@keyLabel][1]
+    let $key-field := $model//(domain:element|domain:attribute)[@name = $model/@keyLabel][1]
     return 
      (
      domain:set-identity-cache($key,$key-field),
-     fn:exactly-one($key-field)
+     $key-field
     )
 };
 (:~
@@ -267,7 +267,7 @@ declare function domain:get-model-key-field($model as element(domain:model)) {
     return
         if($cache) then $cache
         else 
-            let $field := $model//(domain:element|domain:attribute)[fn:node-name(.) = $DOMAIN-NODE-FIELDS][@name eq $model/@key]
+            let $field := $model//(domain:element|domain:attribute)[@name eq $model/@key]
             return (
                domain:set-identity-cache($key,$field),
                $field
@@ -827,7 +827,18 @@ declare function domain:get-field-param-value(
     if(fn:exists($key-value)) then $key-value 
     else if(fn:exists($namekey-value)) then $namekey-value else $name-value
 };
-
+declare function domain:get-field-param-triple-value(
+    $field as element(),
+    $params as map:map) {
+  let $key := domain:get-field-id($field)
+  let $name-key := domain:get-field-name-key($field)
+  let $key-value := map:get($params,$key)
+  let $name-value := map:get($params,$field/@name)
+  let $namekey-value := map:get($params,$name-key)
+  return
+    if(fn:exists($key-value)) then $key-value 
+    else if(fn:exists($namekey-value)) then $namekey-value else $name-value
+};
 
 (:~
  : Returns the reference value from a given field from the current context node.

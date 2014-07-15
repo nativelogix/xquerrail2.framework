@@ -31,6 +31,7 @@ declare variable $current-identity := ();
 
 (:Stores a cache of any references resolved :)
 declare variable $REFERENCE-CACHE := map:map();
+declare variable $INSTANCE-CACHE  := map:map();
 declare variable $FUNCTION-CACHE  := map:map();
 (:~
  : Returns the current-identity field for use when instance does not have an existing identity
@@ -325,7 +326,27 @@ declare function model:create-binary-dependencies(
     map:delete($binary-dependencies,$k)
   )
 };
-
+(:~
+ : Caches reference from a created instance so a reference can be formed without a seperate transaction
+ :)
+declare function model:create-reference-cache($model,$instance) {
+   let $cache-key-field := domain:get-model-key-field($model)
+   let $cache-keylabel-field := domain:get-model-keyLabel-field($model)
+   let $cache-key-value := domain:get-field-value($cache-key-field,$instance)
+   let $cache-keylabel-value := domain:get-field-value($cache-keylabel-field,$instance)
+   let $reference :=   
+         element {domain:get-field-qname($model)} {
+            attribute ref-type { "model" },
+            attribute ref-id   {$cache-key-value},
+            attribute ref      { $model/@name},
+            text {$cache-keylabel-value}
+         }
+   return (
+      xdmp:log(("CACHE-INSTANCE::",$reference),"debug"),
+      model:set-cache-reference($model,($cache-key-value,$cache-keylabel-value),$reference)
+   )
+   
+};
 (:~
  : Creates a model for a given domain
  : @param - $model - is the model for the given params
@@ -398,85 +419,86 @@ declare function model:create(
                 )
            return (
                (: Return the update node :)
+               model:create-reference-cache($model,$update),
                $update,
                switch($persistence)
-           (: Creation for document persistence :)
-           case "document" return
-               let $path := $model/domain:document/text()
-               let $field-id := domain:get-field-value(domain:get-model-identity-field($model),$update)
-               let $doc := fn:doc($path)
-               let $root-node := fn:data($model/domain:document/@root)
-               let $root-namespace := domain:get-field-namespace($model)
-               return (
-                   if ($doc) then
-                     let $root :=  model:get-root-node($model,$doc)
-                     return
-                       if($root) then
-                          (: create the instance of the model in the document :)
-                           (xdmp:node-insert-child($root,$update),
-                            xdmp:document-set-permissions(xdmp:node-uri($root),functx:distinct-deep((domain:get-permissions($model),$permissions)))
-                           )
-                       else fn:error(xs:QName("ROOT-MISSING"),"Missing Root Node",$doc)
-                   else (
-                       xdmp:document-insert(
-                         $path,
-                         element { fn:QName($root-namespace,$root-node) } { $update },
-                         functx:distinct-deep((domain:get-permissions($model),$permissions)),
-                         fn:distinct-values(($computed-collections,$collections))
+                 (: Creation for document persistence :)
+                 case "document" return
+                     let $path := $model/domain:document/text()
+                     let $field-id := domain:get-field-value(domain:get-model-identity-field($model),$update)
+                     let $doc := fn:doc($path)
+                     let $root-node := fn:data($model/domain:document/@root)
+                     let $root-namespace := domain:get-field-namespace($model)
+                     return (
+                         if ($doc) then
+                           let $root :=  model:get-root-node($model,$doc)
+                           return
+                             if($root) then
+                                (: create the instance of the model in the document :)
+                                 (xdmp:node-insert-child($root,$update),
+                                  xdmp:document-set-permissions(xdmp:node-uri($root),functx:distinct-deep((domain:get-permissions($model),$permissions)))
+                                 )
+                             else fn:error(xs:QName("ROOT-MISSING"),"Missing Root Node",$doc)
+                         else (
+                             xdmp:document-insert(
+                               $path,
+                               element { fn:QName($root-namespace,$root-node) } { $update },
+                               functx:distinct-deep((domain:get-permissions($model),$permissions)),
+                               fn:distinct-values(($computed-collections,$collections))
+                            )
+                        ),
+                        model:create-binary-dependencies($identity,$update)
+                    )
+                 (: Creation for directory persistence :)
+                 case 'directory' return
+                      let $field-id := domain:get-field-value(domain:get-model-identity-field($model),$update)
+                      let $computed-collections :=
+                            model:build-collections(($model/domain:collection,$collections),$model,$update)
+                      let $base-path := $model/domain:directory/text()
+                      let $sub-path := $model/domain:directory/@subpath
+                      let $ext-path := 
+                          if($sub-path) 
+                          then model:generate-uri($sub-path,$model,$update)
+                          else ""
+                      let $path :=
+                          model:normalize-path(fn:concat(
+                              $base-path,
+                              $ext-path,
+                              "/",
+                              $field-id
+                          , ".xml"))
+                      return (
+                          xdmp:document-insert(
+                               $path,
+                               $update,
+                               functx:distinct-deep((domain:get-permissions($model),$permissions)),
+                               fn:distinct-values(($computed-collections,$collections))
+                          ),
+                          model:create-binary-dependencies($identity,$update)
                       )
-                  ),
-                  model:create-binary-dependencies($identity,$update)
-              )
-           (: Creation for directory persistence :)
-           case 'directory' return
-                let $field-id := domain:get-field-value(domain:get-model-identity-field($model),$update)
-                let $computed-collections :=
-                      model:build-collections(($model/domain:collection,$collections),$model,$update)
-                let $base-path := $model/domain:directory/text()
-                let $sub-path := $model/domain:directory/@subpath
-                let $ext-path := 
-                    if($sub-path) 
-                    then model:generate-uri($sub-path,$model,$update)
-                    else ""
-                let $path :=
-                    model:normalize-path(fn:concat(
-                        $base-path,
-                        $ext-path,
-                        "/",
-                        $field-id
-                    , ".xml"))
-                return (
-                    xdmp:document-insert(
-                         $path,
-                         $update,
-                         functx:distinct-deep((domain:get-permissions($model),$permissions)),
-                         fn:distinct-values(($computed-collections,$collections))
-                    ),
-                    model:create-binary-dependencies($identity,$update)
-                )
-          (:Singleton Persistence is good for configuration Files :)
-           case 'singleton' return
-               let $field-id := domain:get-field-value($model/(domain:element|domain:attribute)[@type eq "identity"],$update)
-               let $path := $model/domain:document/text()
-               let $doc := fn:doc($path)
-               let $root-namespace := domain:get-field-namespace($model)
-                let $computed-collections :=
-                      model:build-collections(($model/domain:collection,$collections),$model,$update)
-               return (
-                   if ($doc) then
-                        (: create the instance of the model in the document :)
-                        xdmp:node-replace(model:get-root-node($model,$doc),$update)
-                   else
-                       xdmp:document-insert(
-                         $path,
-                         element { fn:QName($root-namespace,$model/@name) } { $update },
-                         $permissions,
-                        fn:distinct-values(($computed-collections,$collections))
-                      ),
-                   model:create-binary-dependencies($field-id,$update)
-               )
-           case "abstract" return fn:error(xs:QName("PERSISTENCE-ERROR"),"Cannot Persist Abstract Objects",$model/@name)
-           default return fn:error(xs:QName("PERSISTENCE-ERROR"),"No document persistence defined for create",$model/@name)
+                (:Singleton Persistence is good for configuration Files :)
+                 case 'singleton' return
+                     let $field-id := domain:get-field-value($model/(domain:element|domain:attribute)[@type eq "identity"],$update)
+                     let $path := $model/domain:document/text()
+                     let $doc := fn:doc($path)
+                     let $root-namespace := domain:get-field-namespace($model)
+                      let $computed-collections :=
+                            model:build-collections(($model/domain:collection,$collections),$model,$update)
+                     return (
+                         if ($doc) then
+                              (: create the instance of the model in the document :)
+                              xdmp:node-replace(model:get-root-node($model,$doc),$update)
+                         else
+                             xdmp:document-insert(
+                               $path,
+                               element { fn:QName($root-namespace,$model/@name) } { $update },
+                               $permissions,
+                              fn:distinct-values(($computed-collections,$collections))
+                            ),
+                         model:create-binary-dependencies($field-id,$update)
+                     )
+                 case "abstract" return fn:error(xs:QName("PERSISTENCE-ERROR"),"Cannot Persist Abstract Objects",$model/@name)
+                 default return fn:error(xs:QName("PERSISTENCE-ERROR"),"No document persistence defined for create",$model/@name)
        )
 };
 
@@ -1098,19 +1120,32 @@ declare function model:build-triple(
    $updates as item()*,
    $partial as xs:boolean
 ) {
-  let $subject := $context/@subject
-  let $predicate := $context/@predicate
-  let $object := $context/@object
-  let $graph  := $context/@graph
-  
+(:  let $values := domain:get-field-value($context,$updates)
+  let $subject-def   := $value/*:subject, $context/@subject)[1]
+  let $predicate-def := $context/@predicate
+  let $object-def := $context/@object
+  let $graph-def  := $context/@graph
   return
-   element {domain:get-field-qname($context)} {
-    xdmp:function(xs:QName("sem:triple"))(
-       model:generate-iri($subject,  $context/ancestor-or-self::domain:model,$updates),
-       model:generate-iri($predicate,$context/ancestor-or-self::domain:model,$updates),
-       model:generate-iri($object,   $context/ancestor-or-self::domain:model,$updates)
-    )}
-};
+    if($field/@occurrence = "+","*")
+    then 
+     for $value in $values
+     
+     return
+         element {domain:get-field-qname($context)} {
+          xdmp:function(xs:QName("sem:triple"))(
+             model:generate-iri($subject,  $context/ancestor-or-self::domain:model,$updates),
+             model:generate-iri($predicate,$context/ancestor-or-self::domain:model,$updates),
+             model:generate-iri($object,   $context/ancestor-or-self::domain:model,$updates),
+             model:generate-iri($graph,   $context/ancestor-or-self::domain:model,$updates)
+          )}
+    else 
+        xdmp:function(xs:QName("sem:triple"))(
+             model:generate-iri($subject,  $context/ancestor-or-self::domain:model,$updates),
+             model:generate-iri($predicate,$context/ancestor-or-self::domain:model,$updates),
+             model:generate-iri($object,   $context/ancestor-or-self::domain:model,$updates),
+             model:generate-iri($graph,   $context/ancestor-or-self::domain:model,$updates)
+          )}
+:)()};
 (:~
  : Deletes the model document
  : @param $model the model of the document and any external binary files
@@ -1868,20 +1903,21 @@ as element()?
   let $key-value := domain:get-field-value($key-field,$params)
   let $keyField-value := domain:get-field-value($keyLabel-field,$params)
   let $cached := model:get-cache-reference($model,($key-value,$keyField-value))
+  let $match-values := ($key-value,$keyField-value)
   return
-    if($cached) then (xdmp:log(("cached::",$cached),"debug"),$cached)
+    if($cached) then (xdmp:log(("cached::",$cached),"info"),$cached)
     else 
         let $query := 
           cts:and-query((
                cts:or-query((
                    typeswitch($key-field)
                       case element(domain:attribute) return (
-                           domain:get-field-query($keyLabel-field,($key-value,$keyField-value)),
-                           domain:get-field-query($key-field, ($key-value,$keyField-value))
+                           domain:get-field-query($keyLabel-field,$match-values),
+                           domain:get-field-query($key-field, $match-values)
                       )
                       default return (
-                           domain:get-field-query($key-field, ($key-value,$keyField-value)),
-                           domain:get-field-query($keyLabel-field,($key-value,$keyField-value))
+                           domain:get-field-query($key-field, $match-values),
+                           domain:get-field-query($keyLabel-field,$match-values)
                       )
                )),
                domain:get-base-query($model)
@@ -1896,14 +1932,17 @@ as element()?
                   $query
                )
           else (
-             model:get($model,$params)
+            let $get :=  model:get($model,$params)
+            return
+             if($get) then $get
+             else model:get-cache-reference($model,($key-value,$keyField-value))  
           )
      let $modelReference := 
         if(fn:exists($values) and $model/@persistence = "directory") 
         then json:array-values($values) 
-        else (
-           domain:get-field-value($keyLabel-field,$params),
-           domain:get-field-value($key-field,$params)
+        else  (
+           domain:get-field-value($key-field,$values),
+           domain:get-field-value($keyLabel-field,$values)
         )
      let $name := fn:data($model/@name)
      let $reference := element {domain:get-field-qname($model)} {

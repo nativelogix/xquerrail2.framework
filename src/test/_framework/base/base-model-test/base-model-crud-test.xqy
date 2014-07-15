@@ -6,7 +6,7 @@ import module namespace app = "http://xquerrail.com/application" at "../../../..
 import module namespace config = "http://xquerrail.com/config" at "../../../../main/_framework/config.xqy";
 import module namespace domain = "http://xquerrail.com/domain" at "../../../../main/_framework/domain.xqy";
 import module namespace model = "http://xquerrail.com/model/base" at "../../../../main/_framework/base/base-model.xqy";
-import module namespace setup = "http://xquerrail.com/test/setup" at "../../../../test/_framework/setup.xqy";
+import module namespace setup = "http://xquerrail.com/test/setup";
 
 declare option xdmp:mapping "false";
 

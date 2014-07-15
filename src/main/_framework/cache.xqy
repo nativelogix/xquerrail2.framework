@@ -154,8 +154,10 @@ declare function remove-cache($type as xs:string, $key as xs:string, $user as xs
       xdmp:eval('
       declare variable $key external;
       function() {
+        if (fn:doc-available($key)) then (
          xdmp:document-delete($key),
          xdmp:commit()
+        ) else ()
       }()',
       (xs:QName("key"), $key),
       <options xmlns="xdmp:eval">

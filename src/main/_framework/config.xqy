@@ -74,7 +74,9 @@ declare variable $ERROR-ROUTING-CONFIGURATION  := xs:QName("ERROR-ROUTING-CONFIG
 declare variable $ERROR-DOMAIN-CONFIGURATION   := xs:QName("ERROR-DOMAIN-CONFIGURATION");
 
 (:Cache Keys:)
-declare variable $CONFIG-CACHE-KEY := "http://xquerrail.com/cache/config" ;
+declare variable $BASE-PATH-CACHE-KEY := "__base-path__";
+declare variable $CONFIG-PATH-CACHE-KEY := "__config-path__";
+(:declare variable $CONFIG-CACHE-KEY := "http://xquerrail.com/cache/config" ;:)
 declare variable $DOMAIN-CACHE-KEY := "http://xquerrail.com/cache/domains/" ;
 declare variable $DOMAIN-CACHE-TS := "application-domains:timestamp::";
 declare variable $CACHE-COLLECTION := "cache:domain";
@@ -95,49 +97,24 @@ declare function config:last-commit() as xs:string {
 };
 
 declare function config:get-config() as element(config:config) {
-  config:load-config()
-};
-
-declare %private function config:set-config($config as element(config:config)) as empty-sequence() {
-  let $_ := cache:set-config-cache(config:cache-location($config), $config, config:anonymous-user($config))
-  return ()
-};
-
-declare function config:load-config() as element(config:config) {
-  if(xdmp:modules-database() = 0)
-  then xdmp:unquote(
-          xdmp:binary-decode(
-              xdmp:external-binary(fn:concat(
-                  xdmp:modules-root(),
-                  if(fn:ends-with(xdmp:modules-root(),"/")) then "" else "/",
-                  fn:concat(config:get-config-path(), "/config.xml"))
-              )
-          ,"utf8")
-       )/element()
-  else
-    xdmp:eval(fn:concat("fn:doc('", config:get-config-path(), "/config.xml')/element()"),
-    (),
-    <options xmlns="xdmp:eval">
-       <database>{xdmp:modules-database()}</database>
-    </options>
-    )
+  cache:get-config-cache($cache:SERVER-FIELD-CACHE-LOCATION)
 };
 
 declare function config:get-base-path() as xs:string? {
-  cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, "__base-path__")
+  cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY)
 };
 
 declare function config:set-base-path($base-path as xs:string) as empty-sequence() {
-  let $_ := cache:set-cache($cache:SERVER-FIELD-CACHE-LOCATION, "__base-path__", $base-path)
+  let $_ := cache:set-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY, $base-path)
   return ()
 };
 
 declare function config:get-config-path() as xs:string? {
-  cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, "__config-path__")
+  cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)
 };
 
 declare function config:set-config-path($config-path as xs:string) as empty-sequence() {
-  let $_ := cache:set-cache($cache:SERVER-FIELD-CACHE-LOCATION, "__config-path__", $config-path)
+  let $_ := cache:set-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY, $config-path)
   return ()
 };
 
@@ -150,13 +127,18 @@ declare function config:framework-path() as xs:string {
 
 (:Removes All Cache Keys:)
 declare function config:clear-cache() {
-  cache:remove-cache($cache:SERVER-FIELD-CACHE-LOCATION, "__base-path__"),
-  cache:remove-cache($cache:SERVER-FIELD-CACHE-LOCATION, "__config-path__"),
-  xdmp:directory-delete($DOMAIN-CACHE-KEY)
-};
-
-declare function config:is-cache-empty() {
-  fn:empty(xdmp:directory($DOMAIN-CACHE-KEY))
+  let $config := config:get-config()
+  return
+  if (fn:exists($config)) then (
+    for $application in config:get-applications()
+      return cache:remove-domain-cache(config:cache-location($config), xs:string($application/@name), config:anonymous-user($config))
+    ,
+    cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION),
+    cache:remove-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY),
+    cache:remove-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)
+  )
+  else
+    ()
 };
 
 (:~

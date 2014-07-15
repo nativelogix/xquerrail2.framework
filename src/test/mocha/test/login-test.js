@@ -25,9 +25,19 @@ function login(callback) {
   request(options, callback);
 };
 
+function initialize(callback) {
+  var options = {
+    method: 'GET',
+    url: xquerrail.url + '/initialize',
+    followRedirect: true
+  };
+
+  request(options, callback);
+};
+
 describe('Authentication features', function() {
 
-  before(function() {
+  before(function(done) {
     var ml;
     try {
       ml = require('../../../../gulpfile.js').ml;
@@ -42,21 +52,16 @@ describe('Authentication features', function() {
     xquerrail.username = ml.user;
     xquerrail.password = ml.password;
     console.log('Using XQuerrail: %j', xquerrail)
+    initialize(function(error, response, body) {
+      expect(response.statusCode).to.equal(200);
+      done();
+    });
   });
 
   describe('login', function() {
     it('should be successful', function(done) {
-      var options = {
-        method: 'POST',
-        url: xquerrail.url + '/login',
-        form: {
-          username: xquerrail.username,
-          password: xquerrail.password
-        },
-        followRedirect: true
-      };
-
-      request(options, function(error, response, body) {
+      login(function(error, response, body) {
+        expect(response.statusCode).to.equal(302);
         expect(response.headers).to.include.keys('set-cookie');
         done();
       });

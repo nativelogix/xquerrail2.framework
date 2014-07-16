@@ -2339,32 +2339,38 @@ declare function find-params($model as element(domain:model),$params as map:map)
                       := $field/@type="reference"
         let $query    :=
           if($operator eq "==" and fn:not($is-reference)) then
-                if($stype eq "range" )
-                then cts:element-range-query($qname,"=",domain:get-param-value($params,$k))
-                else cts:element-value-query($qname,domain:get-param-value($params,$k))
+            if($stype eq "range" )
+            then cts:element-range-query($qname,"=",domain:get-param-value($params,$k))
+            else cts:element-value-query($qname,domain:get-param-value($params,$k))
           else if($operator eq "=="  and $is-reference) then
-               (:ismap a reference process as such:)
-               if($stype eq "range")
-               then cts:element-attribute-range-query($qname,xs:QName("ref-id"), "=", domain:get-param-value($params,$k))
-               else cts:element-attribute-value-query($qname,xs:QName("ref-id"),domain:get-param-value($params,$k))
-            else if($operator eq "!=") then
-               if($stype eq "range")
-               then cts:element-range-query($qname,"!=",domain:get-param-value($params,$k))
-               else cts:not-query(cts:element-value-query($qname,domain:get-param-value($params,$k)))
-            else if($operator = (">",">=","<=","<"))then
-               if($stype eq "range")
-               then  cts:element-range-query($qname,$operator,domain:get-param-value($params,$k))
-               else fn:error(xs:QName("FIND-RANGE-NOT-VALID"),"Must enable range index for field using operator",fn:string($field/@name))
-            else if($operator eq "..") then
-              if($stype eq "range")
-              then cts:and-query((
-                      cts:element-range-query($qname,">=",domain:get-param-value($params,$k)[1]),
-                      cts:element-range-query($qname,"<=",domain:get-param-value($params,$k)[2])
-                     ))
-              else fn:error(xs:QName("FIND-RANGE-NOT-VALID"),"Must enable range index for field using operator",fn:string($field/@name))
-          else if($operator eq "*=")
-                then cts:element-word-query($qname,domain:get-param-value($params,$k))
-                else cts:element-word-query($qname,domain:get-param-value($params,$k))
+            (:ismap a reference process as such:)
+            if($stype eq "range")
+            then cts:element-attribute-range-query($qname,xs:QName("ref-id"), "=", domain:get-param-value($params,$k))
+            else cts:element-attribute-value-query($qname,xs:QName("ref-id"),domain:get-param-value($params,$k))
+          else if($operator eq "!=") then
+            if($stype eq "range")
+            then cts:element-range-query($qname,"!=",domain:get-param-value($params,$k))
+            else cts:not-query(cts:element-value-query($qname,domain:get-param-value($params,$k)))
+          else if($operator = (">",">=","<=","<"))then
+            if($stype eq "range")
+            then  cts:element-range-query($qname,$operator,domain:get-param-value($params,$k))
+            else fn:error(xs:QName("FIND-RANGE-NOT-VALID"),"Must enable range index for field using operator",fn:string($field/@name))
+          else if($operator eq "..") then
+            if($stype eq "range")
+            then cts:and-query((
+              cts:element-range-query($qname,">=",domain:get-param-value($params,$k)[1]),
+              cts:element-range-query($qname,"<=",domain:get-param-value($params,$k)[2])
+            ))
+            else fn:error(xs:QName("FIND-RANGE-NOT-VALID"),"Must enable range index for field using operator",fn:string($field/@name))
+          else if($operator eq "*=") then 
+            cts:element-word-query($qname,domain:get-param-value($params,$k))
+          else
+            typeswitch($field) 
+              case element(domain:attribute) return
+                cts:element-attribute-word-query(fn:QName($ns,$model/@name),xs:QName($field/@name), domain:get-param-value($params,$k))
+              case element(domain:element) return
+                cts:element-word-query($qname,domain:get-param-value($params,$k))
+              default return fn:error(xs:QName("FIND-PARAMS-ERROR"),"Unsupported field type")
       return
          $query
   let $join := (domain:get-param-value($params,"_join"),"and")[1]

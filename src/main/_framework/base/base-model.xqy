@@ -1879,10 +1879,10 @@ declare function model:get-function-cache(
  };
 
 declare function model:set-cache-reference($model as element(domain:model),$keys as xs:string*,$values as item()*) {
-    $keys ! map:put($REFERENCE-CACHE,fn:concat(xdmp:hash64($model),"::", .),$values)
+    $keys ! map:put($REFERENCE-CACHE,fn:concat(domain:hash($model),"::", .),$values)
 };
 declare function model:get-cache-reference($model as element(domain:model),$keys as xs:string) {
-     $keys ! map:get($REFERENCE-CACHE,fn:concat(xdmp:hash64($model),"::", .))
+     $keys ! map:get($REFERENCE-CACHE,fn:concat(domain:hash($model),"::", .))
 };
 (:~
  : This function will create a sequence of nodes that represent each
@@ -1905,7 +1905,7 @@ as element()?
   let $cached := model:get-cache-reference($model,($key-value,$keyField-value))
   let $match-values := ($key-value,$keyField-value)
   return
-    if($cached) then (xdmp:log(("cached::",$cached),"info"),$cached)
+    if($cached) then (xdmp:log(("cached::",$cached),"debug"),$cached)
     else 
         let $query := 
           cts:and-query((

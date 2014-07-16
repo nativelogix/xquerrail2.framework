@@ -753,13 +753,18 @@ declare function domain:get-field-name-key($field as node()) {
     return $path
 };
 
+declare function domain:hash($field as node()) {
+(:  xdmp:hash64(xdmp:describe($field, (), ())):)
+  fn:generate-id($field)
+};
+
 (:~
  :  Returns a unique identity key that can used as a unique identifier for the field.
  :  @param $context - is any domain:model field such as (domain:element|domain:attribute|domain:container)
  :  @return The unique identifier representing the field
  :)
 declare function domain:get-field-id($field as node()) {
-    let $key   := fn:concat("field-id::",xdmp:hash64($field))
+    let $key   := fn:concat("field-id::", domain:hash($field))
     let $cache := domain:get-identity-cache($key)
     return
          if($cache) then $cache
@@ -790,7 +795,7 @@ declare function domain:get-field-namespace(
 $field as element()
 ) as xs:string?
 {
-    let $key   := fn:concat("field-namespace::",xdmp:hash64($field))
+    let $key   := fn:concat("field-namespace::",domain:hash($field))
     let $cache := domain:get-identity-cache($key)
     return
     if($cache) then $cache

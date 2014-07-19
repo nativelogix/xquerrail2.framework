@@ -26,6 +26,7 @@ declare function teardown($collection as xs:string?) as empty-sequence()
       },
       <options xmlns="xdmp:eval">
         <transaction-mode>update</transaction-mode>
+        <isolation>different-transaction</isolation>
       </options>
     )
   else
@@ -49,6 +50,7 @@ declare function eval($fn as function(*)) {
     },
     <options xmlns="xdmp:eval">
       <transaction-mode>update</transaction-mode>
+      <isolation>different-transaction</isolation>
     </options>
   )
 };

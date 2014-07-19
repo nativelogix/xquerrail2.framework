@@ -73,4 +73,13 @@
       <element name="version" type="version" label="Version" occurrence="*" />
     </container>
   </model>
+  <model name="abstract2" persistence="abstract" label="Abstract" extends="base" key="uuid" keyLabel="name">
+    <attribute name="id" type="id"/> 
+    <attribute name="name" type="string" label="Name"/>
+  </model>
+  <model name="model11" persistence="directory" label="Model #11" extends="base" key="uuid" keyLabel="id">
+    <directory>/test/model11/</directory>
+    <element name="id" type="string" label="Id"/>
+    <element name="abstract" type="abstract2" label="Abstract"/>
+  </model>
 </domain>

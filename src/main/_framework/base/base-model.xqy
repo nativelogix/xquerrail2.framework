@@ -1508,7 +1508,8 @@ declare private function model:operator-to-cts(
   $value as item()?,
   $ranged as xs:boolean
 ) {
-  let $model-qname := domain:get-field-qname($field-elem/ancestor::domain:model)
+  let $ancestor-element := ($field-elem/ancestor::domain:element,$field-elem/ancestor::domain:model)[1]
+  let $ancestor-qname := domain:get-field-qname($ancestor-element)
   let $field := domain:get-field-qname($field-elem)
   return
     if($field-elem/@type eq "reference") then
@@ -1579,7 +1580,7 @@ declare private function model:operator-to-cts(
           cts:element-range-query($field,"=",$value)
         else 
           cts:or-query((
-            cts:element-attribute-value-query($model-qname,$field,$value,"case-insensitive"),
+            cts:element-attribute-value-query($ancestor-qname,$field,$value,"case-insensitive"),
             cts:element-value-query($field,$value,"case-insensitive")
           ))
       else if($op eq "ne") then
@@ -1587,66 +1588,66 @@ declare private function model:operator-to-cts(
           cts:element-range-query($field,"!=",$value)
         else
           cts:and-query((
-            cts:not-query(cts:element-attribute-value-query($model-qname,$field,$value)),
+            cts:not-query(cts:element-attribute-value-query($ancestor-qname,$field,$value)),
             cts:not-query(cts:element-value-query($field,$value))
           ))
       else if($op eq "bw") then
         cts:or-query((
-          cts:element-attribute-value-query($model-qname,$field,fn:concat($value,"*"),("wildcarded")),
+          cts:element-attribute-value-query($ancestor-qname,$field,fn:concat($value,"*"),("wildcarded")),
           cts:element-value-query($field,fn:concat($value,"*"),("wildcarded"))
         ))
       else if($op eq "bn") then
         (:cts:not-query( cts:element-value-query($field,fn:concat($value,"*"),("wildcarded"))):)
         cts:and-query((
-          cts:not-query(cts:element-attribute-value-query($model-qname,$field,fn:concat($value,"*")),("wildcarded")),
+          cts:not-query(cts:element-attribute-value-query($ancestor-qname,$field,fn:concat($value,"*")),("wildcarded")),
           cts:not-query(cts:element-value-query($field,$value,fn:concat($value,"*")),("wildcarded"))
         ))
       else if($op eq "ew") then
         (:cts:element-value-query($field,fn:concat("*",$value)):)
         cts:or-query((
-          cts:element-attribute-value-query($model-qname,$field,fn:concat("*",$value),("wildcarded")),
+          cts:element-attribute-value-query($ancestor-qname,$field,fn:concat("*",$value),("wildcarded")),
           cts:element-value-query($field,$value,fn:concat("*",$value),("wildcarded"))
         ))
       else if($op eq "en") then
         (:cts:not-query( cts:element-value-query($field,fn:concat("*",$value),("wildcarded"))):)
         cts:and-query((
-          cts:not-query(cts:element-attribute-value-query($model-qname,$field,fn:concat("*",$value),("wildcarded"))),
+          cts:not-query(cts:element-attribute-value-query($ancestor-qname,$field,fn:concat("*",$value),("wildcarded"))),
           cts:not-query(cts:element-value-query($field,fn:concat("*",$value),("wildcarded")))
         ))
       else if($op eq "cn") then
         (:cts:element-word-query($field,fn:concat("*",$value,"*"),("wildcarded")):)
         cts:or-query((
-          cts:element-attribute-word-query($model-qname,$field,fn:concat("*",$value,"*"),("wildcarded")),
+          cts:element-attribute-word-query($ancestor-qname,$field,fn:concat("*",$value,"*"),("wildcarded")),
           cts:element-word-query($field,fn:concat("*",$value,"*"),("wildcarded","case-insensitive"))
         ))
       else if($op eq "nc") then
         (:cts:not-query( cts:element-word-query($field,fn:concat("*",$value,"*"),("wildcarded"))):)
         cts:and-query((
-          cts:not-query(cts:element-attribute-word-query($model-qname,$field,fn:concat("*",$value,"*"),("wildcarded"))),
+          cts:not-query(cts:element-attribute-word-query($ancestor-qname,$field,fn:concat("*",$value,"*"),("wildcarded"))),
           cts:not-query(cts:element-word-query($field,fn:concat("*",$value,"*"),("wildcarded")))
         ))
       else if($op eq "nu") then
         (:cts:element-query($field,cts:and-query(())):)
         cts:or-query((
-          cts:element-attribute-value-query($model-qname,$field,cts:and-query(())),
+          cts:element-attribute-value-query($ancestor-qname,$field,cts:and-query(())),
           cts:element-query($field,cts:and-query(()))
         ))
       else if($op eq "nn") then
         (:cts:element-query($field,cts:or-query(())):)
         cts:or-query((
-          cts:element-attribute-value-query($model-qname,$field,cts:or-query(())),
+          cts:element-attribute-value-query($ancestor-qname,$field,cts:or-query(())),
           cts:element-query($field,cts:or-query(()))
         ))
       else if($op eq "in") then
         (:cts:element-value-query($field,$value):)
         cts:or-query((
-          cts:element-attribute-value-query($model-qname,$field,$value),
+          cts:element-attribute-value-query($ancestor-qname,$field,$value),
           cts:element-value-query($field,$value)
         ))
       else if($op  eq "ni") then
         (:cts:not-query( cts:element-value-query($field,$value)):)
         cts:and-query((
-          cts:not-query(cts:element-attribute-value-query($model-qname,$field,$value)),
+          cts:not-query(cts:element-attribute-value-query($ancestor-qname,$field,$value)),
           cts:not-query( cts:element-value-query($field,$value))
         ))
       else 

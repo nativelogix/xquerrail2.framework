@@ -67,6 +67,7 @@ declare variable $INSTANCES11 := (
   <model11 xmlns="http://xquerrail.com/app-test">
     <id>list-model11-id3</id>
     <abstract name="container-model11-id3" />
+    <child childId="child-model11-id3" />
   </model11>
 );
 
@@ -161,7 +162,22 @@ declare %test:case function model-list-equal-model-attribute-test() as item()*
       map:entry("searchString", "list-model7-id1")
     ))
   )
-  let $_ := xdmp:log($instances)
+  return (
+    assert:not-empty($instances),
+    assert:equal(xs:integer($instances/totalrecords), 1)
+  )
+};
+
+declare %test:case function model-list-equal-element-attribute-test() as item()*
+{
+  let $model := domain:get-model("model11")
+  let $instances := model:list($model, 
+    map:new((
+      map:entry("searchField", "childId"),
+      map:entry("searchOper", "eq"),
+      map:entry("searchString", "child-model11-id3")
+    ))
+  )
   return (
     assert:not-empty($instances),
     assert:equal(xs:integer($instances/totalrecords), 1)
@@ -171,7 +187,6 @@ declare %test:case function model-list-equal-model-attribute-test() as item()*
 declare %test:ignore function model-list-equal-abstract-type-attribute-test() as item()*
 {
   let $model := domain:get-model("model11")
-  let $_ := xdmp:log($model)
   let $instances := model:list($model, 
     map:new((
       map:entry("searchField", "abstract.name"),
@@ -179,7 +194,6 @@ declare %test:ignore function model-list-equal-abstract-type-attribute-test() as
       map:entry("searchString", "container-model11-id1")
     ))
   )
-  let $_ := xdmp:log($instances)
   return (
     assert:not-empty($instances),
     assert:equal(xs:integer($instances/totalrecords), 1)

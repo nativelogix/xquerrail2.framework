@@ -81,5 +81,8 @@
     <directory>/test/model11/</directory>
     <element name="id" type="string" label="Id"/>
     <element name="abstract" type="abstract2" label="Abstract"/>
+    <element name="child" type="string" label="Abstract">
+      <attribute name="childId" type="string"/> 
+    </element>
   </model>
 </domain>

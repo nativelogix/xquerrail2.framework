@@ -324,7 +324,7 @@ declare function engine:module-file-exists($path as xs:string) as xs:boolean
       )
    let $_ :=
    if (fn:not($exists)) then
-    xdmp:log("Module file " || $path || " does not exist", "warning")
+    xdmp:log("Module file " || $path || " does not exist", "debug")
    else
     ()
    return $exists

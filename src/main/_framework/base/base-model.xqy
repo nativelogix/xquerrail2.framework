@@ -33,6 +33,9 @@ declare variable $current-identity := ();
 declare variable $REFERENCE-CACHE := map:map();
 declare variable $INSTANCE-CACHE  := map:map();
 declare variable $FUNCTION-CACHE  := map:map();
+
+declare variable $EXPANDO-PATTERN := "\$\((\i\c*(/@?\i\c*)*)\)";
+
 (:~
  : Returns the current-identity field for use when instance does not have an existing identity
  :)
@@ -45,62 +48,6 @@ declare function  model:get-identity(){
        (xdmp:set($current-identity,$id),$id)
 };
 
-(:~
- :Casts the value as a specific type
- :)
-declare function model:cast-value($field as element(),$value as item()?)
-{
-   let $type := element {fn:QName("",$field/@type)} {""}
-   return
-     typeswitch($type)
-        case element(id) return $value cast as xs:ID
-        case element(string)  return $value cast as xs:string?
-        case element(integer) return $value cast as xs:integer
-        case element(long)    return $value cast as xs:long
-        case element(decimal) return $value cast as xs:decimal
-        case element(double)  return $value cast as xs:double
-        case element(float)   return $value cast as xs:float
-        case element(boolean) return $value cast as xs:boolean
-        case element(anyURI)  return $value cast as xs:anyURI
-        case element(dateTime) return $value cast as xs:dateTime
-        case element(date) return $value cast as xs:date
-        case element(time) return $value cast as xs:time
-        case element(duration) return $value cast as xs:duration
-        case element(yearMonth) return $value cast as xs:gYearMonth
-        case element(monthDay) return $value cast as xs:gMonthDay
-        case element(identity) return $value cast as xs:string
-        case element(schema-element) return $value
-        default return $value
-};
-(:~
- : Returns if the value is castable to the given value based on the field/@type
- : @param $field Domain element (element|attribute|container)
- :)
-declare function model:castable-value($field as element(),$value as item()?)
-{
-   let $type := element {fn:QName("",$field/@type)} {""}
-   return
-     typeswitch($type)
-        case element(string)  return $value castable as xs:string?
-        case element(integer) return $value castable as xs:integer
-        case element(long)    return $value castable as xs:long
-        case element(decimal) return $value castable as xs:decimal
-        case element(double)  return $value castable as xs:double
-        case element(float)   return $value castable as xs:float
-        case element(boolean) return $value castable as xs:boolean
-        case element(anyURI)  return $value castable as xs:anyURI
-        case element(dateTime) return $value castable as xs:dateTime
-        case element(date) return $value castable as xs:date
-        case element(time) return $value castable as xs:time
-        case element(duration) return $value castable as xs:duration
-        case element(yearMonth) return $value castable as xs:gYearMonth
-        case element(monthDay) return $value castable as xs:gMonthDay
-        case element(identity) return $value castable as xs:string
-        case element(schema-element) return $value instance of element()
-        case element(binary) return $value instance of binary()
-        case element(query) return $value cast as cts:query?
-        default return fn:true()
-};
 
 (:~
  : Generates a UUID based on the SHA1 algorithm.
@@ -153,7 +100,7 @@ declare function model:generate-iri(
     $uri as xs:string,
     $model as element(domain:model),
     $instance as item()) {
-  let $token-pattern := "\$\((\i\c*)\)"
+  let $token-pattern := $EXPANDO-PATTERN
   let $patterns := fn:analyze-string($uri,$token-pattern)
   let $expanded :=
      fn:string-join(
@@ -162,12 +109,12 @@ declare function model:generate-iri(
       typeswitch($p)
          case element(as:non-match) return $p
          case element(as:match) return
-             let $field-name := fn:data($p/*:group[@nr=1])
+             let $field-name := fn:data($p/*:group[@nr=1]/text()[1])
              let $field := $model//(domain:attribute|domain:element)[@name eq $field-name]
              let $data := domain:get-field-value($field,$instance)
              return
                if($data)
-               then $data
+               then fn:data($data)
                else if($field/@type eq "identity") then model:get-identity()
                else fn:error(xs:QName("EMPTY-URI-VARIABLE"),"URI Variables must not be empty",$field-name)
          default return ""
@@ -189,7 +136,7 @@ declare function model:generate-uri(
     $model as element(domain:model),
     $instance as item()
 ) {
-  let $token-pattern := "\$\((\i\c*)\)"
+  let $token-pattern := $EXPANDO-PATTERN
   let $patterns := fn:analyze-string($uri,$token-pattern)
   return
     fn:string-join(
@@ -390,6 +337,7 @@ declare function model:create(
   $collections as xs:string*,
   $permissions as element(sec:permission)*
 ) as element()? {
+  let $params := domain:fire-before-event($model,"create",$params)
   let $id := () (:model:get-id-from-params($model,$params):)
   let $current := model:get($model,$params)
   return
@@ -420,7 +368,6 @@ declare function model:create(
            return (
                (: Return the update node :)
                model:create-reference-cache($model,$update),
-               $update,
                switch($persistence)
                  (: Creation for document persistence :)
                  case "document" return
@@ -498,7 +445,8 @@ declare function model:create(
                          model:create-binary-dependencies($field-id,$update)
                      )
                  case "abstract" return fn:error(xs:QName("PERSISTENCE-ERROR"),"Cannot Persist Abstract Objects",$model/@name)
-                 default return fn:error(xs:QName("PERSISTENCE-ERROR"),"No document persistence defined for create",$model/@name)
+                 default return fn:error(xs:QName("PERSISTENCE-ERROR"),"No document persistence defined for create",$model/@name),
+                 domain:fire-after-event($model,"create",$update)
        )
 };
 
@@ -555,8 +503,10 @@ declare function model:get(
     else domain:get-param-value($params,"uri")
   let $identity-map := map:new((
     map:entry($identity-field-name, $id-value),
-    map:entry($keylabel-field/@name,$id-value),
-    map:entry($keylabel-field/@name,domain:get-field-value($keylabel-field,$params))
+    map:entry($keylabel-field/@name,(
+        domain:get-field-value($keylabel-field,$params),
+        $id-value)
+    )
   ))
   let $persistence := $model/@persistence
   let $identity-query :=
@@ -845,9 +795,12 @@ declare function model:recursive-build(
    typeswitch($context)
    case element(domain:model) return
         let $attributes :=
+        (
+          attribute xsi:type {domain:get-field-qname($context)},
             for $a in $context/domain:attribute
             return
                model:recursive-build($a, $current,$updates)
+        )
         let $ns := domain:get-field-namespace($context)
         let $nses := model:get-namespaces($context)
         return
@@ -1120,32 +1073,38 @@ declare function model:build-triple(
    $updates as item()*,
    $partial as xs:boolean
 ) {
-(:  let $values := domain:get-field-value($context,$updates)
-  let $subject-def   := $value/*:subject, $context/@subject)[1]
-  let $predicate-def := $context/@predicate
-  let $object-def := $context/@object
-  let $graph-def  := $context/@graph
-  return
-    if($field/@occurrence = "+","*")
-    then 
-     for $value in $values
-     
-     return
-         element {domain:get-field-qname($context)} {
+    let $values := domain:get-field-value($context,$updates)
+    let $subject-def   := ($values/*:subject, $context/@subject)[1]
+    let $predicate-def := $context/@predicate
+    let $object-def := $context/@object
+    let $graph-def  := $context/@graph
+    let $subject   :=  "http://marklogic.com/mdm/$(uuid)"
+    let $predicate  := "foaf:knows"
+    let $object     := "http://marklogic.com/mdm/$(country/@refId)"
+    let $graph      := "dc:graph"
+    return
+      if($context/@occurrence = "+","*")
+      then 
+       for $value in $values
+       return
+           element {domain:get-field-qname($context)} {
+                xdmp:function(xs:QName("sem:triple"))(
+                   model:generate-iri($subject,   $context/ancestor-or-self::domain:model,$updates),
+                   model:generate-iri($predicate, $context/ancestor-or-self::domain:model,$updates),
+                   model:generate-iri($object,    $context/ancestor-or-self::domain:model,$updates),
+                   model:generate-iri($graph,     $context/ancestor-or-self::domain:model,$updates)
+                )
+            }
+      else 
+       element {domain:get-field-qname($context)} {
           xdmp:function(xs:QName("sem:triple"))(
-             model:generate-iri($subject,  $context/ancestor-or-self::domain:model,$updates),
-             model:generate-iri($predicate,$context/ancestor-or-self::domain:model,$updates),
-             model:generate-iri($object,   $context/ancestor-or-self::domain:model,$updates),
-             model:generate-iri($graph,   $context/ancestor-or-self::domain:model,$updates)
-          )}
-    else 
-        xdmp:function(xs:QName("sem:triple"))(
-             model:generate-iri($subject,  $context/ancestor-or-self::domain:model,$updates),
-             model:generate-iri($predicate,$context/ancestor-or-self::domain:model,$updates),
-             model:generate-iri($object,   $context/ancestor-or-self::domain:model,$updates),
-             model:generate-iri($graph,   $context/ancestor-or-self::domain:model,$updates)
-          )}
-:)()};
+               model:generate-iri($subject,   $context/ancestor-or-self::domain:model,$updates),
+               model:generate-iri($predicate, $context/ancestor-or-self::domain:model,$updates),
+               model:generate-iri($object,    $context/ancestor-or-self::domain:model,$updates),
+               model:generate-iri($graph,     $context/ancestor-or-self::domain:model,$updates)
+          )
+       }
+};
 (:~
  : Deletes the model document
  : @param $model the model of the document and any external binary files
@@ -1286,8 +1245,6 @@ declare function model:filter-list-result($field as element(),$result) {
       if($field/domain:navigation/@listable = "false")
       then ()
       else 
-        if($field/(domain:element|domain:container|domain:attribute|domain:model))
-        then 
           typeswitch($field)
             case element(domain:model) return
                 element {domain:get-field-qname($field)} {
@@ -1300,7 +1257,14 @@ declare function model:filter-list-result($field as element(),$result) {
                 element {domain:get-field-qname($field)} {
                    for $field in $field/domain:attribute
                    return model:filter-list-result($field,$result),
-                   domain:get-field-value($field,$result)/node()
+                   let $value := domain:get-field-value($field,$result)
+                   let $fieldtype := domain:get-base-type($field)
+                   let $log := xdmp:log(("field-base::",$field/@name,$fieldtype),"debug")    
+                   return
+                     switch($fieldtype)
+                       case "complex" return $value/(@*|node())
+                       default return fn:data($value)
+                       
                 }
             case element(domain:container) return
                   element {domain:get-field-qname($field)} {
@@ -1314,7 +1278,6 @@ declare function model:filter-list-result($field as element(),$result) {
                   domain:get-field-value($field,$result)
                 }
             default return ()                
-        else domain:get-field-value($field,$result)
 };
 
 (:~
@@ -1617,12 +1580,12 @@ declare function model:build-search-options(
     $params as map:map
 ) as element(search:options)
 {
-    let $properties := $model//(domain:element|domain:attribute)[domain:navigation/@searchable = ('true')]
+    let $properties := $model//(domain:element|domain:attribute)[fn:not(domain:navigation/@searchable = ('true'))]
     let $modelNamespace :=  domain:get-field-namespace($model)
     let $baseOptions := $model/search:options
     let $nav := $model/domain:navigation
     let $constraints :=
-            for $prop in $properties[domain:navigation/@searchable = "true"]
+            for $prop in $properties[fn:not(domain:navigation/@searchable = "false")]
             let $prop-nav := $prop/domain:navigation
             let $type := (
                 $prop/domain:navigation/@searchType,
@@ -1723,7 +1686,7 @@ declare function model:build-search-options(
                cts:document-query($model/domain:document/text())
             else if($persistence = "directory") then
                 cts:directory-query($model/domain:directory/text())
-            else ()
+            else cts:or-query(domain:get-descendant-model-query($model))
        let $addQuery := cts:and-query((
             $baseQuery,
             domain:get-param-value($params,"_query")
@@ -1851,10 +1814,10 @@ declare function model:get-function-cache(
       let $node-name := xs:string($reference/@name)
       let $identity-field-name := domain:get-model-identity-field-name($model)
       for $param in $params
-        let $map := map:new((
+      let $map := map:new((
           map:entry($identity-field-name, $param)
         ))
-        return $funct($model, $map)
+      return $funct($reference, $model, $map)
     else
       fn:error(xs:QName("ERROR"), "No Reference function avaliable.")
  };
@@ -1879,10 +1842,10 @@ declare function model:get-function-cache(
  };
 
 declare function model:set-cache-reference($model as element(domain:model),$keys as xs:string*,$values as item()*) {
-    $keys ! map:put($REFERENCE-CACHE,fn:concat(domain:hash($model),"::", .),$values)
+    $keys ! map:put($REFERENCE-CACHE,fn:concat(xdmp:hash64(xdmp:describe($model)),"::", .),$values)
 };
 declare function model:get-cache-reference($model as element(domain:model),$keys as xs:string) {
-     $keys ! map:get($REFERENCE-CACHE,fn:concat(domain:hash($model),"::", .))
+     $keys ! map:get($REFERENCE-CACHE,fn:concat(xdmp:hash64(xdmp:describe($model)),"::", .))
 };
 (:~
  : This function will create a sequence of nodes that represent each
@@ -1891,20 +1854,24 @@ declare function model:get-cache-reference($model as element(domain:model),$keys
  : @param $ids a sequence of ids for models to be extracted
  : @return a sequence of packageType
  :)
+ (:
 declare function model:reference(
-    $model as element(domain:model), 
+    $context as element(),
+    $target as element(domain:model), 
     $params as item()*) 
 as element()?
 {
-  let $keyLabel := fn:data($model/@keyLabel)
-  let $key := fn:data($model/@key)
-  let $key-field := $model//(domain:element|domain:attribute)[@name = $key]
-  let $keyLabel-field := $model//(domain:element|domain:attribute)[@name = $keyLabel]
-  let $key-value := domain:get-field-value($key-field,$params)
-  let $keyField-value := domain:get-field-value($keyLabel-field,$params)
-  let $cached := model:get-cache-reference($model,($key-value,$keyField-value))
-  let $match-values := ($key-value,$keyField-value)
-  return
+    xdmp:log($params),
+    let $keyLabel := fn:data($target/@keyLabel)
+    let $key := fn:data($target/@key)
+    let $key-field :=  domain:get-model-key-field( $target)
+    let $keyLabel-field := domain:get-model-keyLabel-field($target)
+    let $key-value := fn:data(domain:get-field-value($key-field,$params))
+    let $keyField-value := fn:data(domain:get-field-value($keyLabel-field,$params))
+    let $context-value := domain:get-field-value($context,$params)
+    let $cached := model:get-cache-reference($target,($key-value,$keyField-value,$context-value))
+    let $match-values := ($key-value,$keyField-value,$context-value)
+    return
     if($cached) then (xdmp:log(("cached::",$cached),"debug"),$cached)
     else 
         let $query := 
@@ -1920,10 +1887,11 @@ as element()?
                            domain:get-field-query($keyLabel-field,$match-values)
                       )
                )),
-               domain:get-base-query($model)
+               domain:get-base-query($target)
            ))
+     let $parms := map:entry( domain:get-field-id($key-field),$context-value)
      let $values := 
-         if($model/@persistence = "directory") then
+         if($target/@persistence = "directory") then
                cts:value-tuples((
                   domain:get-field-tuple-reference($key-field),
                   domain:get-field-tuple-reference($keyLabel-field)
@@ -1931,36 +1899,57 @@ as element()?
                   ("limit=1"),
                   $query
                )
-          else (
-            let $get :=  model:get($model,$params)
+          else 
+            let $get :=  model:get($target,$parms)
             return
-             if($get) then $get
-             else model:get-cache-reference($model,($key-value,$keyField-value))  
-          )
-     let $modelReference := 
-        if(fn:exists($values) and $model/@persistence = "directory") 
+             if(fn:exists($get)) then $get
+             else (  )
+     let $targetReference := 
+        if(fn:exists($values) and $target/@persistence = "directory") 
         then json:array-values($values) 
         else  (
            domain:get-field-value($key-field,$values),
            domain:get-field-value($keyLabel-field,$values)
         )
-     let $name := fn:data($model/@name)
-     let $reference := element {domain:get-field-qname($model)} {
+     let $name := fn:data($target/@name)
+     let $reference := element {domain:get-field-qname($target)} {
             attribute ref-type { "model" },
-            attribute ref-id   {fn:data($modelReference[1])},
+            attribute ref-id   {fn:data($targetReference[1])},
             attribute ref      { $name },
-            text {fn:data($modelReference[2])}
+            text {fn:data($targetReference[2])}
          }
      return
-       if(fn:exists($modelReference)) then (
-          model:set-cache-reference($model,($keyField-value,$key-value),$reference),
+       if(fn:exists($targetReference)) then (
+          model:set-cache-reference($target,($keyField-value,$key-value),$reference),
           $reference
        )  
        else if(fn:exists($keyField-value) or fn:exists($key-value)) then  
            fn:error(xs:QName("INVALID-REFERENCE-ERROR"),"Invalid Reference", 
-               fn:string-join(("fieldname:",fn:data($model/@name),"values:",$keyField-value,$key-value)," ")
+               fn:string-join(("fieldname:",fn:data($target/@name),"values:",$keyField-value,$key-value)," ")
            )
        else ()
+};
+:)
+declare function model:reference(
+    $context as element(),
+    $model as element(domain:model), 
+    $params as item()*) 
+as element()?
+{
+  let $keyLabel := fn:data($model/@keyLabel)
+  let $key := fn:data($model/@key)
+  let $modelReference := model:get($model,$params)
+  let $name := fn:data($model/@name)
+  return
+    if($modelReference) then
+      element {domain:get-field-qname($model)} {
+         attribute ref-type { "model" },
+         attribute ref-uuid { $modelReference/(@*|*:uuid)/text() },
+         attribute ref-id   { fn:data($modelReference/(@*|node())[fn:local-name(.) = $key])},
+         attribute ref      { $name },
+         fn:data($modelReference/node()[fn:local-name(.) = $keyLabel])
+      }
+    else ()(: fn:error(xs:QName("INVALID-REFERENCE-ERROR"),"Invalid Reference", fn:data($model/@name)):)
 };
 (:~
  : This function will create a reference of an existing element
@@ -1969,6 +1958,7 @@ as element()?
  : @return a sequence of packageType
  :)
 declare function model:instance(
+  $context as element(),
   $model as element(domain:model), 
   $params as item()*
 ) {
@@ -2248,30 +2238,30 @@ declare function model:build-value(
   let $type := $context/@type
   return
     switch($type)
-    case "id" return (
-        if(fn:data($current))
-        then fn:data($current)
+    case "id" return
+        if(fn:exists($current))
+        then $current
+        else if(fn:exists($value)) then $value
         else model:generate-fnid(($value,<x>{xdmp:random()}</x>)[1])
-        )
+    case "identity" return
+        if(fn:exists($current))
+        then $current
+        else if (fn:exists($value) and fn:normalize-space($value) ne "" )
+        then $value
+        else model:get-identity()
     case "reference" return
         model:get-references($context,$value)
-    case "identity" return
-        if(fn:data($current))
-        then fn:data($current)
-        else if (fn:data($value)) 
-        then fn:data($value)
-        else model:get-identity()
     case "update-timestamp" return
         fn:current-dateTime()
     case "update-user" return
         xdmp:get-current-user()
     case "create-timestamp" return
-        if(fn:data($current))
-        then fn:data($current)
+        if(fn:exists($current))
+        then $current
         else fn:current-dateTime()
     case "create-user" return
-        if(fn:data($current))
-        then fn:data($current)
+        if(fn:exists($current))
+        then $current
         else xdmp:get-current-user()
     case "query" return
         cts:query($value)
@@ -2309,6 +2299,8 @@ declare function model:find($model as element(domain:model),$params as map:map) 
                 fn:doc($path)/*/*[cts:contains(.,cts:and-query(($search)))]
         else if($persistence = 'directory') then
                 cts:search(fn:collection(),cts:element-query($model-qname, $search))
+        else if($persistence = "abstract") then 
+                cts:search(fn:collection(),cts:or-query(domain:get-descendant-model-query($model)))
         else fn:error(xs:QName("INVALID-PERSISTENCE"),"Invalid Persistence", $persistence)
    return $found
 };
@@ -2436,7 +2428,7 @@ declare function model:export(
 declare function model:export(
   $model as element(domain:model),
   $params as map:map,
-  $fields as xs:string?
+  $fields as xs:string*
 ) as element(results) {
   let $results := model:list($model, $params)
   let $filter-mod := $model
@@ -2489,8 +2481,10 @@ declare %private function serialize-to-flat-xml(
   let $map := model:convert-to-map($model, $current)
   return
     for $key in map:keys($map)
+    let $values := domain:get-param-value($map, $key) 
     return
-      element { fn:QName($namespace, $key) } { domain:get-param-value($map, $key) }
+      element { fn:QName($namespace, $key) } {
+      if(fn:count($values) gt 1) then fn:string-join(($values ! fn:normalize-space(.)),"|") else $values}
 };
 
 declare %private function convert-flat-xml-to-map(
@@ -2501,8 +2495,12 @@ declare %private function convert-flat-xml-to-map(
   let $_ := (
     map:put($map,domain:get-field-name-key(domain:get-model-identity-field($model)), domain:get-field-value(domain:get-model-identity-field($model), $current)),
     for $field in $current/*
+    let $values :=  $field
+    
     return
-      map:put($map,fn:local-name($field), $field/text())
+      map:put($map,fn:local-name($field),if(fn:count($values) gt 1) then 
+        fn:tokenize($values,"\|") else $values
+      )
   )
   return $map
 };

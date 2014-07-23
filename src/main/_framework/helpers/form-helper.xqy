@@ -174,7 +174,7 @@ declare function form:get-value-from-response($field as element()) {
         else if($field/@type = "schema-element") then
           $node/node()
         else
-            if($node)
+            if(fn:exists($node))
             then fn:data($node)
             else fn:data($field/@default)
 };
@@ -252,7 +252,7 @@ declare function form:values($field,$value)
  )[1]
  let $is-multi := $field/@occurrence  = ("+","*")
  let $default  := $field/@default
- let $value    := if($value[. ne ""]) then $value else $default
+ let $value    := if(fn:exists($value)) then $value else $default
  let $readonly := $field/domain:navigation/@editable eq 'false'
  return
  if($list and fn:not($readonly)) then
@@ -272,7 +272,7 @@ declare function form:values($field,$value)
             if(xs:boolean($value) eq fn:true())
             then attribute checked {"checked"}
             else ()
-    ) else  attribute value {fn:string-join($value,",")}
+    ) else  attribute value {fn:string-join($value ! fn:string(.),",")}
 };
 
 (:~
@@ -768,7 +768,7 @@ declare function form:field-grid-column(
         else if($dataType = "boolean") then "center"
         else if($dataType = ("decimal","float","double")) then "right"
         else "left"
-    let $sortable := ($field/domain:navigation/@sortable,"true")[1]
+    let $sortable := ($field/domain:navigation/@sortable/xs:boolean(.),fn:true())[1]
     let $formatter :=
          if(map:get($options,"formatter"))
          then js:kv("fomatter",map:get($options,"formatter"))
@@ -848,8 +848,8 @@ declare function form:context(
               let $identityField := domain:get-model-identity-field(response:model())
               let $keyLabelField := domain:get-model-keyLabel-field(response:model())
               return (
-              js:kv("currentId",domain:get-field-value($identityField,response:body())/fn:data(.)),
-              js:kv("currentLabel",domain:get-field-value($keyLabelField,response:body())/fn:data(.)),
+              js:kv("currentId",domain:get-field-value($identityField,response:body())),
+              js:kv("currentLabel",domain:get-field-value($keyLabelField,response:body())),
               js:kv("modelName",response:model()/@name),
               js:kv("modelId",domain:get-model-identity-field-name(response:model())),
               js:kv("modelKeyLabel",fn:string(domain:get-model-keyLabel-field(response:model())/@name)),

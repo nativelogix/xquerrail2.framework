@@ -661,7 +661,7 @@ declare function config:property(
 (:~
  : Returns the configurations for any controller extension
 ~:)
-declare function config:controller-extension() as xs:string? {
+declare function config:controller-extension() {
    config:get-config()/config:controller-extension
 };
 (:~

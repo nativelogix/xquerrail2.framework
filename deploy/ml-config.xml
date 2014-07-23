@@ -217,6 +217,13 @@
       </fields>
 -->
       <range-element-indexes>
+        <range-element-index>
+          <scalar-type>string</scalar-type>
+          <namespace-uri>http://xquerrail.com/app-test</namespace-uri>
+          <localname>id</localname>
+          <collation>http://marklogic.com/collation/codepoint</collation>
+          <range-value-positions>false</range-value-positions>
+        </range-element-index>
         <!--
         Sample for:
           <name xmlns="http://marklogic.com/ns/sample">bob<name>
@@ -233,7 +240,7 @@
       <range-element-attribute-indexes>
         <range-element-attribute-index>
           <scalar-type>string</scalar-type>
-          <parent-namespace-uri>http://marklogic.com/model/test</parent-namespace-uri>
+          <parent-namespace-uri>http://xquerrail.com/app-test</parent-namespace-uri>
           <parent-localname>model6</parent-localname>
           <namespace-uri/>
           <localname>id</localname>
@@ -242,8 +249,17 @@
         </range-element-attribute-index>
         <range-element-attribute-index>
           <scalar-type>string</scalar-type>
-          <parent-namespace-uri>http://marklogic.com/model/test</parent-namespace-uri>
+          <parent-namespace-uri>http://xquerrail.com/app-test</parent-namespace-uri>
           <parent-localname>model7</parent-localname>
+          <namespace-uri/>
+          <localname>id</localname>
+          <collation>http://marklogic.com/collation/codepoint</collation>
+          <range-value-positions>false</range-value-positions>
+        </range-element-attribute-index>
+        <range-element-attribute-index>
+          <scalar-type>string</scalar-type>
+          <parent-namespace-uri>http://xquerrail.com/app-test</parent-namespace-uri>
+          <parent-localname>model10</parent-localname>
           <namespace-uri/>
           <localname>id</localname>
           <collation>http://marklogic.com/collation/codepoint</collation>

@@ -10,7 +10,7 @@ import module namespace setup = "http://xquerrail.com/test/setup";
 
 declare option xdmp:mapping "false";
 
-declare variable $TEST-COLLECTION := "base-model-crud-test";
+declare variable $TEST-COLLECTION := "base-model-list-test";
 
 declare variable $TEST-APPLICATION :=
 <application xmlns="http://xquerrail.com/config">
@@ -19,33 +19,84 @@ declare variable $TEST-APPLICATION :=
 </application>
 ;
 
-declare variable $INSTANCE1 := 
-<model1 xmlns="http://marklogic.com/model/model1">
-  <id>crud-model1-id</id>
-  <name>crud-model1-name</name>
-</model1>
-;
+declare variable $INSTANCES1 := (
+  <model1 xmlns="http://marklogic.com/model/model1">
+    <id>list-model1-id1</id>
+    <name>list-model1-name1</name>
+  </model1>
+  ,
+  <model1 xmlns="http://marklogic.com/model/model1">
+    <id>list-model1-id2</id>
+    <name>list-model1-name2</name>
+  </model1>
+  ,
+  <model1 xmlns="http://marklogic.com/model/model1">
+    <id>list-model1-id3</id>
+    <name>list-model1-name3</name>
+  </model1>
+);
 
-declare variable $INSTANCE2 := 
-<model2 xmlns="http://marklogic.com/model/model2">
-  <id>model2-id</id>
-  <name>model2-name</name>
-</model2>
-;
+declare variable $INSTANCES7 := (
+  <model7 xmlns="http://xquerrail.com/app-test" id="list-model7-id1">
+    <score>10</score>
+    <name>list-model7-name1</name>
+  </model7>
+  ,
+  <model7 xmlns="http://xquerrail.com/app-test" id="list-model7-id2">
+    <score>11</score>
+    <name>list-model7-name2</name>
+  </model7>
+  ,
+  <model7 xmlns="http://xquerrail.com/app-test" id="list-model7-id3">
+    <score>12</score>
+    <name>list-model7-name3</name>
+  </model7>
+);
 
-declare variable $INSTANCE4 := 
-<model4 xmlns="http://marklogic.com/model/model4">
-  <id>model4-id</id>
-  <name>model4-name</name>
-</model4>
-;
+declare variable $INSTANCES11 := (
+  <model11 xmlns="http://xquerrail.com/app-test">
+    <id>list-model11-id1</id>
+    <abstract name="container-model11-id1" />
+  </model11>
+  ,
+  <model11 xmlns="http://xquerrail.com/app-test">
+    <id>list-model11-id2</id>
+    <abstract name="container-model11-id2" />
+  </model11>
+  ,
+  <model11 xmlns="http://xquerrail.com/app-test">
+    <id>list-model11-id3</id>
+    <abstract name="container-model11-id3" />
+    <child childId="child-model11-id3" />
+  </model11>
+);
 
 declare variable $CONFIG := ();
 
+declare %private function create-instances($instances as element()*) {
+    for $instance in $instances
+      let $model := domain:get-model(fn:local-name($instance))
+      return xdmp:invoke-function(
+        function() {
+          xdmp:apply(function() {
+            model:create($model, $instance, $TEST-COLLECTION)
+          })
+          ,
+          xdmp:commit()
+        },
+        <options xmlns="xdmp:eval">
+          <transaction-mode>update</transaction-mode>
+          <isolation>different-transaction</isolation>
+        </options>
+      )
+};
+
 declare %test:setup function setup() {
-  let $_ := xdmp:set($CONFIG, app:bootstrap($TEST-APPLICATION))
+  let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION))
   let $model1 := domain:get-model("model1")
-  let $_ := model:create($model1, $INSTANCE1, $TEST-COLLECTION)
+  let $_ := create-instances($INSTANCES1)
+  let $_ := create-instances($INSTANCES7)
+  let $_ := create-instances($INSTANCES11)
   return
     ()
 };
@@ -66,36 +117,90 @@ declare %test:before-each function before-test() {
   xdmp:set($CONFIG, app:bootstrap($TEST-APPLICATION))
 };
 
-declare %test:case function model1-model2-exist-test() as item()*
+declare %test:case function model1-exist-test() as item()*
 {
   let $model1 := domain:get-model("model1")
-  let $model2 := domain:get-model("model2")
   return (
-    assert:not-empty($model1),
-    assert:not-empty($model2)
+    assert:not-empty($model1)
   )
 };
 
-declare %test:case function model-document-new-test() as item()*
+declare %test:case function model-list-totalrecords-test() as item()*
 {
   let $model1 := domain:get-model("model1")
-  let $instance1 := model:new(
-    $model1, 
+  let $instances := model:list($model1, map:new())
+  return (
+    assert:not-empty($instances),
+    assert:equal(xs:integer($instances/totalrecords), 3)
+  )
+};
+
+declare %test:case function model-list-equal-element-test() as item()*
+{
+  let $model := domain:get-model("model1")
+  let $instances := model:list($model, 
     map:new((
-      map:entry("id", "1234"),
-      map:entry("name", "name-1")
+      map:entry("searchField", "id"),
+      map:entry("searchOper", "eq"),
+      map:entry("searchString", "list-model1-id1")
     ))
   )
-  let $value-id := domain:get-field-value(domain:get-model-field($model1, "id"), $instance1)
-  let $value-name := domain:get-field-value(domain:get-model-field($model1, "name"), $instance1)
+  let $_ := xdmp:log($instances)
   return (
-    assert:not-empty($instance1),
-    assert:equal("1234", xs:string($value-id)),
-    assert:equal("name-1", xs:string($value-name))
+    assert:not-empty($instances),
+    assert:equal(xs:integer($instances/totalrecords), 1)
   )
 };
 
-declare %test:case function model-directory-new-test() as item()*
+declare %test:case function model-list-equal-model-attribute-test() as item()*
+{
+  let $model := domain:get-model("model7")
+  let $instances := model:list($model, 
+    map:new((
+      map:entry("searchField", "id"),
+      map:entry("searchOper", "eq"),
+      map:entry("searchString", "list-model7-id1")
+    ))
+  )
+  return (
+    assert:not-empty($instances),
+    assert:equal(xs:integer($instances/totalrecords), 1)
+  )
+};
+
+declare %test:case function model-list-equal-element-attribute-test() as item()*
+{
+  let $model := domain:get-model("model11")
+  let $instances := model:list($model, 
+    map:new((
+      map:entry("searchField", "childId"),
+      map:entry("searchOper", "eq"),
+      map:entry("searchString", "child-model11-id3")
+    ))
+  )
+  return (
+    assert:not-empty($instances),
+    assert:equal(xs:integer($instances/totalrecords), 1)
+  )
+};
+
+declare %test:ignore function model-list-equal-abstract-type-attribute-test() as item()*
+{
+  let $model := domain:get-model("model11")
+  let $instances := model:list($model, 
+    map:new((
+      map:entry("searchField", "abstract.name"),
+      map:entry("searchOper", "eq"),
+      map:entry("searchString", "container-model11-id1")
+    ))
+  )
+  return (
+    assert:not-empty($instances),
+    assert:equal(xs:integer($instances/totalrecords), 1)
+  )
+};
+
+(:declare %test:case function model-directory-new-test() as item()*
 {
   let $model4 := domain:get-model("model4")
   let $instance4 := model:new(
@@ -160,7 +265,7 @@ declare %test:case function model-document-new-create-keep-identity-test() as it
   )
 };
 
-(: Require element range index for keyLabel :)
+(\: Require element range index for keyLabel :\)
 declare %test:ignore function model-directory-create-test() as item()*
 {
   let $model4 := domain:get-model("model4")
@@ -185,7 +290,7 @@ declare %test:ignore function model-directory-create-test() as item()*
 declare %private function eval($fn as function(*)) {
   xdmp:apply($fn)
 
-(:  xdmp:invoke-function(
+(\:  xdmp:invoke-function(
     function() {
       xdmp:apply($fn)
       ,
@@ -196,7 +301,7 @@ declare %private function eval($fn as function(*)) {
       <prevent-deadlocks>true</prevent-deadlocks>
     </options>
   )
-:)
+:\)
 };
 
 declare %test:case function model-document-update-test() as item()*
@@ -251,7 +356,7 @@ declare %test:case function model-document-create-test() as item()*
       )
     }
   )
-(:  let $instance1 := model:create(
+(\:  let $instance1 := model:create(
     $model1, 
     map:new((
       map:entry("id", "1234"),
@@ -259,7 +364,7 @@ declare %test:case function model-document-create-test() as item()*
     )), 
     $TEST-COLLECTION
   )
-:)  let $value-id := domain:get-field-value(domain:get-model-field($model1, "id"), $instance1)
+:\)  let $value-id := domain:get-field-value(domain:get-model-field($model1, "id"), $instance1)
   let $value-name := domain:get-field-value(domain:get-model-field($model1, "name"), $instance1)
   return (
     assert:not-empty($instance1),
@@ -352,7 +457,7 @@ declare %test:case function model-find-by-attribute-test() as item()*
     $model6,
     map:new((
       map:entry("id", $id)
-(:      map:entry("name", "name-6"):)
+(\:      map:entry("name", "name-6"):\)
     ))
   )
   let $value-id := domain:get-field-value(domain:get-model-field($model6, "id"), $instance6)
@@ -461,32 +566,10 @@ declare %test:case function model-document-create-multiple-reference-instances-t
   let $value-id := domain:get-field-value(domain:get-model-field($model10, "id"), $instance10)
   let $value-version := domain:get-field-value(domain:get-model-field($model10, "version"), $instance10)
   let $_ := xdmp:log(("$value-version", $value-version))
-
-(:  let $version1-find := model:find($model10, 
-    map:new((
-      map:entry("version", "version==2")
-    ))
-  )
-  let $_ := xdmp:log(("$version1-find", $version1-find))
-:)
   return (
     assert:not-empty($instance10),
     assert:equal("10101010", xs:string($value-id)),
     assert:equal(2, fn:count($value-version))
-  )
-};
-
-(:declare %test:case function get-model-references-test() as item()*
-{
-  let $model1 := domain:get-model("model1")
-  let $model2 := domain:get-model("model2")
-  let $model1-instance := model:find($model1, map:new((map:entry("id", "model1-id"))))
-  let $identity-field := domain:get-model-identity-field($model1)
-  let $identity-value := xs:string(domain:get-field-value($identity-field, $model1-instance))
-  let $reference-field := domain:get-model-field($model2, "model1")
-  return (
-    assert:not-empty($reference-field),
-    assert:not-empty(model:get-model-references($reference-field, $identity-value))
   )
 };
 :)

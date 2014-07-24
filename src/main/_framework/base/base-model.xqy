@@ -1634,7 +1634,7 @@ declare function model:build-search-options(
     $params as map:map
 ) as element(search:options)
 {
-    let $properties := $model//(domain:element|domain:attribute)[fn:not(domain:navigation/@searchable = ('true'))]
+    let $properties := $model//(domain:element|domain:attribute)[fn:not(domain:navigation/@searchable = ('false'))]
     let $modelNamespace :=  domain:get-field-namespace($model)
     let $baseOptions := $model/search:options
     let $nav := $model/domain:navigation
@@ -2524,7 +2524,7 @@ declare function model:export(
 
 };
 
-declare %private function convert-attributes-to-elements($namespace as xs:string, $attributes, $convert-attributes) {
+declare function convert-attributes-to-elements($namespace as xs:string, $attributes, $convert-attributes) {
   if ($convert-attributes) then
     for $attribute in $attributes
     return
@@ -2533,7 +2533,7 @@ declare %private function convert-attributes-to-elements($namespace as xs:string
     $attributes
 };
 
-declare %private function serialize-to-flat-xml(
+declare function serialize-to-flat-xml(
   $namespace as xs:string,
   $model as element(domain:model),
   $current as node()
@@ -2547,7 +2547,7 @@ declare %private function serialize-to-flat-xml(
       if(fn:count($values) gt 1) then fn:string-join(($values ! fn:normalize-space(.)),"|") else $values}
 };
 
-declare %private function convert-flat-xml-to-map(
+declare function convert-flat-xml-to-map(
   $model as element(domain:model),
   $current as node()
 ) as map:map {

@@ -32,17 +32,14 @@ declare variable $COLLATION := "http://marklogic.com/collation/codepoint";
 
 declare variable $COMPLEX-TYPES := (
   (:GeoSpatial:)        "lat-long", "longitude", "latitude",
-  (:Others:)            "query", "schema-element","triple","binary","reference"
+  (:Others:)            "query", "schema-element","triple","binary","reference","langString"
 );
 
 declare variable $SIMPLE-TYPES := (
   (:Identity Sequence:) "identity", "ID", "id", "sequence",
-  (:Users/Timestamps:)  "create-user","create-timestamp","update-timestamp","update-user",
-    "anyURI", "string",
-    "integer","decimal","double","float",
-    "boolean",
-    "date","time","dateTime",
-    "duration","yearMonth","monthDay"
+  (:Users/Timestamps :) "create-user","create-timestamp","update-timestamp","update-user",
+  (:xs:atomicType    :) "anyURI", "string","integer","decimal","double","float","boolean", 
+  (:Durations        :) "date","time","dateTime", "duration","yearMonth","monthDay"
 );
 
 (:~
@@ -60,7 +57,7 @@ declare variable $FUNCTION-CACHE := map:map() ;
 
 (:~
  : Cache all values
-~:)
+:)
 declare variable $VALUE-CACHE := map:map();
 (:~
  :Casts the value as a specific type
@@ -94,6 +91,7 @@ declare function domain:cast-value($field as element(),$value as item()*)
         case "create-user"      return $value cast as xs:string?
         case "update-user"      return $value cast as xs:string?
         case "schema-element"   return $value
+        case "langString"  return $value cast as rdf:langString*
         default return $value
 };
 (:~
@@ -122,7 +120,8 @@ declare function domain:castable-value($field as element(),$value as item()?)
         case element(identity) return $value castable as xs:string
         case element(schema-element) return $value instance of element()
         case element(binary) return $value instance of binary()
-        case element(query) return $value cast as cts:query?
+        case element(query) return $value castable as cts:query?
+        case element(langString) return $value castable as rdf:langString
         default return fn:true()
 };
 
@@ -177,7 +176,7 @@ declare function domain:get-field-cache-key($field,$prefix as xs:string) {
 
 (:~
  : Returns the cache for a given value function
-~:)
+:)
 declare function domain:exists-field-function-cache(
   $field as element(),
   $type as xs:string
@@ -198,7 +197,7 @@ declare function domain:set-field-function-cache(
 
 (:~
  : Gets the function for the xxx-path from the cache
-~:)
+:)
 declare function domain:get-field-function-cache(
     $field as element(),
     $type as xs:string
@@ -209,7 +208,7 @@ declare function domain:get-field-function-cache(
 
 (:~
  : Returns the cache for a given value function
-~:)
+:)
 declare function domain:exists-field-value-cache(
   $field as element(),
   $type as xs:string
@@ -230,7 +229,7 @@ declare function domain:set-field-value-cache(
 
 (:~
  : Gets the function for the xxx-path from the cache
-~:)
+:)
    declare function domain:get-field-value-cache(
     $field as element(),
     $type as xs:string
@@ -423,6 +422,7 @@ declare function domain:resolve-datatype(
      case element(yearMonth) return "xs:yearMonthDuration"
      case element(monthDay) return "xs:monthDayDuration"
      case element(reference) return "xs:string"
+     case element(langString) return "rdf:langString"
      default return 
         if(domain:get-model($field/@type)) then "element()"
         else fn:error(xs:QName("UNRESOLVED-DATATYPE"),$field)
@@ -613,7 +613,7 @@ declare function domain:get-model-controller-name(
  : @param $application-name - Name of the application
  : @param $model-name - Name of the model
  : @return  a model definition
-  ~:)
+  :)
 declare function domain:get-model(
 $application-name as xs:string,
 $model-name as xs:string*
@@ -1472,7 +1472,7 @@ declare function domain:get-model-search-expression(
 };
 (:~
  : Returns a cts query that returns a cts:query which matches a node against its value.
-~:)
+:)
 declare function domain:get-identity-query(
     $model as element(domain:model),
     $params as item()
@@ -1578,7 +1578,7 @@ declare function domain:get-model-estimate-expression(
 };
 (:~
  : Creates a root term query that can be used in combination to specify the root.
-~:)
+:)
 declare function domain:model-root-query($model as element(domain:model)) {
   let $name := $model/@name
   let $ns := domain:get-field-namespace($model)
@@ -1607,7 +1607,7 @@ declare function domain:model-root-query($model as element(domain:model)) {
 };
 (:~
  : 
-~:)
+:)
 declare function domain:get-field-query(
 $field as element(),
 $value as xs:anyAtomicType*) {
@@ -1662,7 +1662,7 @@ declare function domain:get-field-tuple-reference(
 
 (:~
  : Return as list of all prefixes and their respective namespaces
-~:)
+:)
 declare function domain:declared-namespaces(
   $model as element()
 ) as xs:string* {
@@ -1700,15 +1700,15 @@ declare function domain:fire-before-event(
 ) {
    let $event := $model/domain:event[@name = $event-name and @mode= ("before","wrap")]
    return
-   if($event) then 
-   let $module := $event/@module
-   let $module-namespace := $event/@module-namespace
-   let $module-uri := $event/@module-uri
-   let $function := $event/@function
-   let $call := xdmp:function(fn:QName($module-namespace,$function),$module-uri)
-   return
-     xdmp:apply($call,$event,$context)
-   else $context
+        if($event) then 
+        let $module := $event/@module
+        let $module-namespace := $event/@module-namespace
+        let $module-uri := $event/@module-uri
+        let $function := $event/@function
+        let $call := xdmp:function(fn:QName($module-namespace,$function),$module-uri)
+        return
+          xdmp:apply($call,$event,$context)
+        else $context
 };
 
 (:~
@@ -1740,7 +1740,7 @@ declare function domain:fire-after-event(
 };
 (:~
  : Gets the json path for a given field definition. The path expression by default is relative to the root of the json type
-~:)
+:)
 declare function domain:get-field-jsonpath(
 $field as element()
 ) {
@@ -1801,7 +1801,7 @@ $base-path as xs:string?
 
 (:~
  : Gets the value from an object type
-~:)
+:)
 declare function domain:get-field-value(
     $field as element(),
     $value as item()*
@@ -1912,7 +1912,7 @@ declare function domain:field-is-multivalue($field) {
 
 (:~
  : Returns the passed in value type and its expecting source values
-~:)
+:)
 declare function domain:get-value-type($type as item()?) {
   typeswitch($type)
     case json:object return "json"
@@ -1957,7 +1957,7 @@ declare function domain:get-param-keys(
 };
 (:~
  : Gets a parameter from a map:map or json:object value by its name
-~:)
+:)
 declare function domain:get-param-value(
     $params as item(),
     $key as xs:string*
@@ -2104,7 +2104,7 @@ $function-arity as xs:integer?
 
 (:~
  : Returns all models for all domains
-~:)
+:)
 declare function domain:get-models (
 ) as element(domain:model)* {
    domain:get-models(domain:get-default-application(), fn:false())
@@ -2127,7 +2127,7 @@ declare function domain:get-models (
 (:~
  : Returns all in scope permissions associated with a model.
  : @param $model for a given permission set
-~:)
+:)
 declare function domain:get-permissions(
     $model as element(domain:model)
  ) {
@@ -2158,9 +2158,28 @@ declare function domain:get-descendant-models(
 (:~
  : Returns the query for descendant(@extends) models.
  : @param $model - Model which is the extension model
-:)
+ :)
 declare function domain:get-descendant-model-query(
     $parent as element(domain:model)
 ) {
    domain:get-descendant-models($parent) ! domain:get-base-query(.)
+};
+
+(:~
+ : returns the default language associated with langString field. 
+ :)
+declare function domain:get-default-language($field) {
+  if($field/@defaultLanguage) then $field/@defaultLanguage
+  else if($field/ancestor::domain:domain/domain:default-language) then $field/ancestor::domain:domain/domain:default-language
+  else "en"
+};
+
+(:~
+ : Returns the languages associated with a given domain field whose type is langString
+ :)
+declare function domain:get-field-languages($field as element()) {
+   fn:distinct-values((
+   $field/ancestor::domain:domain/domain:language,
+   fn:tokenize($field/@languages,"\s"),
+   "en"))
 };

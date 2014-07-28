@@ -826,6 +826,7 @@ declare function model:recursive-build(
             case "binary"         return model:build-binary($context,$current,$updates,$partial)
             case "schema-element" return model:build-schema-element($context,$current,$updates,$partial)
             case "triple"         return model:build-triple($context,$current-value,$updates,$partial)
+            case "langString"     return model:build-langString($context,$current-value,$updates,$partial)
             default return
                if($type = ($domain:SIMPLE-TYPES,$domain:COMPLEX-TYPES)) then
                    if(fn:exists($update-value)) then
@@ -1063,7 +1064,29 @@ declare function model:build-instance(
      else if(fn:exists($current-values) and $partial) then $current-values
      else ()
 };
-
+declare function model:build-langString(
+    $context as node(),
+    $current as node()?,
+    $updates as item()*,
+    $partial as xs:boolean
+ ) {
+   if(fn:exists($updates)) then 
+     for $value in  domain:get-field-value($context,$updates)
+     let $lang := (sem:lang($value),$context/@defaultLanguage,"en")[1]
+     return
+        element {domain:get-field-qname($context)} {
+          attribute xml:lang {$lang},
+               fn:data($value)
+        }
+    else if($partial and fn:exists($current)) then
+        $current
+      else if($context/@default) then 
+         element {domain:get-field-qname($context)} {
+            attribute xml:lang {($context/@defaultLanguage,"en")},
+            fn:string($context/@default)
+         }
+      else ()
+ };
 (:~
  : Creates a triple based on an IRI Pattern
  :)
@@ -1116,6 +1139,7 @@ declare function model:delete(
     $params as item()
 ) as xs:boolean
 {
+  let $params := domain:fire-before-event($model,"delete",$params)
   let $current := model:get($model,$params)
   let $is-referenced := domain:is-model-referenced($model,$current)
   let $is-current := if($current) then () else fn:error(xs:QName("DELETE-ERROR"),"Could not find a matching document")
@@ -1130,7 +1154,11 @@ declare function model:delete(
       else
        ( xdmp:node-delete($current)
         ,model:delete-binary-dependencies($model,$current)
-        ,fn:true() )
+        ,let $event := 
+            domain:fire-after-event($model,"delete",$current)
+        return
+          if($event) then $event else fn:true() 
+        )
     } catch($ex) {
        xdmp:rethrow()
     }
@@ -1336,7 +1364,7 @@ as element(list)?
             let $sort-order        := domain:get-param-value($params,"sord")[1]
             let $model-sort-field  := $model/domain:navigation/@sortField/fn:data(.)
             let $model-order       := ($model/domain:navigation/@sortOrder/fn:data(.),"ascending")[1]
-            let $domain-sort-field := $model//(domain:element|domain:attribute)[@name = ($sort-field,$model-sort-field)][1]
+            let $domain-sort-field := $model//(domain:element|domain:attribute)[(domain:get-field-name-key(.),@name) = ($sort-field,$model-sort-field )][1]
             let $domain-sort-as :=
               if($domain-sort-field)
               then fn:concat("[1] cast as ", domain:resolve-datatype($domain-sort-field))
@@ -1648,8 +1676,12 @@ declare function model:build-search-options(
                 $prop/domain:navigation/search:facet-option
             let $ns := domain:get-field-namespace($prop)
             let $prop-nav := $prop/domain:navigation
+            let $name := 
+                typeswitch($prop)
+                  case element(domain:attribute) return fn:concat($prop/../@name,"_",$prop/@name)
+                  default return fn:data($prop/@name)
             return
-                <search:constraint name="{$prop/@name}" label="{$prop/@label}">{
+                <search:constraint name="{$name }" label="{$prop/@label}">{
                   element { fn:QName("http://marklogic.com/appservices/search",$type) } {
                         attribute collation {domain:get-field-collation($prop)},
                         if ($type eq 'range')
@@ -1718,6 +1750,7 @@ declare function model:build-search-options(
          let $ns := domain:get-field-namespace($prop)
          return
             (<search:qname>{
+              $prop/@label,
               typeswitch($prop)
                 case element(domain:element) return
                   (attribute elem-ns{$ns}, attribute elem-name {$prop/@name})
@@ -2691,6 +2724,7 @@ declare function build-complex(
       case "binary"         return model:build-binary($context,$current-value,$update-value,$partial)
       case "schema-element" return model:build-schema-element($context,$current-value,$update-value,$partial)
       case "triple"         return model:build-triple($context,$current-value,$update-value,$partial)
+      case "langString"     return model:build-langString($context,$current-value,$update-value,$partial)
       default return
           if($type = ($domain:COMPLEX-TYPES)) then
              if(fn:exists($update-value) and $context/@occurrence = ("*","+")) then
@@ -2704,7 +2738,6 @@ declare function build-complex(
               else element {domain:get-field-qname($context)}{
                        model:build-value($context, $update-value, $current-value)
                    }
-
          else fn:error(xs:QName("UNKNOWN-TYPE"),"The type of " || $type || " is unknown ",$context)
 };
 

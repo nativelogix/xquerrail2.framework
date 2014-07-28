@@ -68,14 +68,16 @@ declare %test:case function model1-model2-exist-test() as item()*
   )
 };
 
-declare %test:case function model-reference-test() as item()*
+declare %test:case function model-default-reference-function-test() as item()*
 {
   let $model1 := domain:get-model("model1")
+  let $model2 := domain:get-model("model2")
   let $model1-instance := model:find($model1, map:new((map:entry("id", "model1-id"))))
   let $identity-field := domain:get-model-identity-field($model1)
   let $identity-value := xs:string(domain:get-field-value($identity-field, $model1-instance))
   let $itentity-map := map:new((map:entry(domain:get-model-identity-field-name($model1), $identity-value)))
-  let $reference := model:reference($model1, $itentity-map)
+  let $reference-field := domain:get-model-field($model2, "model1")
+  let $reference := model:reference($reference-field, $model1, $itentity-map)
   return (
     assert:not-empty($reference)
   )
@@ -140,10 +142,11 @@ declare %test:case function build-reference-different-name-test() {
       </model3>
     )
   let $reference-field := domain:get-model-field($model3, "dummyModel")
+  let $_ := xdmp:log(("$model1-instance", $model1-instance, "$model3-instance", $model3-instance, "domain:get-field-value(domain:get-model-keylabel-field($model1), $model1-instance)", domain:get-field-value(domain:get-model-keylabel-field($model1), $model1-instance)))
   return 
   (
     assert:not-empty($model3-instance/*:dummyModel, "model3 should have dummyModel element name"),
-    assert:equal(domain:get-field-value(domain:get-model-field($model3, "dummyModel"), $model3-instance)/fn:string(), domain:get-field-value(domain:get-model-keylabel-field($model1), $model1-instance)/fn:string())
+    assert:equal(domain:get-field-value(domain:get-model-field($model3, "dummyModel"), $model3-instance)/fn:string(), xs:string(domain:get-field-value(domain:get-model-keylabel-field($model1), $model1-instance)))
   )
 };
 

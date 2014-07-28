@@ -1,26 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema targetNamespace="http://xquerrail.com/domain" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://xquerrail.com/domain" xmlns:domain="http://www.xqerrail-framework.com/domain" xmlns:builder="http://xquerrail.com/builder" xmlns:ui="http://xquerrail.com/ui" xmlns:search="http://marklogic.com/appservices/search">
+<xs:schema targetNamespace="http://xquerrail.com/domain" elementFormDefault="qualified"
+  xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://xquerrail.com/domain"
+  xmlns:domain="http://www.xqerrail-framework.com/domain"
+  xmlns:builder="http://xquerrail.com/builder" xmlns:ui="http://xquerrail.com/ui"
+  xmlns:search="http://marklogic.com/appservices/search">
   <xs:element name="domain" type="domainType">
     <xs:annotation>
-      <xs:documentation>Defines an application domain for models, controllers and optionLists and default settings </xs:documentation>
+      <xs:documentation>Defines an application domain for models, controllers and optionLists and
+        default settings </xs:documentation>
     </xs:annotation>
   </xs:element>
   <xs:element name="model" type="modelType">
     <xs:annotation>
-      <xs:documentation> Models are objects or in relational terms tables that describe the structure of xml created. Models defined in the application domain can dynamically
-                create new instances without the need of programmatically creating/update/deleting structure. </xs:documentation>
+      <xs:documentation> Models are objects or in relational terms tables that describe the
+        structure of xml created. Models defined in the application domain can dynamically create
+        new instances without the need of programmatically creating/update/deleting structure.
+      </xs:documentation>
     </xs:annotation>
   </xs:element>
   <xs:element name="controller" type="controllerType">
     <xs:annotation>
-      <xs:documentation>controller definitions allow domain model's to be managed and exposed from a web application. A controller provides dynamic scaffolding from a defined
-                base controller within the xQuerRail framework. </xs:documentation>
+      <xs:documentation>controller definitions allow domain model's to be managed and exposed from a
+        web application. A controller provides dynamic scaffolding from a defined base controller
+        within the xQuerRail framework. </xs:documentation>
     </xs:annotation>
   </xs:element>
   <xs:element name="optionlist" type="optionListType">
     <xs:annotation>
-      <xs:documentation>Defines an enumeration or keyValue list. OptionList can be defined globally or within models. optionlist's defined under the domain are global. Model
-                optionlist's are only available within the context of the model. </xs:documentation>
+      <xs:documentation>Defines an enumeration or keyValue list. OptionList can be defined globally
+        or within models. optionlist's defined under the domain are global. Model optionlist's are
+        only available within the context of the model. </xs:documentation>
     </xs:annotation>
   </xs:element>
   <xs:complexType name="domainType">
@@ -29,78 +38,93 @@
     </xs:annotation>
     <xs:sequence>
       <xs:sequence>
-	<xs:element name="name" type="xs:ID" minOccurs="1" maxOccurs="1">
-	  <xs:annotation>
-	    <xs:documentation>Defines the name of the application associated with the domain. The name of the domain is resolved when using dynamic controllers/models
-                            and routing information between different domains.</xs:documentation>
-	  </xs:annotation>
-	</xs:element>
-	<xs:element name="content-namespace" type="namespaceDeclarationType" minOccurs="1" maxOccurs="1">
-	  <xs:annotation>
-	    <xs:documentation>Defines the default namespace for the application domain. This namespace will be used for any defined models unless overriden by fields
-                            defining their </xs:documentation>
-	  </xs:annotation>
-	</xs:element>
-	<xs:element name="application-namespace" type="namespaceDeclarationType" minOccurs="0" maxOccurs="1">
-	  <xs:annotation>
-	    <xs:documentation>Defines the base namespace used to resolve controllers, model, and library namespaces in the framework. The base-namespace maps the base
-                            uri of any defined model,controller,library or plugins such as application-namespace="http://tempuri.org" declare controller namespace
-                            "http://tempuri.org/controller/[model-name]; </xs:documentation>
-	  </xs:annotation>
-	</xs:element>
-	<xs:element name="description" type="xs:string" minOccurs="0" maxOccurs="1">
-	  <xs:annotation>
-	    <xs:documentation>Description of the application domain and its intended purpose</xs:documentation>
-	  </xs:annotation>
-	</xs:element>
-	<xs:element name="author" type="xs:string" minOccurs="0" maxOccurs="unbounded">
-	  <xs:annotation>
-	    <xs:documentation>Author of the domain</xs:documentation>
-	  </xs:annotation>
-	</xs:element>
-	<xs:element name="version" type="xs:string" minOccurs="0" maxOccurs="1">
-	  <xs:annotation>
-	    <xs:documentation>Version of the domain</xs:documentation>
-	  </xs:annotation>
-	</xs:element>
-	<xs:element name="default-collation" type="xs:string" minOccurs="0" maxOccurs="1">
-	  <xs:annotation>
-	    <xs:documentation>The default collation of the associated application used in search context when defining range elements </xs:documentation>
-	  </xs:annotation>
-	</xs:element>
-	<xs:choice minOccurs="0" maxOccurs="unbounded">
-	  <xs:element name="declare-namespace" type="namespaceDeclarationType" minOccurs="0" maxOccurs="unbounded">
-	    <xs:annotation>
-	      <xs:documentation>Any declare namespaces associated with application domain. Any declared namespaces will automatically be associated with any instances
-                                created. </xs:documentation>
-	    </xs:annotation>
-	  </xs:element>
-	  <xs:element name="import" type="importType" minOccurs="0" maxOccurs="unbounded"/>
-	  <xs:element name="permission" type="permissionType" minOccurs="0" maxOccurs="unbounded"/>
-	</xs:choice>
-	<xs:choice minOccurs="1" maxOccurs="unbounded">
-	  <xs:annotation>
-	    <xs:documentation> The types associated with the domain model that can be created. </xs:documentation>
-	  </xs:annotation>
-	  <xs:element name="model" type="modelType" minOccurs="0" maxOccurs="unbounded">
-	    <xs:annotation>
-	      <xs:documentation>Models are objects or in relational terms tables that describe the structure of xml created. Models defined in the application domain
-                                can dynamically create new instances without the need of programmatically creating/update/deleting structure.</xs:documentation>
-	    </xs:annotation>
-	  </xs:element>
-	  <xs:element name="controller" type="controllerType" minOccurs="0" maxOccurs="unbounded">
-	    <xs:annotation>
-	      <xs:documentation> Controller define dynamic web interfaces that inherit base functions from the framework. Dynamic controllers usually will manage one
-                            model and supports HTML/REST based interactions.</xs:documentation>
-	    </xs:annotation>
-	  </xs:element>
-	  <xs:element name="optionlist" type="optionListType" minOccurs="0" maxOccurs="unbounded">
-	    <xs:annotation>
-	      <xs:documentation>optionlists are enumeration or keyvalue lists that are managed within the domain and can be used to restrict values for fields defined
-                                in models.</xs:documentation>
-	    </xs:annotation>
-	  </xs:element>
-	</xs:choice>
+        <xs:element name="name" type="xs:ID" minOccurs="1" maxOccurs="1">
+          <xs:annotation>
+            <xs:documentation>Defines the name of the application associated with the domain. The
+              name of the domain is resolved when using dynamic controllers/models and routing
+              information between different domains.</xs:documentation>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="content-namespace" type="namespaceDeclarationType" minOccurs="1"
+          maxOccurs="1">
+          <xs:annotation>
+            <xs:documentation>Defines the default namespace for the application domain. This
+              namespace will be used for any defined models unless overriden by fields defining
+              their </xs:documentation>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="application-namespace" type="namespaceDeclarationType" minOccurs="0"
+          maxOccurs="1">
+          <xs:annotation>
+            <xs:documentation>Defines the base namespace used to resolve controllers, model, and
+              library namespaces in the framework. The base-namespace maps the base uri of any
+              defined model,controller,library or plugins such as
+              application-namespace="http://tempuri.org" declare controller namespace
+              "http://tempuri.org/controller/[model-name]; </xs:documentation>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="description" type="xs:string" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:documentation>Description of the application domain and its intended
+              purpose</xs:documentation>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="author" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+          <xs:annotation>
+            <xs:documentation>Author of the domain</xs:documentation>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="version" type="xs:string" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:documentation>Version of the domain</xs:documentation>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="default-collation" type="xs:string" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:documentation>The default collation of the associated application used in search
+              context when defining range elements </xs:documentation>
+          </xs:annotation>
+        </xs:element>
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+          <xs:element name="declare-namespace" type="namespaceDeclarationType" minOccurs="0"
+            maxOccurs="unbounded">
+            <xs:annotation>
+              <xs:documentation>Any declare namespaces associated with application domain. Any
+                declared namespaces will automatically be associated with any instances created.
+              </xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element name="import" type="importType" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="permission" type="permissionType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:choice>
+        <xs:choice minOccurs="1" maxOccurs="unbounded">
+          <xs:annotation>
+            <xs:documentation> The types associated with the domain model that can be created.
+            </xs:documentation>
+          </xs:annotation>
+          <xs:element name="model" type="modelType" minOccurs="0" maxOccurs="unbounded">
+            <xs:annotation>
+              <xs:documentation>Models are objects or in relational terms tables that describe the
+                structure of xml created. Models defined in the application domain can dynamically
+                create new instances without the need of programmatically creating/update/deleting
+                structure.</xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element name="controller" type="controllerType" minOccurs="0" maxOccurs="unbounded">
+            <xs:annotation>
+              <xs:documentation> Controller define dynamic web interfaces that inherit base
+                functions from the framework. Dynamic controllers usually will manage one model and
+                supports HTML/REST based interactions.</xs:documentation>
+            </xs:annotation>
+          </xs:element>
+          <xs:element name="optionlist" type="optionListType" minOccurs="0" maxOccurs="unbounded">
+            <xs:annotation>
+              <xs:documentation>optionlists are enumeration or keyvalue lists that are managed
+                within the domain and can be used to restrict values for fields defined in
+                models.</xs:documentation>
+            </xs:annotation>
+          </xs:element>
+        </xs:choice>
       </xs:sequence>
     </xs:sequence>
   </xs:complexType>
@@ -117,159 +141,182 @@
   <xs:complexType name="modelType">
     <xs:sequence>
       <xs:group ref="contentModelTypeGroup"/>
-      <xs:element name="declare-namespace" type="namespaceDeclarationType" minOccurs="0" maxOccurs="unbounded">
-	<xs:annotation>
-	  <xs:documentation>Declares a namespace for a given model. Namespace declarations will be added to each model instance. Namespace declarations from domain are
-                        merged and added to the root node of the element. Example: (:NEEDED:) </xs:documentation>
-	</xs:annotation>
+      <xs:element name="declare-namespace" type="namespaceDeclarationType" minOccurs="0"
+        maxOccurs="unbounded">
+        <xs:annotation>
+          <xs:documentation>Declares a namespace for a given model. Namespace declarations will be
+            added to each model instance. Namespace declarations from domain are merged and added to
+            the root node of the element. Example: (:NEEDED:) </xs:documentation>
+        </xs:annotation>
       </xs:element>
       <xs:element name="collection" type="xs:string" minOccurs="0" maxOccurs="unbounded">
-	<xs:annotation>
-	  <xs:documentation>Adds collections to instance documents stored in database. Collections can take advantage of expansion notation $(field) to construct custom
-                        collections based on content stored with a given model</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Adds collections to instance documents stored in database. Collections
+            can take advantage of expansion notation $(field) to construct custom collections based
+            on content stored with a given model</xs:documentation>
+        </xs:annotation>
       </xs:element>
       <xs:element name="navigation" minOccurs="0" maxOccurs="unbounded">
-	<xs:annotation>
-	  <xs:documentation>Defines navigational context associated with the model. The navigation element controls how information from model are displayed listed able
-                        to be modifed from the UI or REST interface.</xs:documentation>
-	</xs:annotation>
-	<xs:complexType>
-	  <xs:sequence>
-	    <xs:any namespace="http://marklogic.com/appservices/search" processContents="lax" minOccurs="0" maxOccurs="1">
-	      <xs:annotation>
-		<xs:documentation>
-                            Supports adding search:option constructions for facets
-                            </xs:documentation>
-	      </xs:annotation>
-	    </xs:any>
-	  </xs:sequence>
-	  <xs:attributeGroup ref="modelNavigationAttributes"/>
-	</xs:complexType>
+        <xs:annotation>
+          <xs:documentation>Defines navigational context associated with the model. The navigation
+            element controls how information from model are displayed listed able to be modifed from
+            the UI or REST interface.</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+          <xs:sequence>
+            <xs:any namespace="http://marklogic.com/appservices/search" processContents="lax"
+              minOccurs="0" maxOccurs="1">
+              <xs:annotation>
+                <xs:documentation> Supports adding search:option constructions for facets
+                </xs:documentation>
+              </xs:annotation>
+            </xs:any>
+          </xs:sequence>
+          <xs:attributeGroup ref="modelNavigationAttributes"/>
+        </xs:complexType>
       </xs:element>
       <xs:choice minOccurs="0" maxOccurs="unbounded">
-	<xs:element name="permission" type="permissionType"/>
+        <xs:element name="permission" type="permissionType"/>
       </xs:choice>
       <xs:choice minOccurs="1" maxOccurs="unbounded">
-	<xs:element name="attribute" type="attributeType" minOccurs="0" maxOccurs="unbounded">
-	  <xs:annotation>
-	    <xs:documentation>Definition of an attribute within a given model</xs:documentation>
-	  </xs:annotation>
-	</xs:element>
-	<xs:element name="element" type="elementType" minOccurs="0" maxOccurs="unbounded">
-	  <xs:annotation>
-	    <xs:documentation source="fieldAttributes">Definition of an element within the model. </xs:documentation>
-	  </xs:annotation>
-	</xs:element>
-	<xs:element name="container" type="containerType" minOccurs="0" maxOccurs="unbounded">
-	  <xs:annotation>
-	    <xs:documentation>Containers are element definitions usually for structural composition within a model, this allows for nesting for elements that require
-                            additional structure for containment. Hence container. Containers also provide additional grouping features in building forms using the xQuerrail
-                            framework form-builder helper. </xs:documentation>
-	  </xs:annotation>
-	</xs:element>
+        <xs:element name="attribute" type="attributeType" minOccurs="0" maxOccurs="unbounded">
+          <xs:annotation>
+            <xs:documentation>Definition of an attribute within a given model</xs:documentation>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="element" type="elementType" minOccurs="0" maxOccurs="unbounded">
+          <xs:annotation>
+            <xs:documentation source="fieldAttributes">Definition of an element within the model.
+            </xs:documentation>
+          </xs:annotation>
+        </xs:element>
+        <xs:element name="container" type="containerType" minOccurs="0" maxOccurs="unbounded">
+          <xs:annotation>
+            <xs:documentation>Containers are element definitions usually for structural composition
+              within a model, this allows for nesting for elements that require additional structure
+              for containment. Hence container. Containers also provide additional grouping features
+              in building forms using the xQuerrail framework form-builder helper.
+            </xs:documentation>
+          </xs:annotation>
+        </xs:element>
       </xs:choice>
       <xs:choice minOccurs="0" maxOccurs="unbounded">
-	<xs:element name="optionlist" type="optionListType" minOccurs="0" maxOccurs="unbounded">
-	  <xs:annotation>
-	    <xs:documentation>Defines an optionlist within a model instance. OptionList's are scoped only to the model from which they are contained in. For global
-                            optionlist's define under the domain. The syntax for accessing an optionlist are model:optionlist:[$name] </xs:documentation>
-	  </xs:annotation>
-	</xs:element>
+        <xs:element name="optionlist" type="optionListType" minOccurs="0" maxOccurs="unbounded">
+          <xs:annotation>
+            <xs:documentation>Defines an optionlist within a model instance. OptionList's are scoped
+              only to the model from which they are contained in. For global optionlist's define
+              under the domain. The syntax for accessing an optionlist are model:optionlist:[$name]
+            </xs:documentation>
+          </xs:annotation>
+        </xs:element>
       </xs:choice>
       <xs:sequence maxOccurs="1" minOccurs="0">
-	<xs:any namespace="http://marklogic.com/appservices/search" processContents="lax" minOccurs="0" maxOccurs="unbounded">
-	  <xs:annotation>
-	    <xs:documentation>Supports inclusion of &lt;search:options/&gt;.When included the search options 
-                        are merged with dynamically generated search options. It is important that you do not duplicate constraints
-                        that conflict with names of elements
-                    </xs:documentation>
-	  </xs:annotation>
-	</xs:any>
+        <xs:any namespace="http://marklogic.com/appservices/search" processContents="lax"
+          minOccurs="0" maxOccurs="unbounded">
+          <xs:annotation>
+            <xs:documentation>Supports inclusion of &lt;search:options/&gt;.When included the search
+              options are merged with dynamically generated search options. It is important that you
+              do not duplicate constraints that conflict with names of elements </xs:documentation>
+          </xs:annotation>
+        </xs:any>
       </xs:sequence>
-      <!--
-            <xs:element name="hasMany" type="relationType" minOccurs="0" maxOccurs="unbounded">
-                <xs:annotation>
-                    <xs:documentation>(:NOT-IMPLEMENTED:)allows the definition of 1 to many relationship between itself and another model. </xs:documentation>
-                </xs:annotation>
-            </xs:element>
+      <!--
+
+            <xs:element name="hasMany" type="relationType" minOccurs="0" maxOccurs="unbounded">
+
+                <xs:annotation>
+
+                    <xs:documentation>(:NOT-IMPLEMENTED:)allows the definition of 1 to many relationship between itself and another model. </xs:documentation>
+
+                </xs:annotation>
+
+            </xs:element>
+
             -->
     </xs:sequence>
     <xs:attributeGroup ref="modelBaseAttributes">
       <xs:annotation>
-	<xs:documentation>Defines core attributes for a given model (see.modelBaseAttributes) </xs:documentation>
+        <xs:documentation>Defines core attributes for a given model (see.modelBaseAttributes)
+        </xs:documentation>
       </xs:annotation>
     </xs:attributeGroup>
   </xs:complexType>
   <xs:group name="contentModelTypeGroup">
     <xs:sequence>
       <xs:element name="directory" minOccurs="0" maxOccurs="1">
-	<xs:annotation>
-	  <xs:documentation> When persistence="directory" defines the directory for which the model instance will be stored. The directory should be in the form of
-                        /directory1/directory2/. Note: It is important to include the leading and following "/" character. (:WARNING:) Original directory supported the string
-                        expansion syntax, but has been deprecated for defining the directory structure. </xs:documentation>
-	</xs:annotation>
-	<xs:simpleType>
-	  <xs:restriction base="xs:string">
-	    <xs:pattern value="(http:/)?/.*/"/>
-	  </xs:restriction>
-	</xs:simpleType>
+        <xs:annotation>
+          <xs:documentation> When persistence="directory" defines the directory for which the model
+            instance will be stored. The directory should be in the form of /directory1/directory2/.
+            Note: It is important to include the leading and following "/" character. (:WARNING:)
+            Original directory supported the string expansion syntax, but has been deprecated for
+            defining the directory structure. </xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:pattern value="(http:/)?/.*/"/>
+          </xs:restriction>
+        </xs:simpleType>
       </xs:element>
       <xs:element name="document" minOccurs="0" maxOccurs="1">
-	<xs:annotation>
-	  <xs:documentation> When persistence="document" defines the uri for the document. </xs:documentation>
-	</xs:annotation>
-	<xs:complexType>
-	  <xs:simpleContent>
-	    <xs:extension base="xs:string">
-	      <xs:attribute name="root" type="xs:QName">
-		<xs:annotation>
-		  <xs:documentation> Defines the root element used to create the document. Since a document can only have a single root node. The root attribute
-                                        will usually be the pluralized name of the model, such as model name="country" &lt;document root="countries"&gt; </xs:documentation>
-		</xs:annotation>
-	      </xs:attribute>
-	    </xs:extension>
-	  </xs:simpleContent>
-	</xs:complexType>
+        <xs:annotation>
+          <xs:documentation> When persistence="document" defines the uri for the document.
+          </xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:string">
+              <xs:attribute name="root" type="xs:QName">
+                <xs:annotation>
+                  <xs:documentation> Defines the root element used to create the document. Since a
+                    document can only have a single root node. The root attribute will usually be
+                    the pluralized name of the model, such as model name="country" &lt;document
+                    root="countries"&gt; </xs:documentation>
+                </xs:annotation>
+              </xs:attribute>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
       </xs:element>
       <xs:element name="binaryDirectory" minOccurs="0" maxOccurs="1">
-	<xs:annotation>
-	  <xs:documentation> When a model defines binary or external document types, it is required that this directory be set. If any fields are defined as "binary" and
-                        do not include the fileUri attribute. Any binary field instances will be stored in this directory by default. </xs:documentation>
-	</xs:annotation>
-	<xs:simpleType>
-	  <xs:restriction base="xs:string">
-	    <xs:pattern value="/.*/"/>
-	  </xs:restriction>
-	</xs:simpleType>
+        <xs:annotation>
+          <xs:documentation> When a model defines binary or external document types, it is required
+            that this directory be set. If any fields are defined as "binary" and do not include the
+            fileUri attribute. Any binary field instances will be stored in this directory by
+            default. </xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:pattern value="/.*/"/>
+          </xs:restriction>
+        </xs:simpleType>
       </xs:element>
     </xs:sequence>
   </xs:group>
   <xs:complexType name="elementType">
     <xs:sequence minOccurs="0" maxOccurs="3">
       <xs:element name="attribute" type="attributeType" minOccurs="0" maxOccurs="unbounded">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:element>
       <xs:element name="navigation" type="fieldNavigationType" minOccurs="0" maxOccurs="1"/>
       <xs:element name="constraint" minOccurs="0" maxOccurs="1">
-	<xs:annotation>
-	  <xs:documentation>Defines the constraint context for the element</xs:documentation>
-	</xs:annotation>
-	<xs:complexType>
-	  <xs:attributeGroup ref="constraintAttributes"/>
-	</xs:complexType>
+        <xs:annotation>
+          <xs:documentation>Defines the constraint context for the element</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+          <xs:attributeGroup ref="constraintAttributes"/>
+        </xs:complexType>
       </xs:element>
       <xs:element name="ui" type="uiType" minOccurs="0" maxOccurs="1">
-	<xs:annotation>
-	  <xs:documentation>Defines the UI context for the element</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Defines the UI context for the element</xs:documentation>
+        </xs:annotation>
       </xs:element>
     </xs:sequence>
     <xs:attributeGroup ref="fieldAttributes">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attributeGroup>
   </xs:complexType>
@@ -277,31 +324,38 @@
     <xs:sequence minOccurs="0" maxOccurs="3">
       <xs:element name="navigation" type="fieldNavigationType" minOccurs="0" maxOccurs="1"/>
       <xs:element name="constraint" minOccurs="0" maxOccurs="1">
-	<xs:annotation>
-	  <xs:documentation> Defines constraint aspects of the given attribute definition (see constraintAttributes for further details) </xs:documentation>
-	</xs:annotation>
-	<xs:complexType>
-	  <xs:attributeGroup ref="constraintAttributes"/>
-	</xs:complexType>
+        <xs:annotation>
+          <xs:documentation> Defines constraint aspects of the given attribute definition (see
+            constraintAttributes for further details) </xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+          <xs:attributeGroup ref="constraintAttributes"/>
+        </xs:complexType>
       </xs:element>
       <xs:choice minOccurs="0" maxOccurs="1">
-	<xs:element name="ui" type="uiType" minOccurs="0" maxOccurs="1">
-	  <xs:annotation>
-	    <xs:documentation>Defines the control over ui aspects of the attribute</xs:documentation>
-	  </xs:annotation>
-	</xs:element>
+        <xs:element name="ui" type="uiType" minOccurs="0" maxOccurs="1">
+          <xs:annotation>
+            <xs:documentation>Defines the control over ui aspects of the
+              attribute</xs:documentation>
+          </xs:annotation>
+        </xs:element>
       </xs:choice>
     </xs:sequence>
     <xs:attributeGroup ref="fieldAttributes">
       <xs:annotation>
-	<xs:documentation>Common attributes of an attribute field. see fieldAttributes definition</xs:documentation>
+        <xs:documentation>Common attributes of an attribute field. see fieldAttributes
+          definition</xs:documentation>
       </xs:annotation>
     </xs:attributeGroup>
   </xs:complexType>
-  <!--
-    <xs:complexType name="relationType">
-        <xs:attributeGroup ref="relationshipAttributes"/>
-    </xs:complexType>
+  <!--
+
+    <xs:complexType name="relationType">
+
+        <xs:attributeGroup ref="relationshipAttributes"/>
+
+    </xs:complexType>
+
     -->
   <xs:complexType name="containerType">
     <xs:choice minOccurs="1" maxOccurs="unbounded">
@@ -325,7 +379,7 @@
     </xs:annotation>
     <xs:simpleContent>
       <xs:extension base="xs:string">
-	<xs:attribute name="label" type="xs:string"/>
+        <xs:attribute name="label" type="xs:string"/>
       </xs:extension>
     </xs:simpleContent>
   </xs:complexType>
@@ -339,44 +393,44 @@
     </xs:annotation>
     <xs:attribute name="prefix" type="xs:string">
       <xs:annotation>
-	<xs:documentation>unique prefix of the library. When constructing the prefix, the prefix name can be the convention of the filename so that 
-                the framework will construct the correct declaration. For example
-                &lt;importLibrary prefix="custom"/&gt; will resolve to syntax
-                import module namespace custom = "http://tempuri.org/lib/custom" at "/[application-folder]/lib/custom-lib.xqy";
-                or in function resolution:
-                    xdmp:function(fn:QName("http://tempuri.org/lib/custom","custom"),"/[appplication-folder]/lib/custom-lib.xqy";               
-                </xs:documentation>
+        <xs:documentation>unique prefix of the library. When constructing the prefix, the prefix
+          name can be the convention of the filename so that the framework will construct the
+          correct declaration. For example &lt;importLibrary prefix="custom"/&gt; will resolve to
+          syntax import module namespace custom = "http://tempuri.org/lib/custom" at
+          "/[application-folder]/lib/custom-lib.xqy"; or in function resolution:
+          xdmp:function(fn:QName("http://tempuri.org/lib/custom","custom"),"/[appplication-folder]/lib/custom-lib.xqy";
+        </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="uri" type="xs:string">
       <xs:annotation>
-	<xs:documentation>If the library is outside the application context, then specifying the uri will construct the appropriate namespace 
-                for the module import
-                </xs:documentation>
+        <xs:documentation>If the library is outside the application context, then specifying the uri
+          will construct the appropriate namespace for the module import </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="at" type="xs:string">
       <xs:annotation>
-	<xs:documentation>Is the filename associated with the import library. If the library is a file, then it will look into the [application folder]/lib directory 
-                for file to resolve the location.  If the location is a directory structure, then it will use the absolute path of the (module)library location.
-                </xs:documentation>
+        <xs:documentation>Is the filename associated with the import library. If the library is a
+          file, then it will look into the [application folder]/lib directory for file to resolve
+          the location. If the location is a directory structure, then it will use the absolute path
+          of the (module)library location. </xs:documentation>
       </xs:annotation>
     </xs:attribute>
   </xs:attributeGroup>
   <xs:attributeGroup name="optionListAttributes">
     <xs:attribute name="name" type="xs:string">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="child-element" type="xs:string">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="type" type="dataType">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
   </xs:attributeGroup>
@@ -389,627 +443,702 @@
     </xs:annotation>
     <xs:attribute name="name" type="xs:NCName">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="class" type="xs:NCName">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="model" type="xs:IDREF">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="label" type="xs:string">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
   </xs:attributeGroup>
   <xs:attributeGroup name="modelBaseAttributes">
     <xs:attribute name="name" use="required">
       <xs:annotation>
-	<xs:documentation> Name of domain model ie. name="customer" &lt;customer&gt; ...other element|attribute|container &lt;/customer&gt; </xs:documentation>
+        <xs:documentation> Name of domain model ie. name="customer" &lt;customer&gt; ...other
+          element|attribute|container &lt;/customer&gt; </xs:documentation>
       </xs:annotation>
       <xs:simpleType>
-	<xs:restriction base="xs:ID">
-	  <xs:whiteSpace value="collapse"/>
-	</xs:restriction>
+        <xs:restriction base="xs:ID">
+          <xs:whiteSpace value="collapse"/>
+        </xs:restriction>
       </xs:simpleType>
     </xs:attribute>
     <xs:attribute name="namespace" type="xs:anyURI">
       <xs:annotation>
-	<xs:documentation> Namespace associated with domain model. Namespace will override any content-namespace definition associated with domain and children will inherit
-                    namespace from model namespace. </xs:documentation>
+        <xs:documentation> Namespace associated with domain model. Namespace will override any
+          content-namespace definition associated with domain and children will inherit namespace
+          from model namespace. </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="description" type="xs:string">
       <xs:annotation>
-	<xs:documentation> Description of model that can be used for help context </xs:documentation>
+        <xs:documentation> Description of model that can be used for help context
+        </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="label" type="xs:string">
       <xs:annotation>
-	<xs:documentation> Is the human readable name presented in UI context </xs:documentation>
+        <xs:documentation> Is the human readable name presented in UI context </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="class" type="xs:string">
       <xs:annotation>
-	<xs:documentation> Attribute allows groups of models to be associated together for querying and selecting models based on class attribute </xs:documentation>
+        <xs:documentation> Attribute allows groups of models to be associated together for querying
+          and selecting models based on class attribute </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="key" type="xs:string">
       <xs:annotation>
-	<xs:documentation> Is the key attribute associated with Lookup references. The key when used as type="reference" Will add this attribute uuid </xs:documentation>
+        <xs:documentation> Is the key attribute associated with Lookup references. The key when used
+          as type="reference" Will add this attribute uuid </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="keyLabel" type="xs:string">
       <xs:annotation>
-	<xs:documentation> The keyLabel attribute defines the human readable value used when defining reference or lookup values. This value is used with the key attribute
-                    to ensure you have an id/name association for each reference or lookup. </xs:documentation>
+        <xs:documentation> The keyLabel attribute defines the human readable value used when
+          defining reference or lookup values. This value is used with the key attribute to ensure
+          you have an id/name association for each reference or lookup. </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="extends" type="xs:IDREF">
       <xs:annotation>
-	<xs:documentation> The extends attribute allows for the ability to inherit data fields from another model, usually for the purposes of defining a core set of fields
-                    common for a set of domain models. It is important to note that the extends is only single level extension. So you can define a A extends B, but not A extends B
-                    extends C </xs:documentation>
+        <xs:documentation> The extends attribute allows for the ability to inherit data fields from
+          another model, usually for the purposes of defining a core set of fields common for a set
+          of domain models. It is important to note that the extends is only single level extension.
+          So you can define a A extends B, but not A extends B extends C </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="persistence" use="required">
       <xs:annotation>
-	<xs:documentation> Defines the persistence mechanism for a given model. The possible values are abstract(not persistent), document(all instances in a single
-                    document), directory(one instance per document) singleton(only one instance per database) </xs:documentation>
+        <xs:documentation> Defines the persistence mechanism for a given model. The possible values
+          are abstract(not persistent), document(all instances in a single document), directory(one
+          instance per document) singleton(only one instance per database) </xs:documentation>
       </xs:annotation>
       <xs:simpleType>
-	<xs:restriction base="xs:string">
-	  <xs:enumeration value="document">
-	    <xs:annotation>
-	      <xs:documentation>Creates a single document for all instances</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	  <xs:enumeration value="directory">
-	    <xs:annotation>
-	      <xs:documentation>1 document per instance stored in a single directory</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	  <xs:enumeration value="abstract">
-	    <xs:annotation>
-	      <xs:documentation>abstract models cannot be persisted. Usually used in conjuction to define submodels or extends base models</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	  <xs:enumeration value="singleton">
-	    <xs:annotation>
-	      <xs:documentation>(:NOT-IMPLEMENTED:)Singleton are a single instance per database usually defined by a single uri. Useful for creating configuration
-                                files</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	</xs:restriction>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="document">
+            <xs:annotation>
+              <xs:documentation>Creates a single document for all instances</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+          <xs:enumeration value="directory">
+            <xs:annotation>
+              <xs:documentation>1 document per instance stored in a single
+                directory</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+          <xs:enumeration value="abstract">
+            <xs:annotation>
+              <xs:documentation>abstract models cannot be persisted. Usually used in conjuction to
+                define submodels or extends base models</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+          <xs:enumeration value="singleton">
+            <xs:annotation>
+              <xs:documentation>(:NOT-IMPLEMENTED:)Singleton are a single instance per database
+                usually defined by a single uri. Useful for creating configuration
+                files</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+        </xs:restriction>
       </xs:simpleType>
     </xs:attribute>
   </xs:attributeGroup>
   <xs:attributeGroup name="fieldAttributes">
     <xs:attribute name="name" type="xs:NCName" use="required">
       <xs:annotation>
-	<xs:documentation>Defines the name for a given field(element|attribute|container). </xs:documentation>
+        <xs:documentation>Defines the name for a given field(element|attribute|container).
+        </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="namespace" type="xs:anyURI">
       <xs:annotation>
-	<xs:documentation> Defines the namespace for a given field(element|attribute|container). This namespace will override any inherited namespaces, but unlike the model
-                    namespace will not override child field namespaces </xs:documentation>
+        <xs:documentation> Defines the namespace for a given field(element|attribute|container).
+          This namespace will override any inherited namespaces, but unlike the model namespace will
+          not override child field namespaces </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="prefix" type="xs:NCName">
       <xs:annotation>
-	<xs:documentation> defines the prefix associated with the namespace for a field will have the form: prefix="dc" = &lt;dc:fieldName&lt;/&gt; </xs:documentation>
+        <xs:documentation> defines the prefix associated with the namespace for a field will have
+          the form: prefix="dc" = &lt;dc:fieldName&lt;/&gt; </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="type" type="dataType" use="required">
       <xs:annotation>
-	<xs:documentation> Defines the type of element. See fieldAttributeType enumeration. </xs:documentation>
+        <xs:documentation> Defines the type of element. See fieldAttributeType enumeration.
+        </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="label" type="xs:string">
       <xs:annotation>
-	<xs:documentation>The label is the human readable name of the element used in UI such as defining the label in an html form. </xs:documentation>
+        <xs:documentation>The label is the human readable name of the element used in UI such as
+          defining the label in an html form. </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="description" type="xs:string">
       <xs:annotation>
-	<xs:documentation> General description or help context for a given field. </xs:documentation>
+        <xs:documentation> General description or help context for a given field.
+        </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="identity" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation> Determines whether a given field is an identity column. It is common to use this value when defining simple enumerations, where a unique value is
-                    only required, but is not of type="identity". </xs:documentation>
+        <xs:documentation> Determines whether a given field is an identity column. It is common to
+          use this value when defining simple enumerations, where a unique value is only required,
+          but is not of type="identity". </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="reference" type="xs:string">
       <xs:annotation>
-	<xs:documentation> If the type="reference" then specifying the reference used simple notation: $type:IDREF:functor called to resolve the reference ie.
-                    model:countryCode:reference - will resolve the reference from a model defined by calling the reference function. The reference function is the responsiblity to
-                    take a value and resolve it to the appropriate reference information. Required if field/@type="reference"</xs:documentation>
+        <xs:documentation> If the type="reference" then specifying the reference used simple
+          notation: $type:IDREF:functor called to resolve the reference ie.
+          model:countryCode:reference - will resolve the reference from a model defined by calling
+          the reference function. The reference function is the responsiblity to take a value and
+          resolve it to the appropriate reference information. Required if
+          field/@type="reference"</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="schemaType" type="xs:IDREF">
       <xs:annotation>
-	<xs:documentation>
-                Defines the schemaType(model) when the type='schema-element'. 
-            </xs:documentation>
+        <xs:documentation> Defines the schemaType(model) when the type='schema-element'.
+        </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="default" type="xs:string">
       <xs:annotation>
-	<xs:documentation>default attribute defines the default data value when creating a new instance or no value is specified during creation or
-                    update.</xs:documentation>
+        <xs:documentation>default attribute defines the default data value when creating a new
+          instance or no value is specified during creation or update.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="decimalPrecision" type="xs:integer">
       <xs:annotation>
-	<xs:documentation>(:NOT-IMPLEMENTED:) determines the decimal precision of a field whose type is decimal. If not set the value of the decimal will not be rounded to
-                    meet the decimal precision. Optional if type is decimal</xs:documentation>
+        <xs:documentation>(:NOT-IMPLEMENTED:) determines the decimal precision of a field whose type
+          is decimal. If not set the value of the decimal will not be rounded to meet the decimal
+          precision. Optional if type is decimal</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="fileType" type="fieldFileType" default="auto">
       <xs:annotation>
-	<xs:documentation> If type="binary" then fileType allows to restrict what type of files are allowed to be associated with a given field Possible values are
-                    (xml,binary,text,auto) optional if type is binary. Default value is "auto"</xs:documentation>
+        <xs:documentation> If type="binary" then fileType allows to restrict what type of files are
+          allowed to be associated with a given field Possible values are (xml,binary,text,auto)
+          optional if type is binary. Default value is "auto"</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="fileURI" type="xs:anyURI">
       <xs:annotation>
-	<xs:documentation> Location where the URI for the asset will be created. The fileUri may use special $(field) syntax to dynamically generate the uri based on
-                    information associated with any field in the model. The value is required if binaryDirectory is not set at model level. </xs:documentation>
+        <xs:documentation> Location where the URI for the asset will be created. The fileUri may use
+          special $(field) syntax to dynamically generate the uri based on information associated
+          with any field in the model. The value is required if binaryDirectory is not set at model
+          level. </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="collation" type="xs:anyURI">
       <xs:annotation>
-	<xs:documentation> Overrides the default collation of the domain and ensures any queries are resolved against the collation defined on the field. This collation
-                    does not override any collations of child elements </xs:documentation>
+        <xs:documentation> Overrides the default collation of the domain and ensures any queries are
+          resolved against the collation defined on the field. This collation does not override any
+          collations of child elements </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="occurrence">
       <xs:annotation>
-	<xs:documentation> Defines the number of instances can be associated with the given field so to have multiple values based on cardinality rules of XQuery. "?" = 0
-                    or 1 "+" = 1 or more "*" = 0 to many "1" = only 1 or same as not defining this attribute </xs:documentation>
+        <xs:documentation> Defines the number of instances can be associated with the given field so
+          to have multiple values based on cardinality rules of XQuery. "?" = 0 or 1 "+" = 1 or more
+          "*" = 0 to many "1" = only 1 or same as not defining this attribute </xs:documentation>
       </xs:annotation>
       <xs:simpleType>
-	<xs:restriction base="xs:string">
-	  <xs:enumeration value="+">
-	    <xs:annotation>
-	      <xs:documentation>1 or more</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	  <xs:enumeration value="?">
-	    <xs:annotation>
-	      <xs:documentation>0 or 1. When defined if no value is passed for field, then the field is ommitted </xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	  <xs:enumeration value="*">
-	    <xs:annotation>
-	      <xs:documentation>0 or Many</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	  <xs:enumeration value="1">
-	    <xs:annotation>
-	      <xs:documentation>(default)Exactly 1 or equivalent of not using attribute</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	</xs:restriction>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="+">
+            <xs:annotation>
+              <xs:documentation>1 or more</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+          <xs:enumeration value="?">
+            <xs:annotation>
+              <xs:documentation>0 or 1. When defined if no value is passed for field, then the field
+                is ommitted </xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+          <xs:enumeration value="*">
+            <xs:annotation>
+              <xs:documentation>0 or Many</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+          <xs:enumeration value="1">
+            <xs:annotation>
+              <xs:documentation>(default)Exactly 1 or equivalent of not using
+                attribute</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+        </xs:restriction>
       </xs:simpleType>
     </xs:attribute>
     <xs:attribute name="orderBy" type="fieldOrderType" default="position">
       <xs:annotation>
-	<xs:documentation>Returns default orderBy for multi-occurring elements.</xs:documentation>
+        <xs:documentation>Returns default orderBy for multi-occurring elements.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="subject" type="xs:anyURI"/>
     <xs:attribute name="predicate" type="xs:anyURI"/>
     <xs:attribute name="object" type="xs:anyURI"/>
+    <xs:attribute name="languages" type="xs:language"/>
+    <xs:attribute name="defaultLanguage" type="xs:language"/>
   </xs:attributeGroup>
   <xs:attributeGroup name="containerAttributes">
     <xs:attribute name="name" type="xs:QName">
       <xs:annotation>
-	<xs:documentation>Name of the container element.</xs:documentation>
+        <xs:documentation>Name of the container element.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="namespace" type="xs:anyURI">
       <xs:annotation>
-	<xs:documentation>Associated namespace of a given container. Sub elements will inherit the namespace defined at this level. </xs:documentation>
+        <xs:documentation>Associated namespace of a given container. Sub elements will inherit the
+          namespace defined at this level. </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="label" type="xs:string">
       <xs:annotation>
-	<xs:documentation> Human readable label used in UI contexts </xs:documentation>
+        <xs:documentation> Human readable label used in UI contexts </xs:documentation>
       </xs:annotation>
     </xs:attribute>
   </xs:attributeGroup>
   <xs:attributeGroup name="uiAttributes">
     <xs:annotation>
-      <xs:documentation> Definitions of ui element. Supports information related to creation of html and UI contexts. </xs:documentation>
+      <xs:documentation> Definitions of ui element. Supports information related to creation of html
+        and UI contexts. </xs:documentation>
     </xs:annotation>
     <xs:attribute name="uiName" type="xs:Name">
       <xs:annotation>
-	<xs:documentation>associated name value of the control when created. This allows for creating a name attribute on &lt;input/&gt; elements in html</xs:documentation>
+        <xs:documentation>associated name value of the control when created. This allows for
+          creating a name attribute on &lt;input/&gt; elements in html</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="type" type="xs:Name">
       <xs:annotation>
-	<xs:documentation>Defines the UIType associated with the field definition. It is often necessary to override the default rendering of information based on the
-                    presentation display needed</xs:documentation>
+        <xs:documentation>Defines the UIType associated with the field definition. It is often
+          necessary to override the default rendering of information based on the presentation
+          display needed</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="editType" type="xs:string">
       <xs:annotation>
-	<xs:documentation>Defines the editType for list views and grids</xs:documentation>
+        <xs:documentation>Defines the editType for list views and grids</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="displayType" type="xs:string">
       <xs:annotation>
-	<xs:documentation>Defines a formatter name that can be used to define how an field is displayed</xs:documentation>
+        <xs:documentation>Defines a formatter name that can be used to define how an field is
+          displayed</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="gridAlignment" type="xs:string">
       <xs:annotation>
-	<xs:documentation>Defines the alignment of the field within a grid or list view. This value overrides the default handling by field/@type</xs:documentation>
+        <xs:documentation>Defines the alignment of the field within a grid or list view. This value
+          overrides the default handling by field/@type</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="gridFormatter" type="xs:string">
       <xs:annotation>
-	<xs:documentation>Provides a specific formatter function name when used in a grid context</xs:documentation>
+        <xs:documentation>Provides a specific formatter function name when used in a grid
+          context</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="width" type="xs:string">
       <xs:annotation>
-	<xs:documentation>Determines the width of field element</xs:documentation>
+        <xs:documentation>Determines the width of field element</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="colWidth" type="xs:string">
       <xs:annotation>
-	<xs:documentation>Provides a width designation for a list display</xs:documentation>
+        <xs:documentation>Provides a width designation for a list display</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="dateFormat" type="xs:string">
       <xs:annotation>
-	<xs:documentation>Date Format Localization. Determines how a date will be displayed in UI context</xs:documentation>
+        <xs:documentation>Date Format Localization. Determines how a date will be displayed in UI
+          context</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="numberFormat" type="xs:string">
       <xs:annotation>
-	<xs:documentation>Number Format Localization. Determines how a numeric will be displayed in UI context</xs:documentation>
+        <xs:documentation>Number Format Localization. Determines how a numeric will be displayed in
+          UI context</xs:documentation>
       </xs:annotation>
     </xs:attribute>
   </xs:attributeGroup>
   <xs:attributeGroup name="constraintAttributes">
     <xs:annotation>
-      <xs:documentation>Defines constraints associated with field definitions. Controls validation routines and UI validation contexts</xs:documentation>
+      <xs:documentation>Defines constraints associated with field definitions. Controls validation
+        routines and UI validation contexts</xs:documentation>
     </xs:annotation>
     <xs:attribute name="unique" type="xs:boolean" default="false">
       <xs:annotation>
-	<xs:documentation>Value must be unique within the field definition. Usually to ensure mutual exclusive value across a model' s instances</xs:documentation>
+        <xs:documentation>Value must be unique within the field definition. Usually to ensure mutual
+          exclusive value across a model' s instances</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="inList" type="xs:Name">
       <xs:annotation>
-	<xs:documentation>Defines which optionlist are possible values for a given field definition.</xs:documentation>
+        <xs:documentation>Defines which optionlist are possible values for a given field
+          definition.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="required" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Defines that a value for field definition is required when inserting/updating documents.</xs:documentation>
+        <xs:documentation>Defines that a value for field definition is required when
+          inserting/updating documents.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="minLength" type="xs:integer">
       <xs:annotation>
-	<xs:documentation>Defines the minimum length for a given field value</xs:documentation>
+        <xs:documentation>Defines the minimum length for a given field value</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="maxLength" type="xs:integer">
       <xs:annotation>
-	<xs:documentation>Defines the maximum length for a given field value</xs:documentation>
+        <xs:documentation>Defines the maximum length for a given field value</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="minValue" type="xs:string">
       <xs:annotation>
-	<xs:documentation>Defines the minimum value for a given field value</xs:documentation>
+        <xs:documentation>Defines the minimum value for a given field value</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="maxValue" type="xs:string">
       <xs:annotation>
-	<xs:documentation>Defines the maximum value for a given field value</xs:documentation>
+        <xs:documentation>Defines the maximum value for a given field value</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="pattern" type="xs:string">
       <xs:annotation>
-	<xs:documentation>Defines a regex pattern to match for a given field value</xs:documentation>
+        <xs:documentation>Defines a regex pattern to match for a given field
+          value</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="validator">
       <xs:annotation>
-	<xs:documentation>Defines a custom validator function that will be called to validate the given field value.</xs:documentation>
+        <xs:documentation>Defines a custom validator function that will be called to validate the
+          given field value.</xs:documentation>
       </xs:annotation>
       <xs:simpleType>
-	<xs:restriction base="xs:string">
-	  <xs:annotation>
-	    <xs:documentation> The format for defining a custom validator. </xs:documentation>
-	  </xs:annotation>
-	  <xs:pattern value="\i\c*:(controller|model|lib|framework):\i\c*(:*)?"/>
-	</xs:restriction>
+        <xs:restriction base="xs:string">
+          <xs:annotation>
+            <xs:documentation> The format for defining a custom validator. </xs:documentation>
+          </xs:annotation>
+          <xs:pattern value="\i\c*:(controller|model|lib|framework):\i\c*(:*)?"/>
+        </xs:restriction>
       </xs:simpleType>
     </xs:attribute>
   </xs:attributeGroup>
   <xs:attributeGroup name="modelNavigationAttributes">
     <xs:annotation>
-      <xs:documentation>Defines the navigational context for a model. The navigation context determines how models will be allowed to perform actions based on various
-                attributes associated with the navigation context. Typically controls if model supports searching,editing,creating and deleting instances from UI. or REST based
-                services</xs:documentation>
+      <xs:documentation>Defines the navigational context for a model. The navigation context
+        determines how models will be allowed to perform actions based on various attributes
+        associated with the navigation context. Typically controls if model supports
+        searching,editing,creating and deleting instances from UI. or REST based
+        services</xs:documentation>
     </xs:annotation>
     <xs:attribute name="securable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Defines the model must pass certification of the security model. The attribute has not been implemented but is useful for definition for
-                    programming security hooks </xs:documentation>
+        <xs:documentation>Defines the model must pass certification of the security model. The
+          attribute has not been implemented but is useful for definition for programming security
+          hooks </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="searchable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation> Determines if the model is searchable. </xs:documentation>
+        <xs:documentation> Determines if the model is searchable. </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="sortable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if the results of a list can be sorted dynamically within ui context</xs:documentation>
+        <xs:documentation>Determines if the results of a list can be sorted dynamically within ui
+          context</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="showable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if a model can support showing instances in ui context</xs:documentation>
+        <xs:documentation>Determines if a model can support showing instances in ui
+          context</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="newable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if a model can create a new instance usually through new or put operation from ui context</xs:documentation>
+        <xs:documentation>Determines if a model can create a new instance usually through new or put
+          operation from ui context</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="editable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if a model can create a editable instance usually through edit/post operation from ui context</xs:documentation>
+        <xs:documentation>Determines if a model can create a editable instance usually through
+          edit/post operation from ui context</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="listable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if a model can be listed such as within a base index.</xs:documentation>
+        <xs:documentation>Determines if a model can be listed such as within a base
+          index.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="removable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if a model can create a instance can be removed via delete or remove operation from UI context</xs:documentation>
+        <xs:documentation>Determines if a model can create a instance can be removed via delete or
+          remove operation from UI context</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="findable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if a model can use findable model features</xs:documentation>
+        <xs:documentation>Determines if a model can use findable model features</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="exportable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines wether model will support export. Not implemented but useful for controlling hooks in application code</xs:documentation>
+        <xs:documentation>Determines wether model will support export. Not implemented but useful
+          for controlling hooks in application code</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="importable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines wether model will support import. Not implemented but useful for controlling hooks in application code</xs:documentation>
+        <xs:documentation>Determines wether model will support import. Not implemented but useful
+          for controlling hooks in application code</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="pageSize" type="xs:integer">
       <xs:annotation>
-	<xs:documentation>Determines the default page size for list values when returned using list features. Lists will override any default values from configuration or
-                    code.</xs:documentation>
+        <xs:documentation>Determines the default page size for list values when returned using list
+          features. Lists will override any default values from configuration or
+          code.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="sortField" type="xs:NCName">
       <xs:annotation>
-	<xs:documentation>Determine the default sortField when returning list results.</xs:documentation>
+        <xs:documentation>Determine the default sortField when returning list
+          results.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="sortOrder">
       <xs:annotation>
-	<xs:documentation>Determines the default order in which documents will be returned from list results.</xs:documentation>
+        <xs:documentation>Determines the default order in which documents will be returned from list
+          results.</xs:documentation>
       </xs:annotation>
       <xs:simpleType>
-	<xs:annotation>
-	  <xs:documentation> Determine the default sort order such as ascending,descending </xs:documentation>
-	</xs:annotation>
-	<xs:restriction base="xs:string">
-	  <xs:enumeration value="ascending">
-	    <xs:annotation>
-	      <xs:documentation>Results returned in ascending order</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	  <xs:enumeration value="descending">
-	    <xs:annotation>
-	      <xs:documentation>Results returned in descending order</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	</xs:restriction>
+        <xs:annotation>
+          <xs:documentation> Determine the default sort order such as ascending,descending
+          </xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="ascending">
+            <xs:annotation>
+              <xs:documentation>Results returned in ascending order</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+          <xs:enumeration value="descending">
+            <xs:annotation>
+              <xs:documentation>Results returned in descending order</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+        </xs:restriction>
       </xs:simpleType>
     </xs:attribute>
   </xs:attributeGroup>
   <xs:attributeGroup name="fieldNavigationAttributes">
     <xs:attribute name="securable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines wether field value can be secured through navigation context. Not implemented but useful for hook in application
-                    code.</xs:documentation>
+        <xs:documentation>Determines wether field value can be secured through navigation context.
+          Not implemented but useful for hook in application code.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="sortable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if a field can be used in sort operations</xs:documentation>
+        <xs:documentation>Determines if a field can be used in sort operations</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="newable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if a field value can be changed when creating a new instance.</xs:documentation>
+        <xs:documentation>Determines if a field value can be changed when creating a new
+          instance.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="editable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if a field value can be changed when creating a edit operation(form edit|post).</xs:documentation>
+        <xs:documentation>Determines if a field value can be changed when creating a edit
+          operation(form edit|post).</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="removable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if a field value can be removed from application.</xs:documentation>
+        <xs:documentation>Determines if a field value can be removed from
+          application.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="listable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if a field value will appear in list results</xs:documentation>
+        <xs:documentation>Determines if a field value will appear in list results</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="findable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if a field can use findable features in framework.</xs:documentation>
+        <xs:documentation>Determines if a field can use findable features in
+          framework.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="showable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if a field will be shown or present when performing get|show|edit|new operations.</xs:documentation>
+        <xs:documentation>Determines if a field will be shown or present when performing
+          get|show|edit|new operations.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="exportable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if a field can be exported. Not implemented but useful hook for application code handling export</xs:documentation>
+        <xs:documentation>Determines if a field can be exported. Not implemented but useful hook for
+          application code handling export</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="importable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if a field can be imported. Not implemented but useful hook for application code handling import</xs:documentation>
+        <xs:documentation>Determines if a field can be imported. Not implemented but useful hook for
+          application code handling import</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="searchable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if field is searchable using search:search semantics or be found by a field within a given search</xs:documentation>
+        <xs:documentation>Determines if field is searchable using search:search semantics or be
+          found by a field within a given search</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="facetable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Determines if a field will be faceted within a search:search semantics</xs:documentation>
+        <xs:documentation>Determines if a field will be faceted within a search:search
+          semantics</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="suggestable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Supports if field is suggestable.  This element is used in conjunction with search:search to return suggestions for results.</xs:documentation>
+        <xs:documentation>Supports if field is suggestable. This element is used in conjunction with
+          search:search to return suggestions for results.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="constraintName" type="xs:NCName">
       <xs:annotation>
-	<xs:documentation>Overrides the name of the given constraint used in building search:options</xs:documentation>
+        <xs:documentation>Overrides the name of the given constraint used in building
+          search:options</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="searchType">
       <xs:annotation>
-	<xs:documentation>Defines the type of cts:search the field will use when performing search operations</xs:documentation>
+        <xs:documentation>Defines the type of cts:search the field will use when performing search
+          operations</xs:documentation>
       </xs:annotation>
       <xs:simpleType>
-	<xs:annotation>
-	  <xs:documentation>Restricted list of allowed values</xs:documentation>
-	</xs:annotation>
-	<xs:restriction base="xs:string">
-	  <xs:enumeration value="none">
-	    <xs:annotation>
-	      <xs:documentation>Equivalent to not searchable navigation context</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	  <xs:enumeration value="range">
-	    <xs:annotation>
-	      <xs:documentation>Uses path-range-query construct</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	  <xs:enumeration value="path">
-	    <xs:annotation>
-	      <xs:documentation>Uses path-range-query construct</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	  <xs:enumeration value="field">
-	    <xs:annotation>
-	      <xs:documentation>Uses field-range-query construct</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	  <xs:enumeration value="value">
-	    <xs:annotation>
-	      <xs:documentation>Uses value-query construct</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	  <xs:enumeration value="word">
-	    <xs:annotation>
-	      <xs:documentation>Uses word-query construct</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	  <xs:enumeration value="geo-element">
-	    <xs:annotation>
-	      <xs:documentation>Not Implemented but can be used for point field type</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	  <xs:enumeration value="geo-element-child">
-	    <xs:annotation>
-	      <xs:documentation>Not Implemented but can be used for lat/long field definition</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	  <xs:enumeration value="geo-element-pair">
-	    <xs:annotation>
-	      <xs:documentation>Not Implemented</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	  <xs:enumeration value="geo-attribute-pair">
-	    <xs:annotation>
-	      <xs:documentation>Not Implemented</xs:documentation>
-	    </xs:annotation>
-	  </xs:enumeration>
-	</xs:restriction>
+        <xs:annotation>
+          <xs:documentation>Restricted list of allowed values</xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="none">
+            <xs:annotation>
+              <xs:documentation>Equivalent to not searchable navigation context</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+          <xs:enumeration value="range">
+            <xs:annotation>
+              <xs:documentation>Uses path-range-query construct</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+          <xs:enumeration value="path">
+            <xs:annotation>
+              <xs:documentation>Uses path-range-query construct</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+          <xs:enumeration value="field">
+            <xs:annotation>
+              <xs:documentation>Uses field-range-query construct</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+          <xs:enumeration value="value">
+            <xs:annotation>
+              <xs:documentation>Uses value-query construct</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+          <xs:enumeration value="word">
+            <xs:annotation>
+              <xs:documentation>Uses word-query construct</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+          <xs:enumeration value="geo-element">
+            <xs:annotation>
+              <xs:documentation>Not Implemented but can be used for point field
+                type</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+          <xs:enumeration value="geo-element-child">
+            <xs:annotation>
+              <xs:documentation>Not Implemented but can be used for lat/long field
+                definition</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+          <xs:enumeration value="geo-element-pair">
+            <xs:annotation>
+              <xs:documentation>Not Implemented</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+          <xs:enumeration value="geo-attribute-pair">
+            <xs:annotation>
+              <xs:documentation>Not Implemented</xs:documentation>
+            </xs:annotation>
+          </xs:enumeration>
+        </xs:restriction>
       </xs:simpleType>
     </xs:attribute>
   </xs:attributeGroup>
   <xs:attributeGroup name="relationshipAttributes">
     <xs:annotation>
-      <xs:documentation>NOT-IMPLEMENTED defines relationship between parent and child documents</xs:documentation>
+      <xs:documentation>NOT-IMPLEMENTED defines relationship between parent and child
+        documents</xs:documentation>
     </xs:annotation>
     <xs:attribute name="name" type="xs:Name">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="type" type="xs:string">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="reference" type="xs:string">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="create" type="referenceIntegrity">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="read" type="referenceIntegrity">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="update" type="referenceIntegrity">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="delete" type="referenceIntegrity">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
   </xs:attributeGroup>
@@ -1018,175 +1147,191 @@
   </xs:simpleType>
   <xs:simpleType name="systemType">
     <xs:annotation>
-      <xs:documentation>Defines the value type for a given field. Many fields map to their xs type equivalent of specifically to a marklogic internal type </xs:documentation>
+      <xs:documentation>Defines the value type for a given field. Many fields map to their xs type
+        equivalent of specifically to a marklogic internal type </xs:documentation>
     </xs:annotation>
     <xs:restriction base="xs:NCName">
       <!--Generic Types-->
       <xs:enumeration value="id">
-	<xs:annotation>
-	  <xs:documentation>Returns the xs:ID type from fn:generate-id() function</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Returns the xs:ID type from fn:generate-id() function</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="string">
-	<xs:annotation>
-	  <xs:documentation>String value (xs:string)</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>String value (xs:string)</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="integer">
-	<xs:annotation>
-	  <xs:documentation>Integer Value (xs:integer)</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Integer Value (xs:integer)</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="unsignedInteger">
-	<xs:annotation>
-	  <xs:documentation>Unsigned Integer (xs:unsignedInt)</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Unsigned Integer (xs:unsignedInt)</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="long">
-	<xs:annotation>
-	  <xs:documentation>Long Value (xs:long)</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Long Value (xs:long)</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="unsignedLong">
-	<xs:annotation>
-	  <xs:documentation>Unsigned Long Value (xs:unsignedLong)</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Unsigned Long Value (xs:unsignedLong)</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="decimal">
-	<xs:annotation>
-	  <xs:documentation>Decimal Value (xs:decimal)</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Decimal Value (xs:decimal)</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="double">
-	<xs:annotation>
-	  <xs:documentation>Double Value (xs:double)</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Double Value (xs:double)</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="float">
-	<xs:annotation>
-	  <xs:documentation>Float Value (xs:float)</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Float Value (xs:float)</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="boolean">
-	<xs:annotation>
-	  <xs:documentation>Boolean Value (xs:boolean)</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Boolean Value (xs:boolean)</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="anyURI">
-	<xs:annotation>
-	  <xs:documentation>anyURI Value (xs:anyURI)</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>anyURI Value (xs:anyURI)</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="date">
-	<xs:annotation>
-	  <xs:documentation>Date Value (xs:date). The date format will be in the form of CCYY-MM-DDT-[OFFSET]</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Date Value (xs:date). The date format will be in the form of
+            CCYY-MM-DDT-[OFFSET]</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="dateTime">
-	<xs:annotation>
-	  <xs:documentation>DateTime Value (xs:dateTime). The date format will be in the form of CCYY-MM-DDT-[OFFSET]</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>DateTime Value (xs:dateTime). The date format will be in the form of
+            CCYY-MM-DDT-[OFFSET]</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="time">
-	<xs:annotation>
-	  <xs:documentation>Time Value (xs:time)</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Time Value (xs:time)</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="duration">
-	<xs:annotation>
-	  <xs:documentation>Duration Type xs:duration</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Duration Type xs:duration</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="yearMonth">
-	<xs:annotation>
-	  <xs:documentation>YearMonth Value (xs:yearMonth)</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>YearMonth Value (xs:yearMonth)</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="monthDay">
-	<xs:annotation>
-	  <xs:documentation>MonthDay Value (xs:gMonthDay)</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>MonthDay Value (xs:gMonthDay)</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="binary">
-	<xs:annotation>
-	  <xs:documentation>Binary Value (stored as seperate binary value)</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Binary Value (stored as seperate binary value)</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <!--Model Custom-->
       <xs:enumeration value="identity">
-	<xs:annotation>
-	  <xs:documentation>Identity defines a unique key system generated as a guid</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Identity defines a unique key system generated as a
+            guid</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="reference">
-	<xs:annotation>
-	  <xs:documentation>Defines a relationship reference to another model</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Defines a relationship reference to another model</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="instance">
-	<xs:annotation>
-	  <xs:documentation>Defines a instance relationship to another model</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Defines a instance relationship to another model</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="update-timestamp">
-	<xs:annotation>
-	  <xs:documentation>Creates a new timestamp dateTime value on update of an instance</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Creates a new timestamp dateTime value on update of an
+            instance</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="update-user">
-	<xs:annotation>
-	  <xs:documentation>Creates the user associated with an update for every document</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Creates the user associated with an update for every
+            document</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="create-timestamp">
-	<xs:annotation>
-	  <xs:documentation>Creates a new timestamp dateTime value on the creation of a new instance.This value will remain once set for the duration of the instance in
-                        the database. </xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Creates a new timestamp dateTime value on the creation of a new
+            instance.This value will remain once set for the duration of the instance in the
+            database. </xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="create-user">
-	<xs:annotation>
-	  <xs:documentation>Creates a user associated with a create for an instance. This will remain once set for the duration of the instance instance in the
-                        database</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Creates a user associated with a create for an instance. This will
+            remain once set for the duration of the instance instance in the
+            database</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="file">
-	<xs:annotation>
-	  <xs:documentation>Same as binary type</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Same as binary type</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="schema-element">
-	<xs:annotation>
-	  <xs:documentation> Defines a element container that can contain any type of XML content not managed by the model. This allows any arbitrary xml information to
-                        be stored. </xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation> Defines a element container that can contain any type of XML content
+            not managed by the model. This allows any arbitrary xml information to be stored.
+          </xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="query">
-	<xs:annotation>
-	  <xs:documentation>Allows for the storage of cts:query serialized xml.</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Allows for the storage of cts:query serialized xml.</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <!--Geospatial support-->
       <xs:enumeration value="point">
-	<xs:annotation>
-	  <xs:documentation>Stores a point value associated with the value. The point value in the form of lat long ex. &lt;field&gt;37.52 -122.25&lt;/field&gt;
-                    </xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Stores a point value associated with the value. The point value in the
+            form of lat long ex. &lt;field&gt;37.52 -122.25&lt;/field&gt; </xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="latitude">
-	<xs:annotation>
-	  <xs:documentation>Stores a latitude value associated with the point. Value can be -180 to 180 inclusive</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Stores a latitude value associated with the point. Value can be -180 to
+            180 inclusive</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="longititude">
-	<xs:annotation>
-	  <xs:documentation>Stores a longitude value associated with the point. Value is constrained by -90 to 90 inclusive</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Stores a longitude value associated with the point. Value is constrained
+            by -90 to 90 inclusive</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="triple">
-	<xs:annotation>
-	  <xs:documentation>Stores a triple as an index value</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Stores a triple as an index value</xs:documentation>
+        </xs:annotation>
+      </xs:enumeration>
+      <xs:enumeration value="langString">
+        <xs:annotation>
+          <xs:documentation>Language string including an xml:lang attribute</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
@@ -1196,37 +1341,37 @@
     </xs:annotation>
     <xs:restriction base="xs:string">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
       <xs:enumeration value="email">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="url">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="ssn">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="uuid">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="creditCard">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="custom">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
@@ -1271,111 +1416,112 @@
   <xs:complexType name="gridColumnType">
     <xs:sequence minOccurs="0" maxOccurs="unbounded">
       <xs:any processContents="lax" namespace="##targetNamespace">
-	<xs:annotation>
-	  <xs:documentation>NOT-IMPLEMENTED</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>NOT-IMPLEMENTED</xs:documentation>
+        </xs:annotation>
       </xs:any>
     </xs:sequence>
     <xs:attributeGroup ref="gridColumnAttributes">
       <xs:annotation>
-	<xs:documentation>NOT-IMPLEMENTED</xs:documentation>
+        <xs:documentation>NOT-IMPLEMENTED</xs:documentation>
       </xs:annotation>
     </xs:attributeGroup>
   </xs:complexType>
   <xs:attributeGroup name="uiTypeAttributes">
     <xs:annotation>
-      <xs:documentation>Defines attributes associated with ui field navigation context</xs:documentation>
+      <xs:documentation>Defines attributes associated with ui field navigation
+        context</xs:documentation>
     </xs:annotation>
     <xs:attribute name="id" type="xs:Name">
       <xs:annotation>
-	<xs:documentation>Overrides id attributes in html forms.</xs:documentation>
+        <xs:documentation>Overrides id attributes in html forms.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="type" type="uiFieldType">
       <xs:annotation>
-	<xs:documentation>Overrides default type from field/@type</xs:documentation>
+        <xs:documentation>Overrides default type from field/@type</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="label" type="xs:string">
       <xs:annotation>
-	<xs:documentation>Overrides field/@label when creating headers or html &lt;label/&gt; elements</xs:documentation>
+        <xs:documentation>Overrides field/@label when creating headers or html &lt;label/&gt;
+          elements</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="class" type="xs:string">
       <xs:annotation>
-	<xs:documentation>Adds additional class attributes to input forms and containers</xs:documentation>
+        <xs:documentation>Adds additional class attributes to input forms and
+          containers</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="renderer" type="xs:string">
       <xs:annotation>
-	<xs:documentation>Allows a custom rendering function to render a specific value. 
-               Use in conjuction with unparse attribute to unparse the passed value
-                </xs:documentation>
+        <xs:documentation>Allows a custom rendering function to render a specific value. Use in
+          conjuction with unparse attribute to unparse the passed value </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="parser" type="xs:string">
       <xs:annotation>
-	<xs:documentation>Context/Helper method to unparse the value of a rendered value.  
-                The unparse method will be given the request map during the parse method in request and allowed to augment the request
-                before it is passed to the controller 
-                </xs:documentation>
+        <xs:documentation>Context/Helper method to unparse the value of a rendered value. The
+          unparse method will be given the request map during the parse method in request and
+          allowed to augment the request before it is passed to the controller </xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="repeatable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation>Allows element to be repeated in UI</xs:documentation>
+        <xs:documentation>Allows element to be repeated in UI</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="gridWidth" type="xs:integer">
       <xs:annotation>
-	<xs:documentation>Used when creating grid/list columns in list views</xs:documentation>
+        <xs:documentation>Used when creating grid/list columns in list views</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="colWidth" type="xs:integer">
       <xs:annotation>
-	<xs:documentation>Used when creating grid/list columns in list views</xs:documentation>
+        <xs:documentation>Used when creating grid/list columns in list views</xs:documentation>
       </xs:annotation>
     </xs:attribute>
   </xs:attributeGroup>
   <xs:attributeGroup name="gridColumnAttributes">
     <xs:attribute name="name" type="xs:string">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="index" type="xs:string">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="label" type="xs:string">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="editable" type="xs:boolean">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="edittype" type="uiFieldType">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="displaytype" type="uiFieldType">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="formatter" type="xs:NCName">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="unformatter" type="xs:NCName">
       <xs:annotation>
-	<xs:documentation/>
+        <xs:documentation/>
       </xs:annotation>
     </xs:attribute>
   </xs:attributeGroup>
@@ -1388,141 +1534,143 @@
   </xs:attributeGroup>
   <xs:simpleType name="uiFieldType">
     <xs:annotation>
-      <xs:documentation>Custom UI Types that can be associated with widgets. By setting type will override or initialize a javascript context for creating widgets Note some
-                of the overrides may not be supported from field/@type default rendering.</xs:documentation>
+      <xs:documentation>Custom UI Types that can be associated with widgets. By setting type will
+        override or initialize a javascript context for creating widgets Note some of the overrides
+        may not be supported from field/@type default rendering.</xs:documentation>
     </xs:annotation>
     <xs:restriction base="xs:Name">
       <xs:enumeration value="textbox">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="textarea">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="selectbox">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="checkbox">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="fileupload">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="grid">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="datepicker">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="datepager">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="timepicker">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="code-editor">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="html-editor">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="slider">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="radiolist">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="checkboxlist">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="list">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="rating">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="inputmask">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="model">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="hidden">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="text">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="password">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="reference">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="tag">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="custom">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
   <xs:simpleType name="uiContainerType">
     <xs:annotation>
-      <xs:documentation>Defines the container Type within UI for container fields.</xs:documentation>
+      <xs:documentation>Defines the container Type within UI for container
+        fields.</xs:documentation>
     </xs:annotation>
     <xs:restriction base="xs:Name">
       <xs:enumeration value="panel">
-	<xs:annotation>
-	  <xs:documentation/>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation/>
+        </xs:annotation>
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
@@ -1532,24 +1680,24 @@
     </xs:annotation>
     <xs:restriction base="xs:string">
       <xs:enumeration value="auto">
-	<xs:annotation>
-	  <xs:documentation>Uses builtin detection to serialize/deserialize type</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Uses builtin detection to serialize/deserialize type</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="binary">
-	<xs:annotation>
-	  <xs:documentation>Defines the element will be stored as binary only</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Defines the element will be stored as binary only</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="xml">
-	<xs:annotation>
-	  <xs:documentation>Defines the underlying file/binary field is xml</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Defines the underlying file/binary field is xml</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
       <xs:enumeration value="text">
-	<xs:annotation>
-	  <xs:documentation>Defines the underlying file/binary field is text</xs:documentation>
-	</xs:annotation>
+        <xs:annotation>
+          <xs:documentation>Defines the underlying file/binary field is text</xs:documentation>
+        </xs:annotation>
       </xs:enumeration>
     </xs:restriction>
   </xs:simpleType>
@@ -1564,16 +1712,17 @@
   </xs:simpleType>
   <xs:complexType name="fieldNavigationType">
     <xs:annotation>
-      <xs:documentation>Defines navigational context associated with the field. The navigation element controls how information from field are displayed listed able
-                to be modifed from the UI or REST interface.</xs:documentation>
+      <xs:documentation>Defines navigational context associated with the field. The navigation
+        element controls how information from field are displayed listed able to be modifed from the
+        UI or REST interface.</xs:documentation>
     </xs:annotation>
     <xs:sequence>
-      <xs:any namespace="http://marklogic.com/appservices/search" processContents="lax" minOccurs="0" maxOccurs="unbounded">
-	<xs:annotation>
-	  <xs:documentation>
-                    Supports adding search:option constructions for facets
-                </xs:documentation>
-	</xs:annotation>
+      <xs:any namespace="http://marklogic.com/appservices/search" processContents="lax"
+        minOccurs="0" maxOccurs="unbounded">
+        <xs:annotation>
+          <xs:documentation> Supports adding search:option constructions for facets
+          </xs:documentation>
+        </xs:annotation>
       </xs:any>
     </xs:sequence>
     <xs:attributeGroup ref="fieldNavigationAttributes"/>

@@ -10,6 +10,8 @@ import module namespace js    = "http://xquerrail.com/helper/javascript" at "../
 import module namespace response = "http://xquerrail.com/response" at "../response.xqy";
 import module namespace base = "http://xquerrail.com/model/base" at "../base/base-model.xqy";
 
+declare namespace engine         = "http://xquerrail.com/engine";
+
 declare option xdmp:output "indent=yes";
 declare option xdmp:output "method=xml";
 declare option xdmp:ouput "omit-xml-declaration=yes";
@@ -64,9 +66,8 @@ as item()*
 {
     let $init := response:initialize($response)
     let $_ := xdmp:log(("form:build-form::",response:body()),"debug")
-    for $field in $domain-model/(domain:attribute|domain:element|domain:container)
-    return
-      form:build-form-field($field)
+    return 
+      form:build-form-field($domain-model)
 };
 
 declare function form:form-field(
@@ -84,20 +85,35 @@ declare function form:build-form-field(
    let $value :=  form:get-value-from-response($field)
    let $type := (fn:data($field/domain:ui/@type),fn:data($field/@type))[1]
    let $label := fn:data($field/@label)
+   let $template := $field/domain:ui/@template
    return
    typeswitch($field)
-     case element(domain:container) return
-       <fieldset>
-        <legend>{fn:data(($field/@label,$field/@name)[1])}</legend>
-        {
-            for $containerField in $field/(domain:attribute|domain:element|domain:container)
+     case element(domain:model) return 
+       if($template) then form:call-template($field)
+       else
+         <div class="{$field/@name}">{
+            for $f in $field//(domain:attribute|domain:element|domain:container)
             return
-                form:build-form-field($containerField)
-        }
+               form:build-form-field($f)
+          }</div>
+           
+     case element(domain:container) return
+       if($template) then form:call-template($field)
+       else 
+       <fieldset>
+            <legend>{fn:data(($field/@label,$field/@name)[1])}</legend>
+            {
+                for $containerField in $field/(domain:attribute|domain:element|domain:container)
+                return
+                    form:build-form-field($containerField)
+            }
       </fieldset>
      case element(domain:element) return
-             (form:control($field,$value))
+            if($template) then form:call-template($field)
+            else (form:control($field,$value))
      case element(domain:attribute) return
+        if($template) then form:call-template($field)
+        else 
            <div class="form-group type_{$type}">{ (form:control($field,$value)) }</div>
      default return ()
 };
@@ -116,7 +132,7 @@ declare function form:control($field,$value)
       case element(grid)           return form:build-child-grid($field,$value)
       case element(instance)       return form:complex($field,$value)
       case element(query)          return form:complex($field,$value)
-
+      case element(langString)     return form:langString($field,$value)
       (:Text Elements:)
       case element(identity)  return form:hidden($field,$value)
       case element(string)    return form:text($field,$value)
@@ -864,4 +880,74 @@ declare function form:context(
            else ()
         ))
    ))
+};
+(:~
+ : Invokes a template by calling into the engine
+~:)
+declare function form:call-template(
+$field
+) {
+  let $format   := response:format()
+  let $template := processing-instruction{"template"}{fn:concat("name='",$field/domain:ui/@template,"'")}
+  let $response := map:new((response:response(),map:entry("response::body",$template)))   
+  let $engine := config:get-engine($response)
+  let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
+  let $engine-func := xdmp:function(xs:QName("engine:transform-template"),$engine-uri)
+  return
+       xdmp:apply($engine-func,$template)
+};
+declare function form:langString(
+  $field,
+  $value
+) {
+<div class="{$FORM-OUTER-CONTAINER-CLASS}">{
+       form:before($field),
+       let $default-language := domain:get-default-language($field)
+       return
+       <div class="{$FORM-INNER-CONTAINER-CLASS} input-group">{  
+           if($value) then (
+             for $val at $pos in ($value, if($value) then () else "")
+                return (
+                  <input id="{form:get-field-name($field)}[{$pos - 1}]" name="{form:get-field-id($field)}" type="text">
+                          {form:attributes($field)}
+                  {form:values($field,$val)}
+                  </input>,
+                  <span class="input-group-addon">
+                  <select id="{form:get-field-name($field)}[{$pos - 1}]" name="{form:get-field-id($field)}@lang">
+                  {domain:get-field-languages($field) ! 
+                    <option value=".">{
+                        if(rdf:langString-language($val) = .) then attribute selected {"selected"} else (), 
+                        .
+                    }</option>
+                  }</select>
+                  </span>
+             ))
+             else (
+                  <input id="{form:get-field-name($field)}" name="{form:get-field-id($field)}@lang" type="text" class="form-control {$field/@type}">
+                  {form:values($field,$value)}
+                  </input>,
+                  <span class="input-group-btn">
+                    <select id="{form:get-field-name($field)}[0]" name="{form:get-field-id($field)}@lang" class="btn">
+                    {domain:get-field-languages($field) ! 
+                      <option value=".">{
+                          if(. = $default-language) then attribute selected {"selected"} else (), 
+                          .
+                      }</option>
+                    }</select>
+                   </span>
+             )(:
+             <div class="input-group">
+                <input type="text" class="form-control"/>
+                <span class="input-group-btn">
+                  <select class="btn">
+                    <option>Inches</option>
+                    <option>Feet</option>
+                    <option>mm</option>
+                  </select>
+                </span>
+              </div>:)
+       }</div>
+       ,
+       form:after($field)
+  }</div>
 };

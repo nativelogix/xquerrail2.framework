@@ -69,6 +69,7 @@ declare %private function app:load-config(
          <database>{xdmp:modules-database()}</database>
       </options>
       )
+  let $config := element config:config { $config/* }
   let $_ := cache:set-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $config)
   return $config
 };

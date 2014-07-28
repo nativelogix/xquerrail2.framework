@@ -430,12 +430,12 @@ declare function engine:render-view()
 declare function engine:transform-template($node)
 {
    let $dummy := xdmp:unquote(fn:concat("<template ",fn:data($node),"/>"))/*
-   for $n in xdmp:invoke(engine:template-uri(fn:data($dummy/@name)),
-     (
-        fn:QName("","response"),response:response() 
-     )
-     ) 
-     return engine:transform($n)
+   let $template-uri := engine:template-uri(fn:data($dummy/@name))
+   return
+     if(engine:module-file-exists($template-uri)) then 
+        for $n in xdmp:invoke($template-uri,(fn:QName("","response"),response:response()))    
+          return engine:transform($n)
+     else fn:error(xs:QName("TEMPLATE-NOT-EXISTS"),"Template at uri:'" || $template-uri ||"' does not exist")
 };
 
 declare function engine:transform-view($node)

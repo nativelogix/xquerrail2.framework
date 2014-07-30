@@ -70,7 +70,7 @@ declare function domain:cast-value($field as element(),$value as item()*)
         case "identity"         return $value[fn:string(.) ne ""] cast as xs:string?
         case "id"               return $value cast as xs:ID?
         case "anyURI"           return $value cast as xs:anyURI*
-        case "string"           return $value cast as xs:string*
+        case "string"           return $value[fn:string(.) ne ""] cast as xs:string*
         case "integer"          return $value[fn:string(.) ne ""] cast as xs:integer*
         case "unsignedInt"      return $value[fn:string(.) ne ""] cast as xs:unsignedInt*
         case "long"             return $value[fn:string(.) ne ""] cast as xs:long*
@@ -1873,7 +1873,7 @@ declare function domain:get-field-xml-value(
   else
     let $type := domain:get-base-type($field)
     let $path := domain:get-field-xpath($field)
-    let $_    := xdmp:log(("domain:get-field-xpath",$field,$path),"debug")
+    let $_    := xdmp:log(("domain:get-field-xpath",$field,$path),"finest")
     let $expr := fn:concat("$value", $path)
     let $func := 
       switch($type)

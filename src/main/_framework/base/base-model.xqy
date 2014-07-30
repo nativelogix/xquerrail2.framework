@@ -1287,7 +1287,7 @@ declare function model:filter-list-result($field as element(),$result) {
                    return model:filter-list-result($field,$result),
                    let $value := domain:get-field-value($field,$result)
                    let $fieldtype := domain:get-base-type($field)
-                   let $log := xdmp:log(("field-base::",$field/@name,$fieldtype),"debug")    
+                   let $log := xdmp:log(("field-base::",$field/@name,$fieldtype),"finest")    
                    return
                      switch($fieldtype)
                        case "complex" return $value/(@*|node())

@@ -230,6 +230,14 @@ declare function response:body()
 {
   map:get($response,$BODY)
 };
+declare function response:set-context($context)
+{
+  map:put($response,$CONTEXT,$context)
+};
+declare function response:context()
+{
+  map:get($response,$CONTEXT)
+};
 
 
 declare function response:set-response-code(

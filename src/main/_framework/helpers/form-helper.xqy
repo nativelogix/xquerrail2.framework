@@ -49,7 +49,7 @@ declare function form:get-field-name($field as node()) {
  : with same name but in different containers
 ~:)
 declare function form:get-field-id($field as node()) {
-    domain:get-field-id($field)
+    domain:get-field-name-key($field)
 };
 
 (:~
@@ -74,7 +74,7 @@ declare function form:form-field(
     $domain-model as element(domain:model),
     $fieldname as xs:string
 ) {
-    for $field in $domain-model//(domain:attribute|domain:element|domain:container)[@name = $fieldname]
+    for $field in $domain-model/(domain:attribute|domain:element|domain:container)[@name = $fieldname]
     return
       form:build-form-field($field)
 };
@@ -92,7 +92,7 @@ declare function form:build-form-field(
        if($template) then form:call-template($field)
        else
          <div class="{$field/@name}">{
-            for $f in $field//(domain:attribute|domain:element|domain:container)
+            for $f in $field/(domain:attribute|domain:element|domain:container)
             return
                form:build-form-field($f)
           }</div>
@@ -889,8 +889,8 @@ $field
 ) {
   let $format   := response:format()
   let $template := processing-instruction{"template"}{fn:concat("name='",$field/domain:ui/@template,"'")}
-  let $response := map:new((response:response(),map:entry("response::body",$template)))   
-  let $engine := config:get-engine($response)
+  let $_ := response:set-context(domain:get-field-id($field))
+  let $engine := config:get-engine(response:flush())
   let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
   let $engine-func := xdmp:function(xs:QName("engine:transform-template"),$engine-uri)
   return

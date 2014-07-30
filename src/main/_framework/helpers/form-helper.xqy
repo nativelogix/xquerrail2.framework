@@ -183,7 +183,6 @@ declare function form:get-value-from-response($field as element()) {
     (: Verify you only pull the approprite node just incase the body is a sequence :)
     (:let $node := response:body()/*[fn:local-name(.) = $name]:)
     let $node := domain:get-field-value($field,response:body())
-    let $_ := xdmp:log(("field:node::",$node),"debug")
     return
         if($field/@type = ("reference","binary"))
         then $node

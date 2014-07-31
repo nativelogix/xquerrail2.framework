@@ -10,6 +10,8 @@
     
     <default-application value="app-test"/>
     
+    <resource-handler/>
+  
     <!--Register Your Application(s) Here-->
     <application name="app-test" namespace="http://xquerrail.com/app-test" uri="/test/_framework/config-test/app-test">
       <domain resource="domains/application-domain.xml" />

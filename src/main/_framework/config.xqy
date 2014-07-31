@@ -614,7 +614,15 @@ declare function config:interceptor-config() as xs:string?
  : against the content like compression or other things to augment the resource
  :)
 declare function config:resource-handler() {
-  config:get-config()/config:resource-handler
+  if (config:get-config()/config:resource-handler) then (
+    if (config:get-config()/config:resource-handler/@resource) then 
+      config:get-config()/config:resource-handler
+    else
+      <resource-handler resource="{config:resolve-framework-path("handlers/resource.handler.xqy")}"/>
+  )[1]
+  else
+    ()
+  
 };
 
 (:~

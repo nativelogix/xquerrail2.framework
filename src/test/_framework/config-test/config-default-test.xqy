@@ -146,6 +146,11 @@ declare %test:case function test-error-handler() as item()*
   assert:equal(config:error-handler(), config:resolve-framework-path("error.xqy"))
 };
 
+declare %test:case function test-resource-handler() as item()*
+{
+  assert:equal(config:resource-handler()/@resource/fn:string(), config:resolve-framework-path("handlers/resource.handler.xqy"))
+};
+
 declare %test:case function test-framework-path() as item()*
 {
   assert:equal(config:framework-path(), "/main/_framework")

@@ -372,7 +372,7 @@ declare function domain:get-field-prefix($field as element()) {
  : @param $name  - name or key of the field
  :)
 declare function domain:get-model-field($model as element(domain:model),$key as xs:string) {
-  $model//(domain:element|domain:attribute)[$key = @name]
+  $model//(domain:element|domain:attribute)[$key = @name or $key = @keyId or $key = @keyName]
 };
 
 (:~
@@ -691,13 +691,51 @@ declare function domain:get-domain-model(
                             }
                         , $model/node()
                      }
-            else $model 
+            else $model
          return ($extends,domain:set-model-cache($cache-key,$extends))
     return 
         if($models) 
         then element domain:domain { $domain/@*, $domain/domain:name, $domain/*[. except $domain/domain:model], $models } / domain:model
         else fn:error(xs:QName("NO-DOMAIN-MODEL"), "Model does not exist",$model-names)
 };
+
+declare function domain:set-model-field-attributes(
+  $field as item()
+) as item() {
+  typeswitch($field)
+    case element(domain:model) return 
+      element { fn:node-name($field) } {
+        $field/@*,
+        $field/*[. except $field/(domain:element | domain:container | domain:attribute)],
+        for $f in  $field/(domain:element | domain:container | domain:attribute)
+          return domain:set-model-field-attributes($f)
+      }
+    case element(domain:container) return
+      element { fn:node-name($field) } {
+        domain:set-field-attributes($field),
+        $field/* ! (domain:set-model-field-attributes(.))
+      }
+    case element(domain:element) return
+      element { fn:node-name($field) } {
+        domain:set-field-attributes($field),
+        $field/* ! (domain:set-model-field-attributes(.))
+      }
+    case element(domain:attribute) return
+      element { fn:node-name($field) } {
+        domain:set-field-attributes($field),
+        $field/* ! (domain:set-model-field-attributes(.))
+      }
+    default return $field
+};
+
+declare function domain:set-field-attributes($field as element()) as attribute()* {
+  (
+    attribute keyId { domain:get-field-id($field) },
+    attribute keyName { domain:get-field-name-key($field) },
+    $field/@*[. except ($field/@keyId, $field/@keyName)]
+  )
+};
+
 (:~
  : Returns a list of all defined controllers for a given application domain
  : @param $application-name - application domain name

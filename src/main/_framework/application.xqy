@@ -5,7 +5,7 @@ module namespace app = "http://xquerrail.com/application";
 import module namespace config = "http://xquerrail.com/config" at "config.xqy";
 import module namespace cache = "http://xquerrail.com/cache" at "cache.xqy";
 
-declare namespace domain = "http://xquerrail.com/domain";
+import module namespace domain = "http://xquerrail.com/domain" at "domain.xqy";
 
 declare option xdmp:mapping "false";
 
@@ -45,6 +45,8 @@ declare %private function app:load-application(
   let $domain-config := config:get-resource($application-path)
   let $domain := load-domain($domain-config)
   let $config := config:get-config()
+  let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config))
+  let $domain := update-domain($domain)
   let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config))
   return $domain
 };
@@ -93,6 +95,18 @@ declare %private function app:load-domain(
          ($domain/domain:controller,$imports/domain:controller),
          ($domain/domain:view,$imports/domain:view)
        }
+};
+
+declare %private function update-domain(
+  $domain
+) {
+  element domain {
+    namespace domain {"http://xquerrail.com/domain"},
+    attribute xmlns {"http://xquerrail.com/domain"},
+    $domain/@*,
+    $domain/*[. except $domain/domain:model],
+    $domain/domain:model ! (domain:set-model-field-attributes(.))
+  }
 };
 
 declare %private function app:get-base() as element(config:application) {

@@ -50,3 +50,17 @@ declare %test:case function app-get-setting-test() as item()*
   )
 };
 
+declare %test:case function get-model-field-test() as item()* {
+  let $model1 := domain:get-model("model1")
+  let $field := $model1/domain:element[./@name/fn:string() eq "name"]
+  let $_ := xdmp:log(("$model1", $model1, "$field", $field))
+  let $field-name := "name"
+  let $field-key-id := domain:get-field-id($field)
+  let $fiel-key-name := domain:get-field-name-key($field)
+  return (
+    assert:equal(domain:get-model-field($model1, $field-name), $field),
+    assert:equal(domain:get-model-field($model1, $field-key-id), $field),
+    assert:equal(domain:get-model-field($model1, $fiel-key-name), $field)
+  )
+};
+

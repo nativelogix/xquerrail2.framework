@@ -1447,7 +1447,7 @@ declare function model:list-params(
            $sf ne "" and $so ne "")
         then
             let $op := $so
-            let $field-elem := $model//(domain:element|domain:attribute)[@name eq $sf]
+            let $field-elem := domain:get-model-field($model, $sf)
             let $field := fn:QName(domain:get-field-namespace($field-elem),$field-elem/@name)
             let $value := domain:get-param-value($params,"searchString")[1]
             return
@@ -1460,7 +1460,7 @@ declare function model:list-params(
                 let $op :=  $rule/json:entry[@key='op']/json:value
                 let $sf :=  $rule/json:entry[@key='field']/json:value
                 let $sv :=  $rule/json:entry[@key='data']/json:value
-                let $field-elem := $model//(domain:element|domain:attribute)[@name eq $sf]
+                let $field-elem := domain:get-model-field($model, $sf)
                 let $field :=
                     fn:QName(domain:get-field-namespace($field-elem),$field-elem/@name)
                 return

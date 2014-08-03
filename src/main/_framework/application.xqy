@@ -13,19 +13,23 @@ declare function app:bootstrap() as item()* {
   app:bootstrap(())
 };
 
+declare function app:set-path($application as element(config:application)?) {
+  if ($application) then (
+    config:set-base-path(xs:string($application/config:base)),
+    config:set-config-path((xs:string($application/config:config), "/_config")[1])
+  )
+  else (
+    config:set-base-path(xs:string(get-base()/config:base)),
+    config:set-config-path((xs:string(get-base()/config:config), "/_config")[1])
+  )
+};
+
 declare function app:bootstrap($application as element(config:application)?) as item()* {
   if (fn:empty($application) and config:get-base-path() and config:get-config-path()) then
     ()
   else
   (
-    if ($application) then (
-      config:set-base-path(xs:string($application/config:base)),
-      config:set-config-path((xs:string($application/config:config), "/_config")[1])
-    )
-    else (
-      config:set-base-path(xs:string(get-base()/config:base)),
-      config:set-config-path((xs:string(get-base()/config:config), "/_config")[1])
-    )
+    app:set-path($application)
   ,
   xdmp:log(("Bootstrap XQuerrail Application - version [" || config:version() || "] - commit [" || config:last-commit() || "]", "base [" || config:get-base-path() || "] - config [" || config:get-config-path() || "] - framework [" || config:framework-path() || "] - ML version [" || xdmp:version() || "]"), "info")
   ,

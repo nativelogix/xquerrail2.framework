@@ -37,7 +37,7 @@ declare variable $collation := "http://marklogic.com/collation/codepoint";
  :)
 declare function controller:initialize($request)
 {(
-   xdmp:log(("initialize::",$request),"debug"),
+   xdmp:log(("initialize::",$request),"finest"),
    request:initialize($request),
    response:initialize(map:map(),$request),
    response:set-partial(request:partial())
@@ -260,7 +260,7 @@ declare function controller:suggest()
  :)
 declare function controller:list()
 {
-    xdmp:log(("controller:list::",request:params()),"debug"),
+    xdmp:log(("controller:list::",request:params()),"finest"),
     model:list(
       controller:model(),
       request:params()

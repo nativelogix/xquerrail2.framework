@@ -367,7 +367,7 @@ declare function model:create(
                 )
            return (
                (: Return the update node :)
-               model:create-reference-cache($model,$update),
+(:               model:create-reference-cache($model,$update),:)
                switch($persistence)
                  (: Creation for document persistence :)
                  case "document" return

@@ -110,12 +110,27 @@ declare function form:build-form-field(
       </fieldset>
      case element(domain:element) return
             if($template) then form:call-template($field)
-            else (form:control($field,$value))
+            else (form:control-group($field,$value))
      case element(domain:attribute) return
         if($template) then form:call-template($field)
         else 
-           <div class="form-group type_{$type}">{ (form:control($field,$value)) }</div>
+           <div class="form-group type_{$type}">{ (form:control-group($field,$value)) }</div>
      default return ()
+};
+
+(:~
+ : Returns the label and the control wrapped in form group div
+~:)
+declare function form:control-group($field,$value)
+{
+  <div class="{$FORM-OUTER-CONTAINER-CLASS}">{
+       form:before($field),
+       <div class="{$FORM-INNER-CONTAINER-CLASS}">{
+        form:control($field, $value)
+       }</div>
+       ,
+       form:after($field)
+  }</div>
 };
 
 declare function form:control($field,$value)
@@ -313,9 +328,6 @@ declare function form:custom($field,$value)
 ~:)
 declare function form:text($field,$value)
 {
-  <div class="{$FORM-OUTER-CONTAINER-CLASS}">{
-       form:before($field),
-       <div class="{$FORM-INNER-CONTAINER-CLASS}">{
             if($field/domain:constraint/@inList and fn:not($field/domain:navigation/@editable eq 'false')) then
             <select id="{form:get-field-id($field)}" name="{form:get-field-name($field)}">
             {form:attributes($field)}
@@ -335,10 +347,6 @@ declare function form:text($field,$value)
                   {form:attributes($field)}
                   {form:values($field,$value)}
                   </input>
-       }</div>
-       ,
-       form:after($field)
-  }</div>
 };
 (:~
  : Renders a list of radio boxes
@@ -352,7 +360,6 @@ declare function form:list($field,$value) {
         then "checkbox"
         else fn:error(xs:QName("FIELD-OPTION-TYPE-ERROR"),"Type is not value for renderlist",$type)
     return (
-       form:before($field),
        if($field/domain:constraint/@inList) then
          let $optionlist := domain:get-field-optionlist($field)
          for $option in $optionlist/domain:option
@@ -374,8 +381,6 @@ declare function form:list($field,$value) {
        else if($field/@type = "reference") then
             ()
        else ()
-       ,
-       form:after($field)
   )
 };
 (:~
@@ -392,10 +397,7 @@ $value as item()*
 };
 
 declare function form:checkbox($field,$value)
-{
-  <div class="{$FORM-OUTER-CONTAINER-CLASS}">{
-   form:before($field),
-    <div class="{$FORM-INNER-CONTAINER-CLASS}">
+{(
       <label class="checkbox radio-inline  inline">
        <input id="{form:get-field-name($field)}" name="{form:get-field-name($field)}" type="radio" value="true">
        {form:attributes($field)}
@@ -406,7 +408,7 @@ declare function form:checkbox($field,$value)
        }
        True
        </input>
-       </label>
+       </label>,
        <label class="checkbox radio-inline inline">
        <input name="{form:get-field-name($field)}" type="radio" value="false"  >
        {form:attributes($field)}
@@ -417,44 +419,29 @@ declare function form:checkbox($field,$value)
        False
        </input>
        </label>
-       {form:after($field)}
-       </div>
-    }</div>
-};
+)};
 
 declare function form:money($field,$value)
-{(
-           form:before($field),
-           <input id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" type="text">
-           {form:attributes($field)}
-           {form:values($field,$value)}
-           </input>,
-           form:after($field)
-)};
+{
+  <input id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" type="text">
+    {form:attributes($field)}
+    {form:values($field,$value)}
+  </input>
+};
 
 declare function form:number($field,$value)
 {
-(
-   form:before($field),
-   <input id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" type="text">
-   {form:attributes($field)}
-   {form:values($field,$value)}
-   </input>,
-   form:after($field)
-)
+  <input id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" type="text">
+    {form:attributes($field)}
+    {form:values($field,$value)}
+  </input>
 };
 declare function form:password($field,$value)
 {
- <div class="{$FORM-OUTER-CONTAINER-CLASS}">{(
-   form:before($field),
-   <div class="{$FORM-INNER-CONTAINER-CLASS}">
-         <input id="{form:get-field-name($field)}" name="{form:get-field-name($field)}" type="password">
-         {form:attributes($field)}
-         {form:values($field,$value)}
-         </input>
-   </div>,
-   form:after($field)
-   )}</div>
+  <input id="{form:get-field-name($field)}" name="{form:get-field-name($field)}" type="password">
+    {form:attributes($field)}
+    {form:values($field,$value)}
+  </input>
 };
 
 
@@ -470,9 +457,7 @@ declare function form:choice($field,$value)
 
 
 declare function form:time($field,$value)
-{ <div class="{$FORM-OUTER-CONTAINER-CLASS}">{
-       form:before($field),
-       <div class="{$FORM-INNER-CONTAINER-CLASS}">
+{ 
          <div id="{form:get-field-name($field)}_time" class="input-append">
             <input id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" type="text" data-format="hh:MM:ss">
             {form:attributes($field)}
@@ -480,10 +465,6 @@ declare function form:time($field,$value)
             </input>
             <span class="add-on"><i class="icon-time"></i></span>
          </div>
-       </div>
-       ,
-       form:after($field)
-  }</div>
 };
 
 declare function form:date($field,$value)
@@ -504,13 +485,12 @@ declare function form:date($field,$value)
 };
 
 declare function form:hidden($field,$value)
-{(
+{
    <input id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" type="hidden">
    {form:attributes($field)}
    {form:values($field,$value)}
-   </input>,
-   form:after($field)
-)};
+   </input>
+};
 declare function form:binary-content-type-icon($value) {
     let $content-type := $value/@content-type
     return
@@ -532,53 +512,37 @@ declare function form:binary-url($field,$value) {
     fn:concat("",$controller/@name,"binary?name=",$field/@name,"&amp;uuid=",$id)
 };
 
-declare function form:binary($field,$value) {
-  <div class="{$FORM-INNER-CONTAINER-CLASS}">{
-       form:before($field),
-       <div class="{$FORM-INNER-CONTAINER-CLASS}">
+declare function form:binary($field,$value
+) {
+(
             <input id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" type="file">
             {form:attributes($field)}
             {form:values($field,$value)}
-            </input>
+            </input>,
             <span class="links">
                 <strong>File: {fn:string($value/@filename)}</strong>
                 <a href="{form:binary-url($field,$value)}" class="filename">
                 <span class="icon-download-alt pull-right"></span>
                 </a>
             </span>
-       </div>
-       ,
-       form:after($field)
-  }</div>
+)
 };
 
 declare function form:schema-element($field,$value)
-{(
- <div class="{$FORM-OUTER-CONTAINER-CLASS}">{
-  form:before($field),
-  <div class="{$FORM-INNER-CONTAINER-CLASS}">
+{
     <textarea name="{form:get-field-name($field)}" id="{form:get-field-id($field)}">
         { form:attributes($field) }
         { if( $value/element() or $value instance of element() and $value) then xdmp:quote($value) else $value}
      </textarea>
-   </div>,
-   form:after($field)
-   }</div>
-)};
+};
 
 declare function form:complex($field,$value)
-{(
-  <div class="{$FORM-OUTER-CONTAINER-CLASS}">{
-       form:before($field),
-       <div class="{$FORM-INNER-CONTAINER-CLASS}">
+{
         <textarea name="{form:get-field-name($field)}" id="{domain:get-field-id($field)}">
             { form:attributes($field) }
             { if( $field/@type = "schema-element") then xdmp:quote($value) else $value}
          </textarea>
-       </div>,
-       form:after($field)
-   }</div>
-)};
+};
 
 declare function form:build-child-grid($field,$value) {
     let $fieldKey := form:get-field-name($field)
@@ -618,14 +582,12 @@ declare function form:build-child-grid($field,$value) {
 
 	return
 	(
-     form:before($field),
       <div class="complexGridWrapper">
            <div id="{$fieldKey}" class="complexGrid"></div>
            <script type="text/javascript">
                 buildEditGrid('{$fieldKey}', {$modelData},   {$columnSchema})
            </script>
-       </div>,
-      form:after($field)
+       </div>
    )
 };
 
@@ -653,9 +615,6 @@ declare function form:lookup($field,$value) {
                fn:concat("/",$tokenz[1],"/lookup.xml")
           else fn:error(xs:QName("LOOKUP-REFERENCE-ERROR"),"Unable to resolve reference",$tokenz)
     return
-      <div class="{$FORM-OUTER-CONTAINER-CLASS}">
-       {form:before($field)}
-       <div class="{$FORM-INNER-CONTAINER-CLASS}">
             <input id="{$fieldName}" name="{$fieldName}" type="hidden" data-lookup="{$refController}" value="{$value/@ref-id}">
             {   (:Added validation Rendering:)
                 form:validation($field),
@@ -670,9 +629,6 @@ declare function form:lookup($field,$value) {
 
              }
             </input>
-       </div>
-       {form:after($field)}
-      </div>
 };
 
 declare function form:reference($field,$value) {
@@ -689,9 +645,6 @@ declare function form:reference($field,$value) {
       else if($FORM-MODE = "edit" and fn:not($field/domain:navigation/@editable = "false")) then ()
       else "readonly"
     return
-    <div class="{$FORM-OUTER-CONTAINER-CLASS}">
-           { form:before($field) }
-       <div class="{$FORM-INNER-CONTAINER-CLASS}">
            <select id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" >{
                 form:validation($field),
                 if(($field/domain:navigation/@editable = 'false' and $FORM-MODE = "edit")
@@ -749,9 +702,6 @@ declare function form:reference($field,$value) {
                 else ()
              }
            </select>
-        </div>
-           { form:after($field) }
-    </div>
 };
 (:~
  : Builds a grid column from
@@ -899,11 +849,8 @@ declare function form:langString(
   $field,
   $value
 ) {
-<div class="{$FORM-OUTER-CONTAINER-CLASS}">{
-       form:before($field),
        let $default-language := domain:get-default-language($field)
        return
-       <div class="{$FORM-INNER-CONTAINER-CLASS} input-group">{  
            if($value) then (
              for $val at $pos in ($value, if($value) then () else "")
                 return (
@@ -945,8 +892,4 @@ declare function form:langString(
                   </select>
                 </span>
               </div>:)
-       }</div>
-       ,
-       form:after($field)
-  }</div>
 };

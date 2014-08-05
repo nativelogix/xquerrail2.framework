@@ -2293,15 +2293,10 @@ declare function model:convert-to-map(
     $model as element(domain:model),
     $current as node()
 ) {
-    let $params := map:map()
-    let $_ :=
+    map:new((
       for $field in $model//(domain:element|domain:attribute)
-        let $field-name := domain:get-field-name-key($field)
-        let $xpath := fn:string-join(domain:get-field-xpath($field), "")
-        let $value := xdmp:value("$current" || $xpath || "/fn:data()")
-        return
-          map:put($params, $field-name, $value)
-    return $params
+        return map:entry(domain:get-field-name-key($field), domain:get-field-value($field, $current))
+    ))
 };
 
 (:~

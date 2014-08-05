@@ -464,11 +464,7 @@ declare function model:exists(
          cts:search(fn:doc(),
            cts:element-query(fn:QName($namespace,$localname),
                 cts:and-query((
-                      if($model/@persistence = "directory")
-                      then cts:directory-query($model/domain:directory,"1")
-                      else if($model/@persistence ="document")
-                      then cts:document-query($model/domain:document)
-                      else (),
+                      domain:get-base-query($model),
                       domain:get-param-value($params,"_query")
                 ))
            )
@@ -1137,7 +1133,7 @@ declare function model:build-triple(
 declare function model:delete(
     $model as element(domain:model),
     $params as item()
-) as xs:boolean
+) 
 {
   let $params := domain:fire-before-event($model,"delete",$params)
   let $current := model:get($model,$params)
@@ -1209,10 +1205,8 @@ declare function model:lookup($model as element(domain:model), $params as map:ma
                     then cts:word-query(fn:concat("*",$qString,"*"),("diacritic-insensitive", "wildcarded","case-insensitive","punctuation-insensitive"))
                     else cts:and-query(())
                  ),
-                 if($model/@persistence = "directory")
-                 then cts:directory-query($model/domain:directory)
-                 else cts:document-query($model/domain:document)
-                 ,$additional-constraint
+                 domain:get-base-query($model),
+                 $additional-constraint
               ))
     let $values :=
         if($model/@persistence = 'document') then
@@ -1338,14 +1332,13 @@ as element(list)?
                 return
                   xdmp:value("fn:doc($path)/*:" || $root || "/*:"  || $name ||  "[cts:contains(.,cts:and-query(($search,$additional-query)))]")
             else
-                let $dir := cts:directory-query($model/domain:directory/text())
-                let $predicate :=
+                let $predicate := 
                     cts:element-query(fn:QName($namespace,$name),
                         cts:and-query((
-                            domain:model-root-query($model),
+                             domain:get-base-query($model),
                             $additional-query,
                             $search,
-                            $dir,
+                            
                             $listExpr
                         ))
                     )
@@ -1769,10 +1762,8 @@ declare function model:build-search-options(
        (:Implement a base query:)
        let $persistence := fn:data($model/@persistence)
        let $baseQuery :=
-            if ($persistence = ("document","singleton")) then
-               cts:document-query($model/domain:document/text())
-            else if($persistence = "directory") then
-                cts:directory-query($model/domain:directory/text())
+            if ($persistence = ("document","singleton","directory")) 
+            then domain:get-base-query($model)
             else cts:or-query(domain:get-descendant-model-query($model))
        let $addQuery := cts:and-query((
             $baseQuery,
@@ -2781,6 +2772,5 @@ declare function build-simple(
      return
       if(fn:starts-with($computed,"/"))
       then $computed
-      else fn:concat("/",$computed)
-    
+      else fn:concat("/",$computed)    
  }; 

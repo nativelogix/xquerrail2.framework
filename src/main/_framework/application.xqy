@@ -93,7 +93,7 @@ declare %private function app:load-domain(
          namespace domain {"http://xquerrail.com/domain"},
          attribute xmlns {"http://xquerrail.com/domain"},
          $domain/@*,
-         $domain/(domain:name|domain:content-namespace|domain:application-namespace|domain:description|domain:author|domain:version|domain:declare-namespace|domain:default-collation|domain:permission),
+         $domain/(domain:name|domain:content-namespace|domain:application-namespace|domain:description|domain:author|domain:version|domain:declare-namespace|domain:default-collation|domain:permission|domain:language|domain:default-language),
          ($domain/domain:model,$imports/domain:model),
          ($domain/domain:optionlist,$imports/domain:optionlist),
          ($domain/domain:controller,$imports/domain:controller),

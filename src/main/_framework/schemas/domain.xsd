@@ -96,6 +96,7 @@
           </xs:element>
           <xs:element name="import" type="importType" minOccurs="0" maxOccurs="unbounded"/>
           <xs:element name="permission" type="permissionType" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element maxOccurs="unbounded" minOccurs="0" name="language" type="languageType"/>
         </xs:choice>
         <xs:choice minOccurs="1" maxOccurs="unbounded">
           <xs:annotation>
@@ -347,6 +348,22 @@
           definition</xs:documentation>
       </xs:annotation>
     </xs:attributeGroup>
+  </xs:complexType>
+  <xs:complexType name="languageType">
+    <xs:annotation>
+      <xs:documentation> Defines a language(localization) for  langString
+      </xs:documentation>
+    </xs:annotation>
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="label" type="xs:QName">
+          <xs:annotation>
+            <xs:documentation>Defines a localization language string used for langString type.</xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+      </xs:extension>
+    </xs:simpleContent>
+
   </xs:complexType>
   <!--
 

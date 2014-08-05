@@ -19,7 +19,7 @@ return
  if($model) then 
     <x>{js:object((       
         js:keyvalue("type",$node/@type cast as xs:string),
-        js:keyvalue("elapsed",$node/@elapsed),
+        js:keyvalue("elapsed",fn:string($node/@elapsed)),
         js:keyvalue("currentpage",$node/currentpage cast as xs:integer),
         js:keyvalue("pagesize",$node/pagesize cast as xs:integer),
         js:keyvalue("totalpages",$node/totalpages cast as xs:integer),

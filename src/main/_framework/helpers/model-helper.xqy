@@ -261,25 +261,33 @@ declare function model:build-json(
         let $field-value := domain:get-field-value($field,$instance)
         return  (
             for $field in $field/(domain:attribute) return model:build-json($field,$instance,$include-root),
-           if($field/@reference and $field/@type eq "reference") then
+           if($field/@reference and $field/@type eq "reference") then   
                 let $value := domain:get-field-value($field,$instance)
                 return 
                   if(fn:not($value)) then js:kv($field/@name,())
-                  else 
-                   js:kv($field/@name,js:o((
-                        js:kv("reference",fn:true()),
-                        js:kv("text", fn:string($field-value)),
-                        js:kv("id", $field-value/@ref-id),
-                        js:kv("type",fn:data($field-value/@ref))
-                    )))
+                  else if($field/@occurrence = ("+","*")) then 
+                        js:kv($field/@name,js:a(
+                        for $ref in $field-value
+                        return
+                             js:kv($field/@name,js:o((
+                                 js:kv("text", fn:string($ref)),
+                                 js:kv("id", fn:string($ref/@ref-id)),
+                                 js:kv("type",fn:string($ref/@ref))
+                             )))))
+                    else 
+                         js:kv($field/@name,js:o((
+                             js:kv("text", fn:string($field-value)),
+                             js:kv("id", fn:string($field-value/@ref-id)),
+                             js:kv("type",fn:string($field-value/@ref))
+                         )))
             else if($field/@type eq "binary") then 
                let $value := domain:get-field-value($field,$instance)
                return 
                    if($value) then 
                        js:kv($field/@name,(
                            js:kv("uri", fn:string($field-value)),
-                           js:kv("filename", fn:data($field-value/@filename)),
-                           js:kv("contentType",fn:data($field-value/@content-type))
+                           js:kv("filename", fn:string($field-value/@filename)),
+                           js:kv("contentType",fn:string($field-value/@content-type))
                        )) 
                    else js:kv($field/@name,"")       
                else if($field/@type eq "identity") then 
@@ -290,6 +298,7 @@ declare function model:build-json(
                  if($field/@occurrence = ("*","+")) then
                     js:kv($field/@name,js:a(
                        for $v in $field-value
+                       let $log := xdmp:log($v)
                        return js:o((
                              domain:get-model($field/@type) ! model:build-json(.,$v)
                        ))
@@ -300,15 +309,14 @@ declare function model:build-json(
                              domain:get-model($field/@type) ! model:build-json(.,$v)
                        ))
                     )
-         
                else 
                     if($field/@occurrence = ("*","+")) 
-                    then js:kv($field/@name, js:a($field-value ! fn:data(.)[. ne ""]))
+                    then js:kv($field/@name, js:a($field-value ! fn:string(.)[. ne ""]))
                     else 
                         if($field/@type = "string")
                         then js:kv($field/@name,($field-value)[1])
                         else if($field/@type = "boolean") then
-                        let $field-value := if($field-value eq "true") then fn:true() else fn:false()
+                        let $field-value := if(fn:string($field-value) eq "true") then fn:true() else fn:false()
                         return js:kv($field/@name, $field-value)
                         else js:kv($field/@name, ($field-value,"")[1])
       )

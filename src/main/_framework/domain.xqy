@@ -8,9 +8,10 @@ module namespace domain = "http://xquerrail.com/domain";
 
 import module namespace config = "http://xquerrail.com/config" at "config.xqy";
 import module namespace functx = "http://www.functx.com" at "/MarkLogic/functx/functx-1.0-doc-2007-01.xqy"; 
+import module namespace sem = "http://marklogic.com/semantics" at "/MarkLogic/semantics.xqy";
+
 
 declare namespace qry = "http://marklogic.com/cts/query";
-declare namespace sem = "http://marklogic.com/semantcis";
 
 declare option xdmp:mapping "false";
 
@@ -91,7 +92,7 @@ declare function domain:cast-value($field as element(),$value as item()*)
         case "create-user"      return $value cast as xs:string?
         case "update-user"      return $value cast as xs:string?
         case "schema-element"   return $value
-        case "langString"  return $value cast as rdf:langString*
+        case "langString"  return $value 
         default return $value
 };
 (:~
@@ -121,7 +122,7 @@ declare function domain:castable-value($field as element(),$value as item()?)
         case element(schema-element) return $value instance of element()
         case element(binary) return $value instance of binary()
         case element(query) return $value castable as cts:query?
-        case element(langString) return $value castable as rdf:langString
+        case element(langString) return $value
         default return fn:true()
 };
 
@@ -929,11 +930,41 @@ declare function domain:get-field-param-value(
   let $name-value := map:get($params,$field/@name)
   let $namekey-value := map:get($params,$name-key)
   return
-   domain:cast-value(
-        $field, 
-        if(fn:exists($key-value)) then $key-value 
-        else if(fn:exists($namekey-value)) then $namekey-value else $name-value
-   )
+   switch($field/@type)
+     case "langString" return domain:get-field-param-langString-value($field,$params)   
+     default return 
+           domain:cast-value(
+                $field, 
+                if(fn:exists($key-value)) then $key-value 
+                else if(fn:exists($namekey-value)) then $namekey-value else $name-value
+           )
+};
+declare function domain:get-field-param-match-key(
+    $field as element(),
+    $params as map:map
+) {
+      if(map:contains($params,domain:get-field-name-key($field)))
+      then "name-key"
+      else if(map:contains($params,domain:get-field-id($field))) then "id"
+      else if(map:contains($params,$field/@name)) then "name"
+      else () (:No data match key:)
+};
+declare function domain:get-field-param-langString-value(
+    $field as element(),
+    $params as map:map
+) {
+    let $matched-key :=
+      if(map:contains($params,domain:get-field-name-key($field)))
+      then  domain:get-field-name-key($field)
+      else if(map:contains($params,domain:get-field-id($field))) then domain:get-field-id($field)
+      else if(map:contains($params,$field/@name)) then  fn:data($field/@name)
+      else () (:No data match key:)
+    let $lang-value := 
+        (map:get($params,fn:concat($matched-key,"@lang")),domain:get-default-language($field))[1]
+    return
+       if($matched-key) then rdf:langString(map:get($params,$matched-key),$lang-value)
+       else ()
+        
 };
 declare function domain:get-field-param-triple-value(
     $field as element(),
@@ -1304,13 +1335,7 @@ declare function domain:get-model-reference-query(
     $reference-value as xs:anyAtomicType*
  ) {
     let $referenced-fields := $reference-model//domain:element[@type = "reference" and @reference = $reference-key]
-    let $base-constraint :=
-        switch($reference-model/@persistence)
-           case "directory" return cts:directory-query($reference-model/domain:directory,"infinity")
-           case "document" return cts:document-query($reference-model/domain:document)
-           case "singleton" return cts:document-query($reference-model/domain:document)
-           case "abstract" return () (:References may not need to be persistable:)
-           default return fn:error(xs:QName("PERSISTENCE-NOT-QUERYABLE"),"Cannot query against persistence",$reference-model/@persistence)
+    let $base-constraint := domain:get-base-query($reference-model)
     return 
       cts:and-query((
         $base-constraint,
@@ -1493,13 +1518,7 @@ declare function domain:get-model-search-expression(
        "fn:collection()" || "/ns0:" || $domain-model/@name
     default return 
        "cts:element-query(xs:QName('ns0:" || $domain-model/@name || "'),cts:and-query(()))"
-  let $baseQuery := 
-    switch($domain-model/@persistence)
-       case "document" return cts:document-query($domain-model/domain:document)
-       case "singleton" return cts:document-query($domain-model/domain:document)
-       case "directory" return cts:directory-query($domain-model/domain:directory)
-       case "abstract" return domain:get-descendant-model-query($domain-model)
-       default return ()
+  let $baseQuery := domain:get-base-query($domain-model)
   
   let $searchExpr := 
        "cts:search(" || $pathExpr || "," || xdmp:describe(cts:and-query(($baseQuery,$query)),(),()) || "," || xdmp:describe($options,(),()) || ")"
@@ -1600,13 +1619,7 @@ declare function domain:get-model-estimate-expression(
     case "abstract" return "fn:collection()"
     default return 
        "cts:element-query(xs:QName('ns0:" || $domain-model/@name || "'),cts:and-query(()))"
-  let $baseQuery := 
-    switch($domain-model/@persistence)
-       case "document" return cts:document-query($domain-model/domain:document)
-       case "singleton" return cts:document-query($domain-model/domain:document)
-       case "directory" return cts:directory-query($domain-model/domain:directory)
-       case "abstract" return domain:get-descendant-model-query($domain-model)
-       default return fn:error(xs:QName("MODEL-EXPRESSION-ERROR"),"Cannot construct a query when persistence not set",fn:data($domain-model/@persistence))  
+  let $baseQuery := domain:get-base-query($domain-model)
   let $searchExpr := 
        "xdmp:estimate(cts:search(" || $pathExpr || "," || xdmp:describe(cts:and-query(($baseQuery,$query)),(),()) || "," || xdmp:describe($options,(),()) || "))"
   let $nsExpr := "declare namespace ns0 = '" || domain:get-field-namespace($domain-model) || "'; "

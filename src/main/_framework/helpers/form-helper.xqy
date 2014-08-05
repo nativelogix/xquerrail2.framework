@@ -203,6 +203,7 @@ declare function form:get-value-from-response($field as element()) {
         then $node
         else if($field/@type = "schema-element") then
           $node/node()
+        else if($field/@type = "langString") then $node
         else
             if(fn:exists($node))
             then fn:data($node)
@@ -302,7 +303,8 @@ declare function form:values($field,$value)
             if(xs:boolean($value) eq fn:true())
             then attribute checked {"checked"}
             else ()
-    ) else  attribute value {fn:string-join($value ! fn:string(.),",")}
+    ) 
+   else attribute value {fn:string-join($value ! fn:string(.),",")}
 };
 
 (:~
@@ -845,51 +847,44 @@ $field
   return
        xdmp:apply($engine-func,$template)
 };
+(:~
+ : Returns the langString UI representation
+~:)
 declare function form:langString(
   $field,
   $value
 ) {
        let $default-language := domain:get-default-language($field)
        return
-           if($value) then (
+           if(fn:count($value) gt 0 and $field/@occurrence = ("+","*")) then (
              for $val at $pos in ($value, if($value) then () else "")
-                return (
+             return (
                   <input id="{form:get-field-name($field)}[{$pos - 1}]" name="{form:get-field-id($field)}" type="text">
                           {form:attributes($field)}
                   {form:values($field,$val)}
                   </input>,
-                  <span class="input-group-addon">
-                  <select id="{form:get-field-name($field)}[{$pos - 1}]" name="{form:get-field-id($field)}@lang">
-                  {domain:get-field-languages($field) ! 
-                    <option value=".">{
-                        if(rdf:langString-language($val) = .) then attribute selected {"selected"} else (), 
-                        .
-                    }</option>
-                  }</select>
+                  <span class="input-group-btn">
+                       <select id="{form:get-field-name($field)}[{$pos - 1}]" name="{form:get-field-id($field)}@lang" class="btn">
+                       {domain:get-field-languages($field) ! 
+                         <option value="{.}">{
+                             if($val/@xml:lang = .) then attribute selected {"selected"} else (), 
+                             .
+                         }</option>
+                       }</select>
                   </span>
              ))
              else (
-                  <input id="{form:get-field-name($field)}" name="{form:get-field-id($field)}@lang" type="text" class="form-control {$field/@type}">
+                  <input id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" type="text" class="form-control {$field/@type}">
                   {form:values($field,$value)}
                   </input>,
                   <span class="input-group-btn">
                     <select id="{form:get-field-name($field)}[0]" name="{form:get-field-id($field)}@lang" class="btn">
                     {domain:get-field-languages($field) ! 
-                      <option value=".">{
-                          if(. = $default-language) then attribute selected {"selected"} else (), 
+                      <option value="{.}">{
+                          if(. = $value/@xml:lang) then attribute selected {"selected"} else (), 
                           .
                       }</option>
                     }</select>
                    </span>
-             )(:
-             <div class="input-group">
-                <input type="text" class="form-control"/>
-                <span class="input-group-btn">
-                  <select class="btn">
-                    <option>Inches</option>
-                    <option>Feet</option>
-                    <option>mm</option>
-                  </select>
-                </span>
-              </div>:)
+             )
 };

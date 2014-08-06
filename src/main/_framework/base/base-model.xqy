@@ -1275,19 +1275,22 @@ declare function model:filter-list-result($field as element(),$result) {
                    for $field in $field/(domain:element|domain:container)
                    return model:filter-list-result($field,$result)
                 }
-            case element(domain:element) return
-                element {domain:get-field-qname($field)} {
-                   for $field in $field/domain:attribute
-                   return model:filter-list-result($field,$result),
+            case element(domain:element) return 
                    let $value := domain:get-field-value($field,$result)
                    let $fieldtype := domain:get-base-type($field)
                    let $log := xdmp:log(("field-base::",$field/@name,$fieldtype),"finest")    
+                   for $val in $value 
                    return
                      switch($fieldtype)
-                       case "complex" return $value/(@*|node())
-                       default return fn:data($value)
-                       
-                }
+                       case "complex" return $val
+                       default return 
+                           element {domain:get-field-qname($field)} {
+                                for $field in $field/domain:attribute
+                                return model:filter-list-result($field,$val),
+                                if($val instance of node()) 
+                                then $val/(@*|node())
+                                else $val
+                           }
             case element(domain:container) return
                   element {domain:get-field-qname($field)} {
                      for $field in $field/domain:attribute

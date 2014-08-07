@@ -1263,7 +1263,7 @@ declare function model:lookup($model as element(domain:model), $params as map:ma
 };
 
 (:~Recursively Removes elements based on @listable = true :)
-declare function model:filter-list-result($field as element(),$result) {
+declare function model:filter-list-result($field as element(),$result,$params) {
       if($field/domain:navigation/@listable = "false")
       then ()
       else 
@@ -1271,9 +1271,9 @@ declare function model:filter-list-result($field as element(),$result) {
             case element(domain:model) return
                 element {domain:get-field-qname($field)} {
                    for $field in $field/(domain:attribute)
-                   return model:filter-list-result($field,$result),
+                   return model:filter-list-result($field,$result,$params),
                    for $field in $field/(domain:element|domain:container)
-                   return model:filter-list-result($field,$result)
+                   return model:filter-list-result($field,$result,$params)
                 }
             case element(domain:element) return 
                    let $value := domain:get-field-value($field,$result)
@@ -1286,7 +1286,7 @@ declare function model:filter-list-result($field as element(),$result) {
                        default return 
                            element {domain:get-field-qname($field)} {
                                 for $field in $field/domain:attribute
-                                return model:filter-list-result($field,$val),
+                                return model:filter-list-result($field,$val,$params),
                                 if($val instance of node()) 
                                 then $val/(@*|node())
                                 else $val
@@ -1294,9 +1294,9 @@ declare function model:filter-list-result($field as element(),$result) {
             case element(domain:container) return
                   element {domain:get-field-qname($field)} {
                      for $field in $field/domain:attribute
-                     return model:filter-list-result($field,$result),
+                     return model:filter-list-result($field,$result,$params),
                      for $field in $field/(domain:element|domain:container)
-                     return model:filter-list-result($field,$result)
+                     return model:filter-list-result($field,$result,$params)
                   }
             case element(domain:attribute) return
                 attribute {fn:QName("",$field/@name)} {
@@ -1405,7 +1405,7 @@ as element(list)?
             then
                 for $result in $results
                 return
-                 model:filter-list-result($model,$result/node())
+                 model:filter-list-result($model,$result/node(),$params)
             else  $results
         return
           <list type="{$name}" elapsed="{xdmp:elapsed-time()}">

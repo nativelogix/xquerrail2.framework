@@ -69,7 +69,7 @@ declare function domain:cast-value($field as element(),$value as item()*)
    return
      switch($type)
         case "identity"         return $value[fn:string(.) ne ""] cast as xs:string?
-        case "id"               return $value cast as xs:ID?
+        case "id"               return $value[fn:string(.) ne ""] cast as xs:ID?
         case "anyURI"           return $value cast as xs:anyURI*
         case "string"           return $value[fn:string(.) ne ""] cast as xs:string*
         case "integer"          return $value[fn:string(.) ne ""] cast as xs:integer*
@@ -1593,6 +1593,7 @@ declare function domain:get-base-query($model) {
        ))
        case "document" return cts:document-query($model/domain:document)
        case "singleton" return cts:document-query($model/domain:document)
+       case "abstract" return  ()
        default return fn:error(xs:QName("BASE-QUERY-ERROR"),"Cannot determine base query on model",$model/@name)
 };
 (:~

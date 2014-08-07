@@ -155,7 +155,8 @@ declare function engine:render-json($node)
    let $is-searchable := $node instance of element(search:response)
    let $is-suggestable := $node instance of element(s)
    let $model := 
-      if($is-listable or $is-lookup)
+      if(response:model()) then response:model()
+      else if($is-listable or $is-lookup)
       then domain:get-domain-model($node/@type)
       else if($is-searchable) then () 
       else if($is-suggestable) then ()
@@ -164,28 +165,28 @@ declare function engine:render-json($node)
    let $_ := xdmp:log(($model,"Body:::",xdmp:describe($node)),"debug")
    return
      if($is-listable and $model) then  
-         js:o((       
-            js:kv("_type",$node/@type cast as xs:integer),
+         xdmp:to-json(js:o((       
+            js:kv("_type",$node/@type   ),
             js:kv("currentpage",$node/currentpage cast as xs:integer),
             js:kv("pagesize",$node/pagesize cast as xs:integer),
             js:kv("totalpages",$node/totalpages cast as xs:integer),
             js:kv("totalrecords",$node/totalrecords cast as xs:integer),
              
             js:e($node/@type,js:a(
-               for $n in $node/*:values/*
+               for $n in $node/*[fn:local-name(.) = $node/@type]
                return 
                    model-helper:to-json($model,$n)
             ))
-         ))
+         )))
      else if($is-lookup) then
-          js:o ((
+         xdmp:to-json( js:o ((
              js:e("lookups", js:a(
              for $n in $node/*:lookup
              return js:o((
                 js:kv("key",fn:string($n/*:key)),
                 js:kv("label",fn:string($n/*:label))
              ))))
-          ))     
+          )))     
      else if($is-searchable) then 
         engine:render-search-results($node)
      else if($is-suggestable) then 
@@ -234,7 +235,7 @@ declare function engine:render()
      let $view := if($view-uri and engine:view-exists($view-uri)) then engine:render-view() else ()
      return 
         if(fn:exists($view))
-        then  xdmp:to-json(if($view instance of json:object) then $view else json:object($view))
+        then  xdmp:to-json(if($view instance of json:object or $view instance of json:array) then $view else json:object($view))
         else if(fn:exists(response:body())) then  engine:render-json(response:body())
         else ()
    )

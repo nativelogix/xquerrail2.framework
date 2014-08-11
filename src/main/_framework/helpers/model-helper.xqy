@@ -344,6 +344,11 @@ declare function model:build-json(
          return        
              js:kv(fn:concat(config:attribute-prefix(),$field/@name),$field-value)
      case element(domain:container) return 
+         if($options/json:strip-container/xs:boolean(.))
+         then 
+            for $field in $field/(domain:element|domain:container|domain:attribute)
+            return model:build-json($field,$instance,$include-root,$options)
+         else 
          js:kv($field/@name, js:o(
             for $field in $field/(domain:element|domain:container|domain:attribute)
             return model:build-json($field,$instance,$include-root,$options)

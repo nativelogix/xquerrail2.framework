@@ -22,6 +22,10 @@ declare function app:set-path($application as element(config:application)?) {
     config:set-base-path(xs:string(get-base()/config:base)),
     config:set-config-path((xs:string(get-base()/config:config), "/_config")[1])
   )
+  ,
+  xdmp:log(("Bootstrap XQuerrail Application - version [" || config:version() || "] - commit [" || config:last-commit() || "]", "base [" || config:get-base-path() || "] - config [" || config:get-config-path() || "] - framework [" || config:framework-path() || "] - ML version [" || xdmp:version() || "]"), "info")
+  ,
+  app:load-config()
 };
 
 declare function app:bootstrap($application as element(config:application)?) as item()* {
@@ -30,14 +34,10 @@ declare function app:bootstrap($application as element(config:application)?) as 
   else
   (
     app:set-path($application)
-  ,
-  xdmp:log(("Bootstrap XQuerrail Application - version [" || config:version() || "] - commit [" || config:last-commit() || "]", "base [" || config:get-base-path() || "] - config [" || config:get-config-path() || "] - framework [" || config:framework-path() || "] - ML version [" || xdmp:version() || "]"), "info")
-  ,
-  app:load-config()
-  ,
-  for $application in config:get-applications()
-    return load-application(xs:string($application/@name))
-  )
+    ,
+    for $application in config:get-applications()
+      return load-application(xs:string($application/@name))
+    )
 };
 
 declare %private function app:load-application(
@@ -49,7 +49,7 @@ declare %private function app:load-application(
   let $domain-config := config:get-resource($application-path)
   let $domain := load-domain($domain-config)
   let $config := config:get-config()
-  let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config))
+  let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config), fn:true())
   let $domain := update-domain($domain)
   let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config))
   return $domain

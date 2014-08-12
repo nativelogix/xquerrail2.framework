@@ -37,7 +37,7 @@ declare %test:teardown function teardown() as empty-sequence()
 :)
 declare %test:case function test-ignore-missing-resource-true() as item()*
 {
-  let $_ := app:bootstrap($TEST-APPLICATION)
+  let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION))
   let $exists := engine:resource-file-exists("/dummy.xqy")
   return
   assert:true($exists)
@@ -45,7 +45,7 @@ declare %test:case function test-ignore-missing-resource-true() as item()*
 
 declare %test:case function test-ignore-missing-resource-false() as item()*
 {
-  let $_ := app:bootstrap($TEST-APPLICATION-2)
+  let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION-2))
   let $exists := engine:resource-file-exists("/dummy.xqy")
   return
   assert:false($exists)
@@ -53,7 +53,7 @@ declare %test:case function test-ignore-missing-resource-false() as item()*
 
 declare %test:case function test-resource-exists-true() as item()*
 {
-  let $_ := app:bootstrap($TEST-APPLICATION-2)
+  let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION-2))
   let $exists := engine:resource-file-exists("/test/_framework/engines/engine.html-test/dummy.xqy")
   return
   assert:true($exists)
@@ -61,7 +61,7 @@ declare %test:case function test-resource-exists-true() as item()*
 
 declare %test:case function test-resource-exists-false() as item()*
 {
-  let $_ := app:bootstrap($TEST-APPLICATION-2)
+  let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION-2))
   let $exists := engine:resource-file-exists("/test/_framework/engines/engine.html-test/dummy-2.xqy")
   return
   assert:false($exists)

@@ -30,6 +30,7 @@ declare %test:teardown function teardown() as empty-sequence()
 
 declare %test:before-each function before-test() {
   (
+    app:reset(), 
     app:bootstrap($TEST-APPLICATION),
     xdmp:set($CONFIG, config:get-config())
   )

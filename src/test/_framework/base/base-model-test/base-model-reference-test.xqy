@@ -35,7 +35,7 @@ declare variable $instance2 :=
 declare variable $CONFIG := ();
 
 declare %test:setup function setup() {
-  let $_ := xdmp:set($CONFIG, app:bootstrap($TEST-APPLICATION))
+  let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION))
   let $model1 := domain:get-model("model1")
   let $_ := model:create($model1, $instance1, $TEST-COLLECTION)
   return

@@ -43,7 +43,7 @@ declare variable $INSTANCE4 :=
 declare variable $CONFIG := ();
 
 declare %test:setup function setup() {
-  let $_ := xdmp:set($CONFIG, app:bootstrap($TEST-APPLICATION))
+  let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION))
   let $model1 := domain:get-model("model1")
   let $_ := model:create($model1, $INSTANCE1, $TEST-COLLECTION)
   return
@@ -63,7 +63,7 @@ declare %test:teardown function teardown() {
 };
 
 declare %test:before-each function before-test() {
-  xdmp:set($CONFIG, app:bootstrap($TEST-APPLICATION))
+  app:bootstrap($TEST-APPLICATION)
 };
 
 declare %test:case function model1-model2-exist-test() as item()*

@@ -26,7 +26,7 @@ declare %test:teardown function teardown() as empty-sequence()
 };
 
 declare %test:before-each function before-test() {
-  xdmp:set($CONFIG, app:bootstrap($TEST-APPLICATION))
+  (app:reset(), app:bootstrap($TEST-APPLICATION))
 };
 
 declare %test:case function get-model-model1-test() as item()*

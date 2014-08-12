@@ -45,7 +45,7 @@ declare variable $INSTANCE2 := map:new((
 
 declare %test:setup function setup() as empty-sequence()
 {
-  let $_ := app:bootstrap($TEST-APPLICATION)
+  let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION))
   return ()
 };
 

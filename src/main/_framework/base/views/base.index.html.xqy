@@ -47,6 +47,16 @@ let $uuidMap := js:json(js:o((
                 )))
 let $uuidKey := domain:get-field-id($domain-model/domain:element[@name = "uuid"])
 
+let $model-sort-field  := domain:get-field-name-key(domain:get-model-field($model, $model/domain:navigation/@sortField/fn:data(.)))
+let $model-order       := ($model/domain:navigation/@sortOrder/fn:data(.),"asc")[1]
+let $model-order := 
+  if ($model-order eq "ascending") then
+    "asc"
+  else if ($model-order eq "descending") then
+    "desc"
+  else
+    $model-order
+
 (:Editable:)
 let $editAction := 
     if($model-editable) 
@@ -85,7 +95,8 @@ return
                 pager: '#{response:controller()}_table_pager',
                 id : "{domain:get-model-identity-field-name(response:model())}",
                 colModel: eval(decodeURIComponent('{fn:encode-for-uri($gridCols)}')),
-                sortname: '{$domain-model/element[@identity eq 'true']/@name}',
+                sortname: '{$model-sort-field}',
+                sortorder: '{$model-order}',
                 emptyrecords: "No {$modelLabel}s Found",
                 loadtext: "Loading {$modelLabel}s",
                 editAction: function(rowid) {{

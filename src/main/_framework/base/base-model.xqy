@@ -1365,7 +1365,7 @@ as element(list)?
               if($domain-sort-field)
               then fn:concat("[1] cast as ", domain:resolve-datatype($domain-sort-field))
               else ()
-            let $domain-sort-order :=
+            let $sort-order :=
                 if($sort-order) then $sort-order
                 else if($model-order) then $model-order
                 else ()

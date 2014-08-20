@@ -39,7 +39,7 @@ declare variable $COMPLEX-TYPES := (
 declare variable $SIMPLE-TYPES := (
   (:Identity Sequence:) "identity", "ID", "id", "sequence",
   (:Users/Timestamps :) "create-user","create-timestamp","update-timestamp","update-user",
-  (:xs:atomicType    :) "anyURI", "string","integer","decimal","double","float","boolean", 
+  (:xs:atomicType    :) "anyURI", "string","integer","decimal","double","float","boolean","long",
   (:Durations        :) "date","time","dateTime", "duration","yearMonth","monthDay"
 );
 

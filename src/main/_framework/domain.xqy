@@ -372,8 +372,17 @@ declare function domain:get-field-prefix($field as element()) {
  : @param $model - The model to extract the given field
  : @param $name  - name or key of the field
  :)
-declare function domain:get-model-field($model as element(domain:model),$key as xs:string) {
-  $model//(domain:element|domain:attribute)[$key = @name or $key = @keyId or $key = @keyName]
+declare function domain:get-model-field($model as element(domain:model),$name as xs:string) {
+  let $key := ($model/@name || ":field:" || $name)
+  let $cache := domain:get-identity-cache($key)
+  return
+    if(fn:exists($cache)) then $cache
+    else 
+      let $value := $model//(domain:element|domain:attribute)[$name eq @name or $name eq @keyId or $name eq @keyName]
+      return (
+        domain:set-identity-cache($key,$value),
+        $value
+      )
 };
 
 (:~
@@ -731,8 +740,8 @@ declare function domain:set-model-field-attributes(
 
 declare function domain:set-field-attributes($field as element()) as attribute()* {
   (
-    attribute keyId { domain:get-field-id($field) },
-    attribute keyName { domain:get-field-name-key($field) },
+    attribute keyId { domain:build-field-id($field) },
+    attribute keyName { domain:build-field-name-key($field) },
     $field/@*[. except ($field/@keyId, $field/@keyName)]
   )
 };
@@ -843,6 +852,19 @@ declare function domain:get-field-key(
  : @param $field - Field in a <b>domain:model</b>
  :)
 declare function domain:get-field-name-key($field as node()) {
+  let $key   := fn:concat("field-name-key::",fn:generate-id($field))
+  let $cache := domain:get-identity-cache($key)
+  return
+       if($cache) then $cache
+       else
+        let $value := $field/@keyName/fn:string()
+        return (
+          domain:set-identity-cache($key,$value),
+          $value
+       )
+};
+
+declare %private function domain:build-field-name-key($field as node()) {
     let $items := $field/ancestor-or-self::*[fn:node-name(.) = $DOMAIN-NODE-FIELDS]
     let $ns := domain:get-field-namespace($field)
     let $path := 
@@ -865,25 +887,30 @@ declare function domain:hash($field as node()) {
  :  @return The unique identifier representing the field
  :)
 declare function domain:get-field-id($field as node()) {
-    let $key   := fn:concat("field-id::",fn:generate-id($field))
-    let $cache := domain:get-identity-cache($key)
-    return
-         if($cache) then $cache
-         else
-         let $items := $field/ancestor-or-self::*[fn:node-name(.) = $DOMAIN-FIELDS]
-         let $ns := domain:get-field-namespace($field)
-         let $path := 
-             fn:string-join(
-                 for $item in $items
-                 return
-                     fn:concat("{" , $ns, "}", $item/@name)
-                 ,"/"    
-             )
-         let $path := fn:concat($field/@name,"__", xdmp:md5($path))
-         return  (
-             domain:set-identity-cache($key,$path),
-             $path
-         )    
+  let $key   := fn:concat("field-id::",fn:generate-id($field))
+  let $cache := domain:get-identity-cache($key)
+  return
+       if($cache) then $cache
+       else
+        let $value := $field/@keyId/fn:string()
+        return (
+          domain:set-identity-cache($key,$value),
+          $value
+       )
+};
+
+declare %private function domain:build-field-id($field as node()) {
+  let $items := $field/ancestor-or-self::*[fn:node-name(.) = $DOMAIN-FIELDS]
+  let $ns := domain:get-field-namespace($field)
+  let $path := 
+     fn:string-join(
+         for $item in $items
+         return
+             fn:concat("{" , $ns, "}", $item/@name)
+         ,"/"    
+     )
+  let $path := fn:concat($field/@name,"__", xdmp:md5($path))
+  return $path
 };
 
 (:~
@@ -1718,11 +1745,20 @@ declare function domain:get-field-tuple-reference(
 declare function domain:declared-namespaces(
   $model as element()
 ) as xs:string* {
-   (
-     $model/ancestor::domain:domain/domain:content-namespace ! (./@prefix, ./(@namespace|@namespace-uri)[1]),
-     $model/ancestor::domain:domain/domain:declare-namespace ! (./@prefix, ./(@namespace|@namespace-uri)[1]),
-     fn:in-scope-prefixes($model)[. ne ""] ! (., fn:namespace-uri-for-prefix(., $model))
-   )
+  let $key   := fn:concat("declared-namespaces::",fn:generate-id($model))
+  let $cache := domain:get-identity-cache($key)
+  return
+    if($cache) then $cache
+    else
+    let $value := (
+      $model/ancestor::domain:domain/domain:content-namespace ! (./@prefix, ./(@namespace|@namespace-uri)[1]),
+      $model/ancestor::domain:domain/domain:declare-namespace ! (./@prefix, ./(@namespace|@namespace-uri)[1]),
+      fn:in-scope-prefixes($model)[. ne ""] ! (., fn:namespace-uri-for-prefix(., $model))
+    )
+    return (
+      domain:set-identity-cache($key,$value),
+      $value
+    )
 };
 
 declare function domain:declared-namespaces-map($model) {

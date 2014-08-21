@@ -101,6 +101,7 @@ declare function form:build-form-field(
        if($template) then form:call-template($field)
        else 
        <fieldset>
+            {form:attributes($field)}
             <legend>{fn:data(($field/@label,$field/@name)[1])}</legend>
             {
                 for $containerField in $field/(domain:attribute|domain:element|domain:container)
@@ -239,30 +240,38 @@ declare function form:after($field)
 };
 
 declare function form:attributes($field)
-{(
-    if(($field/domain:navigation/@editable = 'false' and $FORM-MODE = "edit")
-        or ($field/domain:navigation/@newable = 'false' and $FORM-MODE = "new")
-        or ($FORM-MODE = "readonly")
-       )
-    then attribute readonly { "readonly" }
-    else if($field/@occurrence = ("*","+")) then
-        attribute multiple {"multiple"}
-    else (),
-    if($field/@type eq "boolean")
-    then attribute class {"field checkbox"}
-    else if($field/@type eq "schema-element" or $field/domain:ui/@type = "textarea")
-         then  attribute class {($FORM-INPUT-CLASS, "textarea",$FORM-SIZE-CLASS,$field/@name,$field/domain:ui/@type)}
-    else attribute class {($FORM-INPUT-CLASS,$FORM-SIZE-CLASS,$field/@type,$field/@name,$field/domain:ui/@class/fn:tokenize(.,"\s"))},
-    attribute placeholder {($field/@label,$field/@name)[1]},
-    let $constraint  := $field/domain:constraint
-    return (
-        if($constraint/@required = "true")                then attribute required  {$constraint/@required eq "true"}    else (),
-        if($constraint/@minLength castable as xs:integer) then attribute minlength {xs:integer($constraint/@minLength)} else (),
-        if($constraint/@maxLength castable as xs:integer) then attribute maxlength {xs:integer($constraint/@maxLength)} else (),
-        if($constraint/@minValue ne "" )                  then attribute minValue  {xs:integer($constraint/@minValue)}  else (),
-        if($constraint/@maxValue ne "")                   then attribute maxValue  {xs:integer($constraint/@maxValue)}  else ()
+{
+  let $constraint  := $field/domain:constraint
+  return (
+    if (fn:not($field instance of element(domain:container))) then (
+      if(($field/domain:navigation/@editable = 'false' and $FORM-MODE = "edit")
+          or ($field/domain:navigation/@newable = 'false' and $FORM-MODE = "new")
+          or ($FORM-MODE = "readonly")
+         )
+      then attribute readonly { "readonly" }
+      else if($field/@occurrence = ("*","+")) then
+          attribute multiple {"multiple"}
+      else (),
+      if($field/@type eq "boolean")
+      then attribute class {"field checkbox"}
+      else if($field/@type eq "schema-element" or $field/domain:ui/@type = "textarea")
+           then  attribute class {($FORM-INPUT-CLASS, "textarea",$FORM-SIZE-CLASS,$field/@name,$field/domain:ui/@type)}
+      else attribute class {($FORM-INPUT-CLASS,$FORM-SIZE-CLASS,$field/@type,$field/@name,$field/domain:ui/@class/fn:tokenize(.,"\s"))},
+      attribute placeholder {($field/@label,$field/@name)[1]},
+      (
+          if($constraint/@required = "true")                then attribute required  {$constraint/@required eq "true"}    else (),
+          if($constraint/@minLength castable as xs:integer) then attribute minlength {xs:integer($constraint/@minLength)} else (),
+          if($constraint/@maxLength castable as xs:integer) then attribute maxlength {xs:integer($constraint/@maxLength)} else (),
+          if($constraint/@minValue ne "" )                  then attribute minValue  {xs:integer($constraint/@minValue)}  else (),
+          if($constraint/@maxValue ne "")                   then attribute maxValue  {xs:integer($constraint/@maxValue)}  else ()
+      )
     )
-)};
+    else
+      ()
+    ,
+    $constraint/@*[fn:starts-with(fn:local-name(), "ng-") or fn:starts-with(fn:local-name(), "xq-")]
+  )
+};
 
 declare function form:validation($field) {
     let $constraint  := $field/domain:constraint

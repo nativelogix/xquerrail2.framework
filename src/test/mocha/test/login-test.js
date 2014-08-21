@@ -38,6 +38,7 @@ function initialize(callback) {
 describe('Authentication features', function() {
 
   before(function(done) {
+    this.timeout(5000);
     var ml;
     try {
       ml = require('../../../../gulpfile.js').ml;

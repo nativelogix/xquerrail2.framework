@@ -125,7 +125,38 @@ declare function domain:castable-value($field as element(),$value as item()?)
         case element(langString) return $value
         default return fn:true()
 };
-
+declare function domain:resolve-cts-type($type as xs:string)
+{
+     switch($type)
+        case "string"  return "string"
+        case "anyURI"  return "anyURI"
+        (:Integer Types:)
+        case "boolean" return "int"
+        case "integer" return "int"
+        case "long"    return "long"
+        case "unsignedLong" return "unsignedLong"
+        case "unsignedInt" return "unsignedInt"
+        case "decimal" return "decimal"
+        case "double"  return "double"
+        case "float"   return "float"
+        (:Durations and Date/Time:)
+        case "dateTime" return "dateTime"
+        case "date" return "date"
+        case "time" return "time"
+        case "yearMonth" return "gYearMonth"
+        case "monthDay" return "gMonthDay"
+        case "dayTimeDuration" return "dayTimeDuration"
+        case "yearMonthDuration" return "yearMonthDuration"
+        (:Custom Types:)
+        case "langString" return "string"
+        case "identity" return "string"
+        case "id" return "string"
+        case "create-user" return "string"
+        case "update-user" return "string"
+        case "update-timestamp" return "dateTime"
+        case "create-timestamp" return "dateTime"
+        default return ()
+};
 (:~
  : Gets the domain model from the given cache
  :)
@@ -1051,57 +1082,34 @@ declare function domain:get-field-reference-model(
 declare function domain:get-field-xpath(
   $field as element()
 ) {
-    fn:string-join(
-    for $path in $field/ancestor-or-self::*[fn:node-name(.) = $DOMAIN-NODE-FIELDS]
-    return 
-     typeswitch($path)
-      case element(domain:attribute) return fn:concat("/@",$path/@name)
-      default return  fn:concat("/*:",$path/@name)
-    ,"")
+    let $namespaces := domain:declared-namespaces-map($field)
+    return
+        fn:string-join(
+        for $path in $field/ancestor-or-self::*[fn:node-name(.) = $DOMAIN-NODE-FIELDS]
+        return 
+         typeswitch($path)
+          case element(domain:attribute) return fn:concat("/@",$path/@name)
+          default return  fn:concat("/",domain:get-field-prefix($path),":",$path/@name)
+        ,"")
 };
-
 (:~
  : Returns the xpath expression for a given field by its id/name key
  : The xpath expression is relative to the root of the parent element
- : @param $model - The model/field representing the field.
- : @param $key - The name of the field as a string value
+ : @param $field - instance of a field
  :)
-declare function domain:get-field-xpath(
-  $model as element(), 
-  $key as xs:string
-) { 
-     domain:get-field-xpath($model, $key, 2)  
-};
-
-(:~
- : Returns the xpath expression based on the current level of the context node
- : @param model - 
- : @param $key  - is the id/name key assigned to the field.
- : @param $level - Number of parent levels to traverse for xpath expression. 
- :)
-declare function domain:get-field-xpath($model, $key, $level) { 
-     let $elementField := $model/descendant-or-self::*[fn:node-name(.) = $DOMAIN-NODE-FIELDS][$key = domain:get-field-id(.)]    
-     (:let $level := if($elementField instance of element(domain:attribute)) then 1 else $level:)
-     let $ns := domain:get-field-namespace($model) 
-     let $path := 
+declare function domain:get-field-absolute-xpath(
+  $field as element()
+) {
+    let $namespaces := domain:declared-namespaces-map($field)
+    return
         fn:string-join(
-        for $chain in ($elementField/ancestor-or-self::*[fn:node-name(.) = $DOMAIN-FIELDS])[$level to fn:last()]
-        return
-           if($chain instance of element(domain:element))
-           then fn:concat("*:",$chain/@name)
-           else if($chain instance of element(domain:attribute)) 
-           then fn:concat("@",$chain/@name)
-           else if($chain instance of element(domain:container))
-           then fn:concat("*:",$chain/@name)
-           else ()
-        , "/")
-
-    return 
-        if(fn:normalize-space($path) eq "") 
-        then () 
-        else fn:concat("/",$path)
+        for $path in $field/ancestor-or-self::*[fn:node-name(.) = $DOMAIN-FIELDS]
+        return 
+         typeswitch($path)
+          case element(domain:attribute) return fn:concat("/@",$path/@name)
+          default return  fn:concat("/",domain:get-field-prefix($path),":",$path/@name)
+        ,"")
 };
-
 declare function domain:get-field-qname($field as element()) {
   xdmp:with-namespaces(domain:declared-namespaces($field),
    typeswitch($field)
@@ -1967,8 +1975,8 @@ declare function domain:get-field-xml-value(
     let $expr := fn:concat("$value", $path)
     let $func := 
       switch($type)
-        case "simple" return xdmp:value(fn:concat("function($value){", $expr, "}"))
-        default return xdmp:value(fn:concat("function($value){", $expr, "}"))
+        case "simple" return xdmp:with-namespaces(domain:declared-namespaces($field),xdmp:value(fn:concat("function($value){", $expr, "}")))
+        default return xdmp:with-namespaces(domain:declared-namespaces($field),xdmp:value(fn:concat("function($value){", $expr, "}")))
     return (
        domain:set-field-function-cache($field,"xml",$func),
        $func($value)

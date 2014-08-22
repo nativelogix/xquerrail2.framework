@@ -333,7 +333,7 @@ declare private function json:serialize-value($elem as node(), $options as xs:st
 	    	")/")
 	    else 
 	    	fn:string($elem)
-	else if($elem/@type="boolean" or $elem = ("true","false")) then
+	else if($elem/@type="boolean" or fn:string($elem) = ("true","false")) then
 		xs:boolean($elem)	
 	else if($elem/@type eq "long" or $elem castable as xs:long or 
 		$elem/@type eq "integer" or $elem castable as xs:integer) then

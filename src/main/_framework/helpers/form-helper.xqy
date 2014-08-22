@@ -287,33 +287,34 @@ declare function form:validation($field) {
 declare function form:values($field,$value)
 {
  let $list  := (
-        $field/ancestor::domain:model/domain:optionlist[@name = $field/domain:constraint/@inList],
-        domain:get-optionlist($field/domain:constraint/@inList)
+        domain:get-field-optionlist($field)
  )[1]
  let $is-multi := $field/@occurrence  = ("+","*")
  let $default  := $field/@default
  let $value    := if(fn:exists($value)) then $value else $default
- let $readonly := $field/domain:navigation/@editable eq 'false'
+ let $readonly := fn:false()
  return
- if($list and fn:not($readonly)) then
-    for $option in $list/domain:option
-    return
-        <option value="{$option/text()}">
-            {   if($value = $option/text()) then
-                    attribute selected {"selected" }
-                else (),
-                (fn:data($option/@label),$option/text())[1]
-            }
-        </option>
-  else
-    if(fn:data($field/@type = "boolean"))
-    then (
-            attribute value {$value},
-            if(xs:boolean($value) eq fn:true())
-            then attribute checked {"checked"}
-            else ()
-    ) 
-   else attribute value {fn:string-join($value ! fn:string(.),",")}
+    if($list) then (
+       <option value="">Select {fn:data($field/@label)}</option>,
+       for $option in $list/domain:option
+       return
+           <option value="{$option/text()}">
+               {   if($value = $option/text()) then
+                       attribute selected {"selected" }
+                   else (),
+                   (fn:data($option/@label),$option/text())[1]
+               }
+           </option>
+       )
+     else
+       if(fn:data($field/@type = "boolean"))
+       then (
+               attribute value {$value},
+               if(xs:boolean($value) eq fn:true())
+               then attribute checked {"checked"}
+               else ()
+       ) 
+      else attribute value {fn:string-join($value ! fn:string(.),",")}
 };
 
 (:~
@@ -339,25 +340,26 @@ declare function form:custom($field,$value)
 ~:)
 declare function form:text($field,$value)
 {
-            if($field/domain:constraint/@inList and fn:not($field/domain:navigation/@editable eq 'false')) then
-            <select id="{form:get-field-id($field)}" name="{form:get-field-name($field)}">
-            {form:attributes($field)}
-            {form:values($field,$value)}
-            </select>
-            else
-            if($field/@occurrence = ("*","+"))
-            then
-                for $val at $pos in ($value, if($value) then () else "")
-                return
-                  <input id="{form:get-field-name($field)}[{$pos - 1}]" name="{form:get-field-id($field)}" type="text">
-                  {form:attributes($field)}
-                  {form:values($field,$val)}
-                  </input>
-             else
-                  <input id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" type="text">
-                  {form:attributes($field)}
-                  {form:values($field,$value)}
-                  </input>
+    if($field/domain:constraint[@inList and fn:not(fn:empty(@inList))]) then (
+    <select id="{form:get-field-id($field)}" name="{form:get-field-name($field)}">
+    {form:attributes($field)}
+    {form:values($field,$value)}
+    </select>
+    )
+    else
+    if($field/@occurrence = ("*","+"))
+    then
+        for $val at $pos in ($value, if($value) then () else "")
+        return
+          <input id="{form:get-field-name($field)}[{$pos - 1}]" name="{form:get-field-id($field)}" type="text">
+          {form:attributes($field)}
+          {form:values($field,$val)}
+          </input>
+     else
+          <input id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" type="text">
+          {form:attributes($field)}
+          {form:values($field,$value)}
+          </input>
 };
 (:~
  : Renders a list of radio boxes

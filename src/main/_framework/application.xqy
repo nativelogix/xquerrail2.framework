@@ -92,6 +92,7 @@ declare %private function app:load-domain(
         element domain {
          namespace domain {"http://xquerrail.com/domain"},
          attribute xmlns {"http://xquerrail.com/domain"},
+         ($domain/namespace::*,$imports/namespace::*),
          $domain/@*,
          $domain/(domain:name|domain:content-namespace|domain:application-namespace|domain:description|domain:author|domain:version|domain:declare-namespace|domain:default-collation|domain:permission|domain:language|domain:default-language),
          ($domain/domain:model,$imports/domain:model),
@@ -107,6 +108,7 @@ declare %private function update-domain(
   element domain {
     namespace domain {"http://xquerrail.com/domain"},
     attribute xmlns {"http://xquerrail.com/domain"},
+    $domain/namespace::*,
     $domain/@*,
     $domain/*[. except $domain/domain:model],
     $domain/domain:model ! (domain:set-model-field-attributes(.))

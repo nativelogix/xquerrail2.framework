@@ -392,7 +392,12 @@ declare function domain:get-field-prefix($field as element()) {
         else 
             let $ns := domain:get-field-namespace($field)
             let $nses := domain:declared-namespaces($field)
-            let $prefix := fn:subsequence($nses,fn:index-of($nses,$ns) -1 ,1)
+            let $pos := fn:index-of($nses,$ns)
+            let $prefix :=
+              if (fn:empty($pos)) then
+                fn:error(xs:QName("PREFIX-NOT-DEFINED"), text{"Prefix", $ns, "is not defined in domain"})
+              else
+                fn:subsequence($nses,$pos -1 ,1)
             return (
                domain:set-identity-cache($key,$prefix),
                $prefix
@@ -722,6 +727,7 @@ declare function domain:get-domain-model(
                       if(fn:not($extendedDomain)) then fn:error(xs:QName("NO-EXTENDS-MODEL"),"Missing Extension Model",fn:data($model/@extends))
                       else
                          element { fn:node-name($model) } {
+                         $model/namespace::*,
                          $model/@*,
                          for $f in  $extendedDomain/(domain:element | domain:container | domain:attribute| domain:triple|domain:permission|domain:navigation)
                          return 
@@ -738,7 +744,7 @@ declare function domain:get-domain-model(
          return ($extends,domain:set-model-cache($cache-key,$extends))
     return 
         if($models) 
-        then element domain:domain { $domain/@*, $domain/domain:name, $domain/*[. except $domain/domain:model], $models } / domain:model
+        then element domain:domain { $domain/namespace::*, $domain/@*, $domain/domain:name, $domain/*[. except $domain/domain:model], $models } / domain:model
         else fn:error(xs:QName("NO-DOMAIN-MODEL"), "Model does not exist",$model-names)
 };
 
@@ -748,6 +754,7 @@ declare function domain:set-model-field-attributes(
   typeswitch($field)
     case element(domain:model) return 
       element { fn:node-name($field) } {
+        $field/namespace::*,
         $field/@*,
         $field/*[. except $field/(domain:element | domain:container | domain:attribute)],
         for $f in  $field/(domain:element | domain:container | domain:attribute)
@@ -1971,8 +1978,8 @@ declare function domain:get-field-xml-value(
   else
     let $type := domain:get-base-type($field)
     let $path := domain:get-field-xpath($field)
-    let $_    := xdmp:log(("domain:get-field-xpath",$field,$path),"finest")
     let $expr := fn:concat("$value", $path)
+    let $_    := xdmp:log(("domain:get-field-xpath",$type,$field,$path),"finest")
     let $func := 
       switch($type)
         case "simple" return xdmp:with-namespaces(domain:declared-namespaces($field),xdmp:value(fn:concat("function($value){", $expr, "}")))

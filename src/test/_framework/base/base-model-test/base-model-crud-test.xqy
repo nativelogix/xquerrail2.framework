@@ -275,7 +275,7 @@ declare %test:case function model-document-create-from-xml-with-attribute-test()
     function() {
       model:create(
         $model6, 
-        <model6 xmlns="http://marklogic.com/model/test" score="10" id="666666">
+        <model6 xmlns="http://xquerrail.com/app-test" score="10" id="666666">
           <name>name-6</name>
         </model6>
         , 
@@ -283,7 +283,6 @@ declare %test:case function model-document-create-from-xml-with-attribute-test()
       )
     }
   )
-
   let $value-id := domain:get-field-value(domain:get-model-field($model6, "id"), $instance6)
   let $value-score := domain:get-field-value(domain:get-model-field($model6, "score"), $instance6)
   let $value-name := domain:get-field-value(domain:get-model-field($model6, "name"), $instance6)
@@ -312,7 +311,6 @@ declare %test:case function model-document-create-from-map-with-attribute-test()
     }
   )
 
-  let $_ := xdmp:log(("$instance6", $instance6))
   let $value-id := domain:get-field-value(domain:get-model-field($model6, "id"), $instance6)
   let $value-score := domain:get-field-value(domain:get-model-field($model6, "score"), $instance6)
   let $value-name := domain:get-field-value(domain:get-model-field($model6, "name"), $instance6)
@@ -347,7 +345,6 @@ declare %test:case function model-find-by-attribute-test() as item()*
     </options>
   )
 
-  let $_ := xdmp:log(("$instance6", $instance6))
   let $instance6 := model:find(
     $model6,
     map:new((
@@ -373,7 +370,7 @@ declare %test:case function model-document-create-from-xml-with-integer-attribut
     function() {
       model:create(
         $model7, 
-        <model7 xmlns="http://marklogic.com/model/test" score="10" id="777777">
+        <model7 xmlns="http://xquerrail.com/app-test" score="10" id="777777">
           <name>name-7</name>
         </model7>
         , 
@@ -382,7 +379,6 @@ declare %test:case function model-document-create-from-xml-with-integer-attribut
     }
   )
 
-  let $_ := xdmp:log(("$instance7", $instance7))
   let $value-id := domain:get-field-value(domain:get-model-field($model7, "id"), $instance7)
   let $value-score := domain:get-field-value(domain:get-model-field($model7, "score"), $instance7)
   let $value-name := domain:get-field-value(domain:get-model-field($model7, "name"), $instance7)
@@ -411,7 +407,6 @@ declare %test:case function model-document-create-from-map-with-integer-attribut
     }
   )
 
-  let $_ := xdmp:log(("$instance7", $instance7))
   let $value-id := domain:get-field-value(domain:get-model-field($model7, "id"), $instance7)
   let $value-score := domain:get-field-value(domain:get-model-field($model7, "score"), $instance7)
   let $value-name := domain:get-field-value(domain:get-model-field($model7, "name"), $instance7)
@@ -457,18 +452,9 @@ declare %test:case function model-document-create-multiple-reference-instances-t
     }
   )
 
-  let $_ := xdmp:log(("$instance10", $instance10))
   let $value-id := domain:get-field-value(domain:get-model-field($model10, "id"), $instance10)
   let $value-version := domain:get-field-value(domain:get-model-field($model10, "version"), $instance10)
-  let $_ := xdmp:log(("$value-version", $value-version))
 
-(:  let $version1-find := model:find($model10, 
-    map:new((
-      map:entry("version", "version==2")
-    ))
-  )
-  let $_ := xdmp:log(("$version1-find", $version1-find))
-:)
   return (
     assert:not-empty($instance10),
     assert:equal("10101010", xs:string($value-id)),

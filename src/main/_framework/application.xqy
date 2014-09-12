@@ -42,7 +42,7 @@ declare function app:bootstrap($application as element(config:application)?) as 
 
 declare %private function app:load-application(
   $application-name as xs:string
-) as element(domain)?
+) as element(domain:domain)?
 {
   let $application-path := fn:concat(config:application-directory($application-name), "/domains/application-domain.xml")
   let $_ := xdmp:log(text{"config:load-domain", $application-name, "$application-path", $application-path}, "debug")
@@ -89,11 +89,11 @@ declare %private function app:load-domain(
         return
         config:get-resource(fn:concat($app-path,"/domains/",$import/@resource))
     return
-        element domain {
+        element domain:domain {
          namespace domain {"http://xquerrail.com/domain"},
-         attribute xmlns {"http://xquerrail.com/domain"},
          ($domain/namespace::*,$imports/namespace::*),
          $domain/@*,
+         attribute compiled {fn:true()},
          $domain/(domain:name|domain:content-namespace|domain:application-namespace|domain:description|domain:author|domain:version|domain:declare-namespace|domain:default-collation|domain:permission|domain:language|domain:default-language),
          ($domain/domain:model,$imports/domain:model),
          ($domain/domain:optionlist,$imports/domain:optionlist),
@@ -105,9 +105,8 @@ declare %private function app:load-domain(
 declare %private function update-domain(
   $domain
 ) {
-  element domain {
+  element domain:domain {
     namespace domain {"http://xquerrail.com/domain"},
-    attribute xmlns {"http://xquerrail.com/domain"},
     $domain/namespace::*,
     $domain/@*,
     $domain/*[. except $domain/domain:model],

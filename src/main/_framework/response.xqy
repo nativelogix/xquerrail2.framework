@@ -141,12 +141,12 @@ declare private function response:save-flash() {
         for $fl in map:keys($response)[fn:starts-with(.,$FLASH)]
         return map:put($flash-map,$fl,map:get($response,$fl))
     return(
-      xdmp:log(("Saving Flash",$flash-map), "debug"),
-      xdmp:set-session-field("FLASH",$flash-map)
+      xdmp:log(("Saving Flash",$flash-map), "debug"),()
+      (:DISABLED:: xdmp:set-session-field("FLASH",$flash-map):)
   ))
 };
 declare private function response:initialize-flash() as empty-sequence() {
-    let $sess-field := xdmp:get-session-field("FLASH")
+    let $sess-field := () (:DISABLING xdmp:get-session-field("FLASH"):)
     let $_ :=       xdmp:log(("Loading Flash",$sess-field), "debug")
     let $flash-map  := 
         if($sess-field instance of map:map) 

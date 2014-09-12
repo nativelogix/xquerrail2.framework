@@ -788,80 +788,80 @@ declare function model:recursive-build(
    let $default-value := fn:data($context/@default)
    let $update-value := domain:get-field-value($context, $updates)
    return
-   typeswitch($context)
-   case element(domain:model) return
-        let $attributes :=
-        (
-          attribute xsi:type {domain:get-field-qname($context)},
-            for $a in $context/domain:attribute
+    typeswitch($context)
+    case element(domain:model) return
+         let $attributes :=
+         (
+           attribute xsi:type {domain:get-field-qname($context)},
+             for $a in $context/domain:attribute
+             return
+                model:recursive-build($a, $current,$updates)
+         )
+         let $ns := domain:get-field-namespace($context)
+         let $nses := model:get-namespaces($context)
+         return
+             element {domain:get-field-qname($context)} {
+                 for $nsi in $nses
+                 return
+                   namespace {$nsi/@prefix}{$nsi/@namespace-uri},
+                 $attributes,
+                 for $n in $context/(domain:element|domain:container)
+                 return
+                     model:recursive-build($n,$current,$updates,$partial)
+             }
+      (: Build out any domain Elements :)
+      case element(domain:element) return
+         let $attributes :=
+             $context/domain:attribute ! model:recursive-build(.,$current, $updates,$partial)
+         let $default-value  := (fn:data($context/@default),"")[1]
+         let $occurrence := ($context/@occurrence,"?")
+         return
+           (:Process Complex Types:)
+           switch($type)
+             case "reference"      return model:build-reference($context, $current, $updates, $partial)
+             case "binary"         return model:build-binary($context,$current,$updates,$partial)
+             case "schema-element" return model:build-schema-element($context,$current,$updates,$partial)
+             case "triple"         return model:build-triple($context,$current-value,$updates,$partial)
+             case "langString"     return model:build-langString($context,$current-value,$updates,$partial)
+             default return
+                if($type = ($domain:SIMPLE-TYPES,$domain:COMPLEX-TYPES)) then
+                    if(fn:exists($update-value)) then
+                        for $value in $update-value
+                        return
+                           element {domain:get-field-qname($context)}{
+                              $attributes,
+                              model:build-value($context,$value, $current-value)
+                            }
+                     else if($partial and $current-value) then
+                        for $value in $current-value
+                        return
+                           element {domain:get-field-qname($context)}{
+                              $attributes,
+                              model:build-value($context,$value, $current-value)
+                            }
+                     else element {domain:get-field-qname($context)}{
+                              $attributes,
+                              model:build-value($context, $default-value, $current-value)
+                          }
+                else if(domain:get-base-type($context) eq "instance") then
+                         model:build-instance($context,$current,$updates,$partial)
+                else fn:error(xs:QName("UNKNOWN-TYPE"),"The type of " || $type || " is unknown ",$context)
+ 
+      (: Build out any domain Attributes :)
+      case element(domain:attribute) return model:build-attribute($context,$current,$updates,$partial)
+      case element(domain:triple) return model:build-triple($context,$current,$updates,$partial)
+      (: Build out any domain Containers :)
+      case element(domain:container) return
+         let $ns := domain:get-field-namespace($context)
+         let $localname := fn:data($context/@name)
+         return
+           element {domain:get-field-qname($context)}{
+            for $n in $context/(domain:attribute|domain:element|domain:container)
             return
-               model:recursive-build($a, $current,$updates)
-        )
-        let $ns := domain:get-field-namespace($context)
-        let $nses := model:get-namespaces($context)
-        return
-            element {domain:get-field-qname($context)} {
-                for $nsi in $nses
-                return
-                  namespace {$nsi/@prefix}{$nsi/@namespace-uri},
-                $attributes,
-                for $n in $context/(domain:element|domain:container)
-                return
-                    model:recursive-build($n,$current,$updates,$partial)
+              model:recursive-build($n, $current ,$updates,$partial)
             }
-     (: Build out any domain Elements :)
-     case element(domain:element) return
-        let $attributes :=
-            $context/domain:attribute ! model:recursive-build(.,$current, $updates,$partial)
-        let $default-value  := (fn:data($context/@default),"")[1]
-        let $occurrence := ($context/@occurrence,"?")
-        return
-          (:Process Complex Types:)
-          switch($type)
-            case "reference"      return model:build-reference($context, $current, $updates, $partial)
-            case "binary"         return model:build-binary($context,$current,$updates,$partial)
-            case "schema-element" return model:build-schema-element($context,$current,$updates,$partial)
-            case "triple"         return model:build-triple($context,$current-value,$updates,$partial)
-            case "langString"     return model:build-langString($context,$current-value,$updates,$partial)
-            default return
-               if($type = ($domain:SIMPLE-TYPES,$domain:COMPLEX-TYPES)) then
-                   if(fn:exists($update-value)) then
-                       for $value in $update-value
-                       return
-                          element {domain:get-field-qname($context)}{
-                             $attributes,
-                             model:build-value($context,$value, $current-value)
-                           }
-                    else if($partial and $current-value) then
-                       for $value in $current-value
-                       return
-                          element {domain:get-field-qname($context)}{
-                             $attributes,
-                             model:build-value($context,$value, $current-value)
-                           }
-                    else element {domain:get-field-qname($context)}{
-                             $attributes,
-                             model:build-value($context, $default-value, $current-value)
-                         }
-               else if(domain:get-base-type($context) eq "instance") then
-                        model:build-instance($context,$current,$updates,$partial)
-               else fn:error(xs:QName("UNKNOWN-TYPE"),"The type of " || $type || " is unknown ",$context)
-
-     (: Build out any domain Attributes :)
-     case element(domain:attribute) return model:build-attribute($context,$current,$updates,$partial)
-     case element(domain:triple) return model:build-triple($context,$current,$updates,$partial)
-     (: Build out any domain Containers :)
-     case element(domain:container) return
-        let $ns := domain:get-field-namespace($context)
-        let $localname := fn:data($context/@name)
-        return
-          element {domain:get-field-qname($context)}{
-           for $n in $context/(domain:attribute|domain:element|domain:container)
-           return
-             model:recursive-build($n, $current ,$updates,$partial)
-           }
-     (: Return nothing if the type is not of Model, Element, Attribute or Container :)
-     default return fn:error(xs:QName("UNKNOWN-TYPE"),"The type of " || $type || " is unknown ",$context)
+      (: Return nothing if the type is not of Model, Element, Attribute or Container :)
+      default return fn:error(xs:QName("UNKNOWN-TYPE"),"The type of " || $type || " is unknown ",$context)
 };
 (:~
  : Internal Attribute Builder
@@ -1836,7 +1836,7 @@ declare function model:suggest($model as element(domain:model), $params as item(
 as xs:string*
 {
    let $options := model:build-search-options($model,$params)
-   let $query := domain:get-param-value($params,"query")
+   let $query := (domain:get-param-value($params,"query"),"")[1]
    let $limit := (domain:get-param-value($params,"limit"),10)[1] cast as xs:integer
    let $position := (domain:get-param-value($params,"position"),fn:string-length($query[1]))[1] cast as xs:integer
    let $focus := (domain:get-param-value($params,"focus"),1)[1] cast as xs:integer

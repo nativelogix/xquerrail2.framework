@@ -190,7 +190,9 @@ declare function engine:render-json($node)
      else if($is-searchable) then 
         engine:render-search-results($node)
      else if($is-suggestable) then 
-        json:to-array($node/* ! fn:string(.))
+        xdmp:to-json(js:o((
+            js:e("suggest", js:a($node/* ! fn:string(.)))
+        )))
      else if($model) then (
              xdmp:to-json(model-helper:to-json($model,$node))
           )

@@ -65,6 +65,8 @@ declare variable $VALUE-CACHE := map:map();
  :)
 declare function domain:cast-value($field as element(),$value as item()*)
 {
+   if(fn:not(fn:exists($value))) then ()
+   else 
    let $type := $field/@type
    return
      switch($type)
@@ -161,6 +163,7 @@ declare function domain:resolve-cts-type($type as xs:string)
  : Gets the domain model from the given cache
  :)
 declare %private function domain:get-model-cache($key) {
+   xdmp:log("Reading Caching-" || $key,"debug"),
    map:get($DOMAIN-MODEL-CACHE,$key)
 };
 
@@ -168,6 +171,7 @@ declare %private function domain:get-model-cache($key) {
  : Sets the cache for a domain model
  :)
 declare %private function domain:set-model-cache($key,$model as element(domain:model)?) {
+   xdmp:log("Caching-" || $key,"debug"),
    map:put($DOMAIN-MODEL-CACHE,$key,$model)
 };
 
@@ -385,6 +389,7 @@ declare function domain:get-model-keyLabel-field($model as element(domain:model)
             )
 };
 declare function domain:get-field-prefix($field as element()) {
+    if($field/@prefix) then $field/@prefix else
     let $key := ($field/@name || ":namespace-prefix")
     let $cache := domain:get-identity-cache($key)
     return
@@ -398,6 +403,12 @@ declare function domain:get-field-prefix($field as element()) {
                 fn:error(xs:QName("PREFIX-NOT-DEFINED"), text{"Prefix", $ns, "is not defined in domain"})
               else
                 fn:subsequence($nses,$pos -1 ,1)
+            let $index-ns := fn:index-of($nses,$ns)
+            let $check :=
+                if($index-ns) then () 
+                else fn:error(xs:QName("UNPREFIXED-NAMESPACE"),"Cannot resolve prefix for namespace " || $ns,
+                fn:string($field/ancestor::domain:domain/fn:local-name(.)))
+            let $prefix := fn:subsequence($nses,$index-ns -1 ,1)
             return (
                domain:set-identity-cache($key,$prefix),
                $prefix
@@ -713,7 +724,7 @@ declare function domain:get-domain-model(
      return
         if($cached) then $cached
         else 
-          let $model := $domain/domain:model[@name =  $modelName]
+          let $model := $domain/domain:model[cts:contains(.,cts:element-attribute-value-query(xs:QName("domain:model"),xs:QName("name"),$modelName))]
           let $_ := if($model) then () else fn:error(xs:QName("NO-MODEL"),"Missing Model",$modelName)
           let $extends := 
               if($model/@extends) then
@@ -779,11 +790,23 @@ declare function domain:set-model-field-attributes(
 };
 
 declare function domain:set-field-attributes($field as element()) as attribute()* {
-  (
+  ( 
+    $field/@*[. except 
+    ($field/@keyId, 
+     $field/@keyName,
+     $field/@prefix,
+     $field/@namespace,
+     $field/@xpath,
+     $field/@absXpath,
+     $field/@jsonPath)],
     attribute keyId { domain:build-field-id($field) },
     attribute keyName { domain:build-field-name-key($field) },
-    $field/@*[. except ($field/@keyId, $field/@keyName)]
-  )
+    attribute prefix {domain:get-field-prefix($field)},
+    attribute namespace {domain:get-field-namespace($field)},
+    attribute xpath {domain:get-field-xpath($field)},
+    attribute absXpath {domain:get-field-absolute-xpath($field)},
+    attribute jsonPath {domain:get-field-jsonpath($field)}
+    )
 };
 
 (:~
@@ -892,6 +915,7 @@ declare function domain:get-field-key(
  : @param $field - Field in a <b>domain:model</b>
  :)
 declare function domain:get-field-name-key($field as node()) {
+  if($field/@keyName) then fn:string($field/@keyName) else
   let $key   := fn:concat("field-name-key::",fn:generate-id($field))
   let $cache := domain:get-identity-cache($key)
   return
@@ -927,6 +951,7 @@ declare function domain:hash($field as node()) {
  :  @return The unique identifier representing the field
  :)
 declare function domain:get-field-id($field as node()) {
+  if($field/@keyId) then fn:string($field/@keyId) else
   let $key   := fn:concat("field-id::",fn:generate-id($field))
   let $cache := domain:get-identity-cache($key)
   return
@@ -963,6 +988,7 @@ declare function domain:get-field-namespace(
 $field as element()
 ) as xs:string?
 {
+    if($field/@namespace) then fn:string($field/@namespace) else
     let $key   := fn:concat("field-namespace::",fn:generate-id($field))
     let $cache := domain:get-identity-cache($key)
     return
@@ -997,10 +1023,9 @@ declare function domain:get-field-param-value(
   let $name-value := map:get($params,$field/@name)
   let $namekey-value := map:get($params,$name-key)
   return
-   switch($field/@type)
-     case "langString" return domain:get-field-param-langString-value($field,$params)   
-     default return 
-           domain:cast-value(
+    if($field/@type eq "langString") then  domain:get-field-param-langString-value($field,$params)   
+    else 
+          domain:cast-value(
                 $field, 
                 if(fn:exists($key-value)) then $key-value 
                 else if(fn:exists($namekey-value)) then $namekey-value else $name-value
@@ -1089,6 +1114,7 @@ declare function domain:get-field-reference-model(
 declare function domain:get-field-xpath(
   $field as element()
 ) {
+    if($field/@xpath) then fn:string($field/@xpath) else 
     let $namespaces := domain:declared-namespaces-map($field)
     return
         fn:string-join(
@@ -1107,6 +1133,7 @@ declare function domain:get-field-xpath(
 declare function domain:get-field-absolute-xpath(
   $field as element()
 ) {
+    if($field/@absXpath) then $field/@absXpath else 
     let $namespaces := domain:declared-namespaces-map($field)
     return
         fn:string-join(
@@ -1118,7 +1145,7 @@ declare function domain:get-field-absolute-xpath(
         ,"")
 };
 declare function domain:get-field-qname($field as element()) {
-  xdmp:with-namespaces(domain:declared-namespaces($field),
+
    typeswitch($field)
      case element(domain:model)       return fn:QName(domain:get-field-namespace($field),$field/@name)
      case element(domain:element)     return fn:QName(domain:get-field-namespace($field),$field/@name)
@@ -1126,7 +1153,7 @@ declare function domain:get-field-qname($field as element()) {
      case element(domain:container)   return fn:QName(domain:get-field-namespace($field),$field/@name)
      case element(domain:triple)      return xs:QName("sem:triple")
      default return fn:error(xs:QName("QNAME-ERROR"),"Cannot create qname from field",fn:local-name($field))
-     )
+ 
 };
 
 (:~
@@ -1858,6 +1885,7 @@ $include-root as xs:boolean
 ) {
   domain:get-field-jsonpath($field,$include-root,())
 };
+
 (:~
  : Returns the path of field instance from a json object.  
  : @param $field - Definition of the field instance (domain:element|domain:attribute|domain:container)
@@ -1869,7 +1897,7 @@ $field as element(),
 $include-root as xs:boolean,
 $base-path as xs:string?
 ) {
-
+   if($field/@jsonPath) then fn:string($field/@jsonPath) else
    let $paths := $field/ancestor-or-self::element()[fn:node-name(.) = $DOMAIN-FIELDS]
    return
      fn:string-join((
@@ -1989,19 +2017,28 @@ declare function domain:get-field-xml-value(
        $func($value)
     )
 };
-
 (:~
  : Returns the base type of field definition.  The base type of the domain 
  :) 
 declare function domain:get-base-type(
     $field as element()
 ) {
+  domain:get-base-type($field,fn:true())
+};
+(:~
+ : Returns the base type of field definition.  The base type of the domain 
+ :) 
+declare function domain:get-base-type(
+    $field as element(),
+    $safe as xs:boolean
+) {
   if($field/@type = $SIMPLE-TYPES) then "simple"
   else if($field/@type = $COMPLEX-TYPES) then "complex"
   else if($field instance of element(domain:model)) then "model"
   else if($field instance of element(domain:container)) then "container"
   else if(domain:model-exists($field/@type)) then "instance"
-  else fn:error(xs:QName("UNKNOWN-BASE-TYPE"),"Unknown Base Type",$field)
+  else if($safe) then fn:error(xs:QName("UNKNOWN-BASE-TYPE"),"Unknown Base Type",$field)
+  else "unknown"
 };
 
 (:~

@@ -449,16 +449,16 @@ declare function config:anonymous-user($config as element(config:config), $appli
  :  and if changed may need to be initialized to reflect the latest values
  :  @param $application-name - Name of the application to get the domain.
  :)
-declare function config:get-domain($application-name as xs:string) as element(domain)?
+declare function config:get-domain($application-name as xs:string) as element(domain:domain)?
 {
   let $config := config:get-config()
   let $domain := cache:get-domain-cache(config:cache-location($config), $application-name, config:anonymous-user($config))
   let $domain :=
     typeswitch ($domain)
-      case element(domain)
+      case element(domain:domain)
         return $domain
       case document-node()
-        return $domain/node()
+        return $domain/domain:domain
       default
         return fn:error(xs:QName("NO-DOMAIN-FOUND"))
   return 
@@ -466,7 +466,7 @@ declare function config:get-domain($application-name as xs:string) as element(do
     else fn:error(xs:QName("NO-DOMAIN-FOUND"))
 };
 
-declare function config:get-domain() as element(domain)? {
+declare function config:get-domain() as element(domain:domain)? {
    config:get-domain(config:default-application())
 };
 

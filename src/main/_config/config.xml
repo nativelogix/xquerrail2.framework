@@ -1,4 +1,4 @@
-<config xmlns="http://xquerrail.com/config" 
+<config xmlns="http://xquerrail.com/config"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://xquerrail.com/domain file:../_framework/schemas/config.xsd"
     >
@@ -6,29 +6,29 @@
     <!--Routing Module and Configuration-->
     <routes-config resource="routes-test.xml"/>
     <routes-module resource="routing.xqy"/>
-    
+
     <!--Interceptor Configuration-->
 <!--    <interceptor-config resource="interceptor.xml"/>-->
   <!--  TODO: Could not find any reference of interceptor-module in xquerrail2.framework  -->
 <!--    <interceptor-module resource="interceptor.xqy"/>-->
-    
+
   <!--  TODO: Could not find any reference of plugin-config in xquerrail2.framework  -->
 <!--    <plugin-config resource="/main/_config/plugin.xml"/>-->
-    
-    <!--<error-handler resource="/main/xquerrail2/_framework/error.xqy"/>-->    
-    
+
+    <!--<error-handler resource="/main/xquerrail2/_framework/error.xqy"/>-->
+
     <!--Suffix Configuration-->
 <!--    <controller-suffix value="-controller"/>-->
 <!--    <model-suffix value="-model"/>-->
   <!--  TODO: Could not find any reference of library-suffix in xquerrail2.framework  -->
   <!--    <library-suffix value="-lib"/>-->
 
-    <anonymous-user value="xquerrail2-framework-user"/> 
-    
+    <anonymous-user value="xquerrail2-framework-user"/>
+
 <!--    <dispatcher resource="/main/xquerrail2/_framework/dispatchers/dispatcher.web.xqy"/>-->
 <!--    <controller resource="base/base-controller.xqy"/>-->
     <!--<controller-extension  resource="/_extensions/controller.extension.xqy"/>-->
-    
+
     <!--Register Default Values for engine-->
 <!--    <default-engine value="engine.html"/>-->
     <default-application value="app-test"/>
@@ -40,9 +40,9 @@
 <!--    <default-template-directory resource="/application/templates/"/>-->
   <!--  TODO: Could not find any reference of default-view-directory in xquerrail2.framework  -->
   <!--    <default-view-directory resources="/application/views/"/> -->
-    
+
     <!--Register Your Application(s) Here-->
-    <application name="app-test" namespace="http://xquerrail.com/app-test" uri="/main/app-test">
+    <application name="app-test" namespace="http://xquerrail.com/app-test" uri="/test/mocha/app-test">
       <domain resource="domains/application-domain.xml" />
       <script-directory value="resources/js/"/>
       <stylesheet-directory value="resources/css/"/>
@@ -59,20 +59,20 @@
 <!-- TODO: Not sure if @config location si currently used maybe duplicated with interceptor-moculde/@resource -->
 <!--    <interceptors config="/main/_config/interceptor.xml">-->
     <interceptors>
-       <interceptor 
-            name="ml-security" 
+       <interceptor
+            name="ml-security"
             resource="ml-security.xml"
-            before-request="false" 
-            after-request="true" 
-            before-response="false" 
+            before-request="false"
+            after-request="true"
+            before-response="false"
             after-response="false"
         />
-<!--         <interceptor 
-    name="compressor" 
+<!--         <interceptor
+    name="compressor"
     resource="compressor.xml"
-    before-request="false" 
-    after-request="false" 
-    before-response="false" 
+    before-request="false"
+    after-request="false"
+    before-response="false"
     after-response="true"
 /> -->
     </interceptors>
@@ -82,5 +82,5 @@
       <property name="resource-path" resource="js"/>
       <property name="css-path" resource="css"/>
       <property name="js-path"  resource="js"/>
-    </properties>    
+    </properties>
 </config>

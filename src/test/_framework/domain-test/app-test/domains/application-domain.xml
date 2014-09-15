@@ -2,6 +2,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://xquerrail.com/domain file:/C:/Users/gvidal/workspace64/marklogic_valrico/_framework/schemas/domain.xsd">
   <name>app-test</name>
+  <declare-namespace prefix="model1" namespace-uri="http://marklogic.com/model/model1"/>
   <content-namespace prefix="app-test" namespace-uri="http://xquerrail.com/app-test"/>
   <application-namespace prefix="xquerrail" namespace-uri="http://xquerrail.com/app-test"/>
     <default-collation>http://marklogic.com/collation/codepoint</default-collation>

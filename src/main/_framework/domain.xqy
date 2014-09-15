@@ -390,7 +390,7 @@ declare function domain:get-model-keyLabel-field($model as element(domain:model)
 };
 declare function domain:get-field-prefix($field as element()) {
     if($field/@prefix) then $field/@prefix else
-    let $key := ($field/@name || ":namespace-prefix")
+    let $key   := fn:concat("namespace-prefix::",fn:generate-id($field))
     let $cache := domain:get-identity-cache($key)
     return
         if($cache) then $cache

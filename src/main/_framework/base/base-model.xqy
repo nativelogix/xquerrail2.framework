@@ -1660,7 +1660,11 @@ declare function model:build-search-options(
 {
     let $properties := $model//(domain:element|domain:attribute)[fn:not(domain:navigation/@searchable = ('false'))]
     let $modelNamespace :=  domain:get-field-namespace($model)
-    let $baseOptions := $model/search:options
+    let $baseOptions := 
+        if($model/search:options) 
+        then $model/search:options
+        else if(map:contains($params,"search:options")) then map:get($params,"search:options")
+        else ()
     let $nav := $model/domain:navigation
     let $constraints :=
             for $prop in $properties[fn:not(domain:navigation/@searchable = "false")]
@@ -1670,6 +1674,8 @@ declare function model:build-search-options(
                 if($prop-nav/(@suggestable|@facetable) = "true") then "range" else  "value")[1]
             let $facet-options :=
                 $prop/domain:navigation/search:facet-option
+            let $term-options := $prop/domain:navigation/(search:term-option|search:weight)
+            let $term-options := if($term-options) then $term-options else map:get($params,"search:term-options")
             let $ns := domain:get-field-namespace($prop)
             let $prop-nav := $prop/domain:navigation
             let $name := 
@@ -1690,9 +1696,10 @@ declare function model:build-search-options(
                           case element(domain:attribute) return (
                                   <search:element name="{$prop/../@name}" ns="{domain:get-field-namespace($prop/..)}"/>,
                                   <search:attribute name="{$prop/@name}" ns=""/>
-                            )
-                          default return <search:element name="{$prop/@name}" ns="{$ns}" ></search:element>
-                         , $facet-options
+                          )
+                          default return <search:element name="{$prop/@name}" ns="{$ns}" ></search:element>, 
+                         $term-options,
+                         $facet-options
                   }
                 }</search:constraint>
       let $suggestOptions :=

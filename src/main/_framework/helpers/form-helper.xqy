@@ -65,7 +65,7 @@ declare function form:build-form(
 as item()*
 {
     let $init := response:initialize($response)
-    let $_ := xdmp:log(("form:build-form::",response:body()),"debug")
+    let $_ := xdmp:log(("form:build-form::",response:body()),"finest")
     return 
       form:build-form-field($domain-model)
 };

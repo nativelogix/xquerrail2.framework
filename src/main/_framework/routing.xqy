@@ -102,11 +102,11 @@ declare function get-route($url as xs:string)
        let $new-url := fn:concat(config:get-dispatcher(),"?",map-to-params($params-map),if($params ne "") then fn:concat("&amp;",$params) else ())
        return
          (
-            xdmp:log(("rewriter url:",$new-url),"debug"),
+            xdmp:log(("rewriter url:",$new-url),"finest"),
             if(fn:normalize-space($new-url) eq "") 
              then fn:error(xs:QName("NO-ROUTE"),fn:concat("No Route for ", $path),$path) 
              else $new-url
          )
      else (xdmp:log(("Not Routing Right",$url),"debug"), "/" ,xdmp:set-response-code(404,$path) )   
-  return (xdmp:log(("route:",$route),"debug"),$route)
+  return (xdmp:log(("route:",$route),"finest"),$route)
 };

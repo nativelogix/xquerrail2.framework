@@ -15,19 +15,21 @@ declare variable $response as map:map external;
 response:initialize($response),
 let $node := response:body()
 let $model :=  domain:get-domain-model($node/@type)
+let $result := for $n in $node/*[local-name(.) eq $model/@name]
+return 
+   model:to-json($model,$n)
 return
  if($model) then 
     <x>{js:object((       
         js:keyvalue("type",$node/@type cast as xs:string),
         js:keyvalue("elapsed",fn:string($node/@elapsed)),
+        js:keyvalue("processing",xdmp:elapsed-time()),
         js:keyvalue("currentpage",$node/currentpage cast as xs:integer),
         js:keyvalue("pagesize",$node/pagesize cast as xs:integer),
         js:keyvalue("totalpages",$node/totalpages cast as xs:integer),
         js:keyvalue("totalrecords",$node/totalrecords cast as xs:integer),
-        js:entry($node/@type,(
-           for $n in $node/*[local-name(.) eq $model/@name]
-           return 
-               model:to-json($model,$n)
+        js:entry($node/@type,js:a(
+        $result
         ))
      ))}</x>/*
  else ()

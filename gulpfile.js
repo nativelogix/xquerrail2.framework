@@ -16,6 +16,7 @@ var argv = require('yargs').argv;
 var mocha = require('gulp-mocha');
 var watch = require('gulp-watch');
 var plumber = require('gulp-plumber');
+var runSequence = require('run-sequence');
 
 var ml;
 try {
@@ -130,4 +131,9 @@ gulp.task('release', ['build'], function () {
 });
 
 gulp.task('test', ['coverage', 'lint', 'mocha', 'xray']);
-gulp.task('default', ['test', 'clean', 'build']);
+// gulp.task('default', ['test', 'clean', 'build']);
+gulp.task('default', function() {
+    runSequence('test', 'clean', 'build', function() {
+        console.log('Build completed.');
+    });
+});

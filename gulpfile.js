@@ -30,14 +30,13 @@ module.exports.ml = ml;
 gulp.task('update-xqy', ['copy', 'last-git-commit'], function () {
   gutil.log('version: ' + version + ' - lastcommit: ' + lastCommit);
   return gulp.src(['dist/**/config.xqy'])
-    // .pipe(header(fs.readFileSync('header.txt', 'utf8')))
     .pipe(template({version: version, lastcommit: lastCommit}))
     .pipe(gulp.dest('./dist'));
 });
 
 gulp.task('copy', function () {
   return gulp.src(['src/main/**/*.xqy'])
-    .pipe(header(fs.readFileSync('header.txt', 'utf8')))
+    .pipe(header(fs.readFileSync('license.txt', 'utf8')))
     .pipe(gulp.dest('./dist'));
 });
 
@@ -107,7 +106,7 @@ gulp.task('watch-update-xqy', function()  {
   gulp.src(['src/main/**/*.xqy'])
     .pipe(watch())
     .pipe(plumber()) // This will keeps pipes working after error event
-    .pipe(header(fs.readFileSync('header.txt', 'utf8')))
+    .pipe(header(fs.readFileSync('license.txt', 'utf8')))
     .pipe(gulp.dest('./dist'));
 });
 

@@ -94,7 +94,7 @@ declare %private function app:load-domain(
          ($domain/namespace::*,$imports/namespace::*),
          $domain/@*,
          attribute compiled {fn:true()},
-         $domain/(domain:name|domain:content-namespace|domain:application-namespace|domain:description|domain:author|domain:version|domain:declare-namespace|domain:default-collation|domain:permission|domain:language|domain:default-language),
+         $domain/(domain:name|domain:content-namespace|domain:application-namespace|domain:description|domain:author|domain:version|domain:declare-namespace|domain:default-collation|domain:permission|domain:language|domain:default-language|domain:navigation),
          ($domain/domain:model,$imports/domain:model),
          ($domain/domain:optionlist,$imports/domain:optionlist),
          ($domain/domain:controller,$imports/domain:controller),
@@ -110,7 +110,7 @@ declare %private function update-domain(
     $domain/namespace::*,
     $domain/@*,
     $domain/*[. except $domain/domain:model],
-    $domain/domain:model ! (domain:set-model-field-attributes(.))
+    $domain/domain:model ! (domain:compile-model(.))
   }
 };
 

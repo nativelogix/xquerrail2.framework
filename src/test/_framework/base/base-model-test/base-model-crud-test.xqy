@@ -8,6 +8,8 @@ import module namespace domain = "http://xquerrail.com/domain" at "../../../../m
 import module namespace model = "http://xquerrail.com/model/base" at "../../../../main/_framework/base/base-model.xqy";
 import module namespace setup = "http://xquerrail.com/test/setup";
 
+declare namespace model1 = "http://marklogic.com/model/model1";
+
 declare option xdmp:mapping "false";
 
 declare variable $TEST-COLLECTION := "base-model-crud-test";
@@ -233,6 +235,29 @@ declare %test:case function model-document-update-test() as item()*
     assert:equal(fn:count($find), 1),
     assert:not-empty($update1),
     assert:equal("new-name", xs:string(domain:get-field-value($name-field, $update1)))
+  )
+};
+
+declare %test:case function model-document-new-abstract-different-namespace-test() as item()*
+{
+  let $model1 := domain:get-model("model1")
+  let $instance1 := eval(
+    function() {
+      model:new(
+        $model1, 
+        map:new((
+          map:entry("id", "1234"),
+          map:entry("name", "name-1")
+        ))
+      )
+    }
+  )
+  let $value-id := domain:get-field-value(domain:get-model-field($model1, "id"), $instance1)
+  let $value-name := domain:get-field-value(domain:get-model-field($model1, "name"), $instance1)
+  return (
+    assert:not-empty($instance1),
+    assert:not-empty($instance1/model1:uuid),
+    assert:not-empty($instance1/model1:create-user)
   )
 };
 

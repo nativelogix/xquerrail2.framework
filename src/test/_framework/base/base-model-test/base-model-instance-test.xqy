@@ -54,7 +54,6 @@ let $instance8 := setup:eval(
       model:new($model8, $instance8)
     }
   )
-  let $_ := xdmp:log(("$instance8", $instance8))
   return (
     assert:not-empty($instance8/*:abstract),
     assert:equal(xs:string($instance8/*:abstract/*:name), "abstract-1", "abstract/name should be abstract-1"),
@@ -85,7 +84,6 @@ declare %test:case function model-map-instance-test() as item()*
       model:new($model8, $instance8)
     }
   )
-  let $_ := xdmp:log(("$instance8", $instance8))
   return (
     assert:not-empty($instance8/*:abstract),
     assert:equal(xs:string($instance8/*:abstract/*:name), "abstract-1", "abstract/name should be abstract-1"),

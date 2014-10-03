@@ -1,29 +1,31 @@
 <domain xmlns="http://xquerrail.com/domain"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://xquerrail.com/domain file:/C:/Users/gvidal/workspace64/marklogic_valrico/_framework/schemas/domain.xsd">
-    <name>app-test</name>
-    <content-namespace prefix="app-test" namespace-uri="http://xquerrail.com/app-test"/>
-    <declare-namespace prefix="model1" namespace-uri="http://marklogic.com/model/model1"/>
-    <declare-namespace prefix="model2" namespace-uri="http://marklogic.com/model/model2"/>
-    <declare-namespace prefix="model3" namespace-uri="http://marklogic.com/model/model3"/>
-    <declare-namespace prefix="model4" namespace-uri="http://marklogic.com/model/model4"/>
-    <declare-namespace prefix="model5" namespace-uri="http://marklogic.com/model/model5"/>
-    <application-namespace prefix="xquerrail" namespace-uri="http://xquerrail.com/app-test"/>
-    <default-collation>http://marklogic.com/collation/codepoint</default-collation>
-    <import id="content" resource="content-domain.xml"/>
-    <import id="lookups" resource="lookup-domain.xml"/>
-    <!--Implement a base class to inherit metadata-->
-    <model name="base" description="Base Extension Class" persistence="abstract">
-        <element name="uuid" type="identity" identity="true" label="Globally Unique Identifier">
-            <navigation  searchable="true" sortable="true" facetable="true" />
-            <constraint />
-            <ui type="hidden" colWidth="0"/>
-        </element>
-        <element name="create-user" type="create-user" label="Created User">
-            <ui type="hidden" colWidth="0"/>
-        </element>
-        <element name="created" type="create-timestamp" label="Created Date">
-            <ui type="hidden" colWidth="0"/>
-        </element>
-    </model>
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://xquerrail.com/domain https://raw.githubusercontent.com/nativelogix/xquerrail2.framework/master/src/main/_framework/schemas/domain.xsd">
+  <name>app-test</name>
+  <navigation listable="true"/>
+  <content-namespace prefix="app-test" namespace-uri="http://xquerrail.com/app-test"/>
+  <application-namespace prefix="xquerrail" namespace-uri="http://xquerrail.com/app-test"/>
+  <default-collation>http://marklogic.com/collation/codepoint</default-collation>
+  <declare-namespace prefix="model1" namespace-uri="http://marklogic.com/model/model1"/>
+  <declare-namespace prefix="model2" namespace-uri="http://marklogic.com/model/model2"/>
+  <declare-namespace prefix="model3" namespace-uri="http://marklogic.com/model/model3"/>
+  <declare-namespace prefix="model4" namespace-uri="http://marklogic.com/model/model4"/>
+  <declare-namespace prefix="model5" namespace-uri="http://marklogic.com/model/model5"/>
+  <import id="content" resource="content-domain.xml"/>
+  <import id="lookups" resource="lookup-domain.xml"/>
+  <!--Implement a base class to inherit metadata-->
+  <model name="base" description="Base Extension Class" persistence="abstract">
+    <navigation showable="false" removable="true"></navigation>
+    <element name="uuid" type="identity" identity="true" label="Globally Unique Identifier">
+      <navigation  searchable="true" sortable="true" facetable="true" />
+      <constraint />
+      <ui type="hidden" colWidth="0"/>
+    </element>
+    <element name="create-user" type="create-user" label="Created User">
+      <ui type="hidden" colWidth="0"/>
+    </element>
+    <element name="created" type="create-timestamp" label="Created Date">
+      <ui type="hidden" colWidth="0"/>
+    </element>
+  </model>
 </domain>

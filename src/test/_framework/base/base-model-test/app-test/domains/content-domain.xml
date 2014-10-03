@@ -1,17 +1,24 @@
 <domain xmlns="http://xquerrail.com/domain"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns:search = "http://marklogic.com/appservices/search"
-    xsi:schemaLocation="http://xquerrail.com/domain ../../_framework/schemas/domain.xsd">
+    xsi:schemaLocation="http://xquerrail.com/domain https://raw.githubusercontent.com/nativelogix/xquerrail2.framework/master/src/main/_framework/schemas/domain.xsd">
   <name>pippo</name>
   <model name="model1" persistence="document" label="Model #1" extends="base" namespace-uri="http://marklogic.com/model/model1" key="uuid" keyLabel="id">
     <document root="models">/test/model1.xml</document>
+    <navigation listable="true" pageSize="20">
+      <search:facet-option>frequency-order</search:facet-option>
+    </navigation>
     <element name="id" type="string" label="Id"></element> 
-    <element name="name" type="string" label="Name"/>
+    <element name="name" type="string" label="Name">
+      <navigation listable="false" searchable="true"></navigation>
+    </element>
   </model>
   <model name="model2" persistence="document" label="Model #2" extends="base" namespace-uri="http://marklogic.com/model/model2" key="uuid" keyLabel="id">
     <document root="models">/test/model2.xml</document>
+    <navigation listable="true" showable="true"></navigation>
     <element name="id" type="string" label="Id"></element> 
     <element name="name" type="string" label="Name"/>
+    
     <element name="model1" type="reference" reference="model:model1:reference" label="Model #1"/>
   </model>
   <model name="model3" persistence="document" label="Model #3" extends="base" namespace-uri="http://marklogic.com/model/model3" key="uuid" keyLabel="id">
@@ -39,8 +46,11 @@
   </model>
   <model name="model7" persistence="directory" label="Model #7" extends="base" key="uuid" keyLabel="id">
     <directory>/test/model7/</directory>
+    <navigation listable="true"></navigation>
     <attribute name="id" type="string" label="Id"></attribute> 
-    <attribute name="score" type="integer" label="Score"></attribute>
+    <attribute name="score" type="integer" label="Score">
+      <navigation listable="false" searchable="true"></navigation>
+    </attribute>
     <element name="name" type="string" label="Name"/>
   </model>
   <model name="abstract1" persistence="abstract" label="Abstract" extends="base" key="uuid" keyLabel="id">
@@ -70,7 +80,10 @@
     <directory>/test/model10/</directory>
     <attribute name="id" type="string" label="Id"></attribute> 
     <container name="versions" label="Versions">
-      <element name="version" type="version" label="Version" occurrence="*" />
+      <navigation listable="true" searchable="true"></navigation>
+      <element name="version" type="version" label="Version" occurrence="*">
+        <navigation listable="false" searchable="true" editable="true" />
+      </element>
     </container>
   </model>
   <model name="abstract2" persistence="abstract" label="Abstract" extends="base" key="uuid" keyLabel="name">
@@ -79,6 +92,7 @@
   </model>
   <model name="model11" persistence="directory" label="Model #11" extends="base" key="uuid" keyLabel="id">
     <directory>/test/model11/</directory>
+    <navigation listable="true"></navigation>
     <element name="id" type="string" label="Id"/>
     <element name="abstract" type="abstract2" label="Abstract"/>
     <element name="child" type="string" label="Abstract">

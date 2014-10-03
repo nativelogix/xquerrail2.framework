@@ -289,7 +289,7 @@ declare function model:create-reference-cache($model,$instance) {
             text {$cache-keylabel-value}
          }
    return (
-      xdmp:log(("CACHE-INSTANCE::",$reference),"debug"),
+      xdmp:log(("CACHE-INSTANCE::",$reference),"finest"),
       model:set-cache-reference($model,($cache-key-value,$cache-keylabel-value),$reference)
    )
    
@@ -1264,7 +1264,7 @@ declare function model:lookup($model as element(domain:model), $params as map:ma
 
 (:~Recursively Removes elements based on @listable = true :)
 declare function model:filter-list-result($field as element(),$result,$params) {
-      if($field/domain:navigation/@listable = "false")
+      if(domain:navigation-field($field, "listable") = "false")
       then ()
       else 
           typeswitch($field)
@@ -1312,7 +1312,7 @@ declare function model:filter-list-result($field as element(),$result,$params) {
 declare function model:list($model as element(domain:model), $params as item())
 as element(list)?
 {
-  let $listable := fn:not($model/domain:navigation/@listable eq "false")
+  let $listable := fn:not(domain:navigation-field($model, "listable") eq "false")
   return
   if(fn:not($listable))
   then fn:error(xs:QName("MODEL-NOT-LISTABLE"),fn:concat($model/@name, " is not listable"))
@@ -1359,8 +1359,8 @@ as element(list)?
     let $sort :=
       let $sort-field        := domain:get-param-value($params,"sidx")[1][. ne ""]
       let $sort-order        := domain:get-param-value($params,"sord")[1]
-      let $model-sort-field  := $model/domain:navigation/@sortField/fn:data(.)
-      let $model-order       := ($model/domain:navigation/@sortOrder/fn:data(.),"ascending")[1]
+      let $model-sort-field  := domain:navigation-field($model, "sortField")
+      let $model-order       := (domain:navigation-field($model, "sortOrder"), "ascending")[1]
       let $domain-sort-field := $model//(domain:element|domain:attribute)[(domain:get-field-name-key(.),@name) = ($sort-field,$model-sort-field )][1]
       let $domain-sort-as :=
         if($domain-sort-field)
@@ -1382,7 +1382,7 @@ as element(list)?
       else ()       
     (: 'start' is 1-based offset in records from 'page' which is 1-based offset in pages
      : which is defined by 'rows'. Perfectly fine to give just start and rows :)
-    let $page-size  := $model/domain:navigation/@pageSize/fn:data(.)
+    let $page-size  := domain:navigation-field($model, "pageSize")
     let $pageSize := xs:integer((domain:get-param-value($params, 'rows'), $page-size, 50)[1])
     let $page     := xs:integer((domain:get-param-value($params, 'page'),1)[1])    
     let $start   := xs:integer((domain:get-param-value($params, 'start'),1)[1])
@@ -1399,10 +1399,12 @@ as element(list)?
         if($sort ne "" and fn:exists($sort))
         then fn:concat("(for $__context__ in ", $list, " order by ",$sort, " return $__context__)[",$start, " to ",$end,"]")
         else fn:concat("(", $list, ")[$start to $end]")
+    let $_ := xdmp:log(("$start", $start, "$end", $end, "$resultsExpr", $resultsExpr), "finest")
     let $results :=  xdmp:value($resultsExpr)
     let $results :=
       if($persistence = "directory")
       then
+(:        $results:)
         for $result in $results
         return
          model:filter-list-result($model,$result/node(),$params)
@@ -1661,17 +1663,17 @@ declare function model:build-search-options(
     let $properties := $model//(domain:element|domain:attribute)[fn:not(domain:navigation/@searchable = ('false'))]
     let $modelNamespace :=  domain:get-field-namespace($model)
     let $baseOptions := $model/search:options
-    let $nav := $model/domain:navigation
+    let $nav := domain:navigation($model)
     let $constraints :=
             for $prop in $properties[fn:not(domain:navigation/@searchable = "false")]
-            let $prop-nav := $prop/domain:navigation
+            let $prop-nav := domain:navigation($prop)
             let $type := (
-                $prop/domain:navigation/@searchType,
+                domain:navigation-field($prop, "searchType"),
                 if($prop-nav/(@suggestable|@facetable) = "true") then "range" else  "value")[1]
-            let $facet-options :=
-                $prop/domain:navigation/search:facet-option
+            let $facet-options := $prop-nav/search:facet-option
+(:                $prop/domain:navigation/search:facet-option:)
             let $ns := domain:get-field-namespace($prop)
-            let $prop-nav := $prop/domain:navigation
+(:            let $prop-nav := $prop/domain:navigation:)
             let $name := 
                 typeswitch($prop)
                   case element(domain:attribute) return fn:concat($prop/../@name,"_",$prop/@name)
@@ -1697,12 +1699,12 @@ declare function model:build-search-options(
                 }</search:constraint>
       let $suggestOptions :=
         for $prop in $properties[domain:navigation/@suggestable = "true"]
-        let $type := ($prop/domain:navigation/@searchType,"value")[1]
+        let $type := (domain:navigation-field($prop, "searchType"),"value")[1]
         let $collation := domain:get-field-collation($prop)
-        let $facet-options :=
-        $prop/domain:navigation/search:facet-option
+        let $prop-nav := domain:navigation($prop)
+        let $facet-options := $prop-nav/search:facet-option
+(:        $prop/domain:navigation/search:facet-option:)
         let $ns := domain:get-field-namespace($prop)
-        let $prop-nav := $prop/domain:navigation
         return
             <search:suggestion-source ref="{$prop/@name}">{
               element { fn:QName("http://marklogic.com/appservices/search","range") } {
@@ -2400,7 +2402,7 @@ declare function find-params($model as element(domain:model),$params as map:map)
         let $opfield  := $parts/*:match/*:group[@nr eq 1]
         let $operator := $parts/*:match/*:group[@nr eq 2]
         let $field    := domain:get-model-field($model,$opfield)
-        let $stype    := ($field/domain:navigation/domain:searchType,"value")[1]
+        let $stype    := (domain:navigation-field($field, "searchType"), "value")[1]
         let $ns       := domain:get-field-namespace($field)
         let $qname    := fn:QName($ns,$field/@name)
         let $is-reference

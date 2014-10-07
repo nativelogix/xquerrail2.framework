@@ -28,15 +28,21 @@ var version = pkg.version;
 var lastCommit;
 
 module.exports.ml = ml;
-gulp.task('update-xqy', ['copy', 'last-git-commit'], function () {
+gulp.task('update-xqy', ['copy-no-xqy', 'copy-xqy', 'last-git-commit'], function () {
   gutil.log('version: ' + version + ' - lastcommit: ' + lastCommit);
   return gulp.src(['dist/**/config.xqy'])
     .pipe(template({version: version, lastcommit: lastCommit}))
     .pipe(gulp.dest('./dist'));
 });
 
-gulp.task('copy', function () {
+gulp.task('copy-xqy', function () {
   return gulp.src(['src/main/**/*.xqy'])
+    .pipe(header(fs.readFileSync('license.txt', 'utf8')))
+    .pipe(gulp.dest('./dist'));
+});
+
+gulp.task('copy-no-xqy', function () {
+  return gulp.src(['src/main/**/*.xsd', 'src/main/**/*.xsl'])
     .pipe(header(fs.readFileSync('license.txt', 'utf8')))
     .pipe(gulp.dest('./dist'));
 });

@@ -177,3 +177,18 @@ declare %test:case function model10-version-element-in-container-navigation-test
     assert:equal($showable, fn:false(), "showable must be false")
   )
 };
+
+declare %test:case function model11-facetable-should-not-inherit-test() as item()*
+{
+  let $model11 := domain:get-model("model11")
+  let $child-field := domain:get-model-field($model11, "child")
+  let $child-facetable := domain:navigation-field($child-field, "facetable")
+  let $child-id-field := domain:get-model-field($model11, "childId")
+  let $child-id-facetable := domain:navigation-field($child-id-field, "facetable")
+  return (
+    assert:not-empty($model11),
+    assert:equal($child-facetable, fn:true(), "child@facetable must be true"),
+    assert:empty($child-id-facetable, "childId@facetable must be false")
+  )
+};
+

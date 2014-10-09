@@ -48,7 +48,7 @@ declare variable $MODEL-NAVIGATION-ATTRIBUTES := (
 );
 
 declare variable $FIELD-NAVIGATION-ATTRIBUTES := (
-  $MODEL-NAVIGATION-ATTRIBUTES, "facetable", "suggestable"
+  $MODEL-NAVIGATION-ATTRIBUTES, (:"facetable",:) "suggestable"
 );
 
 (:~

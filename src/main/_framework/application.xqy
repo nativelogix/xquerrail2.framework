@@ -7,6 +7,8 @@ import module namespace cache = "http://xquerrail.com/cache" at "cache.xqy";
 
 import module namespace domain = "http://xquerrail.com/domain" at "domain.xqy";
 
+declare namespace extension      = "http://xquerrail.com/application/extension";
+
 declare option xdmp:mapping "false";
 
 declare function app:bootstrap() as item()* {
@@ -52,7 +54,21 @@ declare %private function app:load-application(
   let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config), fn:true())
   let $domain := update-domain($domain)
   let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config))
+  let $_ := app:custom-bootstrap($application-name)
   return $domain
+};
+
+declare %private function app:custom-bootstrap(
+  $application-name as xs:string
+) {
+  let $path := config:get-application($application-name)/config:bootstrap/@resource
+  return
+    if (fn:exists($path)) then
+      try {
+        xdmp:apply(xdmp:function(xs:QName("extension:initialize"), $path))
+      }
+      catch ($exception) {xdmp:log($exception, "debug")}
+    else ()
 };
 
 declare %private function app:load-config(

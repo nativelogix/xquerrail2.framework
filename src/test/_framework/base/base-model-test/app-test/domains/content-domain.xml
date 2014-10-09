@@ -96,7 +96,26 @@
     <element name="id" type="string" label="Id"/>
     <element name="abstract" type="abstract2" label="Abstract"/>
     <element name="child" type="string" label="Abstract">
+      <navigation facetable="true"></navigation>
       <attribute name="childId" type="string"/> 
     </element>
   </model>
+  
+  <model name="model12" persistence="document" label="Model #12" key="id" keyLabel="id">
+    <document root="models12">/test/model12.xml</document>
+    <binaryDirectory>/test/file12/$(id)/</binaryDirectory>
+    <element name="id" type="identity" identity="true" >
+      <ui type="hidden"/>
+    </element>
+    <element name="file" type="binary" label="File"/>
+  </model>
+  
+  <model name="model13" persistence="document" label="Model #13" key="id" keyLabel="id">
+    <document root="models13">/test/model13.xml</document>
+    <element name="id" type="identity" identity="true" >
+      <ui type="hidden"/>
+    </element>
+    <element name="file" type="binary" label="File" fileURI="/test/file13/$(id)"/>
+  </model>
+
 </domain>

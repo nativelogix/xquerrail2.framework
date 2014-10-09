@@ -184,6 +184,21 @@ declare %test:ignore function model-directory-create-test() as item()*
   )
 };
 
+declare %private function invoke($fn as function(*)) {
+  xdmp:invoke-function(
+    function() {
+      xdmp:apply(
+        $fn
+      ),
+      xdmp:commit() 
+    },
+    <options xmlns="xdmp:eval">
+      <isolation>different-transaction</isolation>
+      <transaction-mode>update</transaction-mode>
+    </options>
+  )
+};
+
 declare %private function eval($fn as function(*)) {
   xdmp:apply($fn)
 
@@ -351,7 +366,7 @@ declare %test:case function model-find-by-attribute-test() as item()*
 {
   let $id := setup:random()
   let $model6 := domain:get-model("model6")
-  let $instance6 := xdmp:invoke-function(
+  let $instance6 := invoke(
     function() {
       model:create(
         $model6, 
@@ -362,12 +377,7 @@ declare %test:case function model-find-by-attribute-test() as item()*
         )), 
         $TEST-COLLECTION
       )
-      ,
-      xdmp:commit()
-    },
-    <options xmlns="xdmp:eval">
-      <transaction-mode>update</transaction-mode>
-    </options>
+    }
   )
 
   let $instance6 := model:find(
@@ -484,6 +494,60 @@ declare %test:case function model-document-create-multiple-reference-instances-t
     assert:not-empty($instance10),
     assert:equal("10101010", xs:string($value-id)),
     assert:equal(2, fn:count($value-version))
+  )
+};
+
+declare %test:case function model-document-binary-with-directory-binary-create() as item()*
+{
+  let $model12 := domain:get-model("model12")
+  let $id := "id12-" || xdmp:random()
+  let $binary := binary{ xs:hexBinary("DEADBEEF") }
+  let $instance12 := invoke(
+    function() {
+      model:create(
+        $model12, 
+        map:new((
+          map:entry("id", $id),
+          map:entry("file", $binary)
+        )), 
+        $TEST-COLLECTION
+      ),
+      xdmp:commit() 
+    }
+  )
+  let $value-id := domain:get-field-value(domain:get-model-field($model12, "id"), $instance12)
+  let $value-file := domain:get-field-value(domain:get-model-field($model12, "file"), $instance12)
+  return (
+    assert:not-empty($instance12),
+    assert:equal($id, xs:string($value-id)),
+    assert:equal( xdmp:binary-decode($binary, "UTF-8"), xdmp:binary-decode(fn:doc(xs:string($value-file)), "UTF-8"))
+  )
+};
+
+declare %test:case function model-document-binary-with-file-uri-create() as item()*
+{
+  let $model13 := domain:get-model("model13")
+  let $id := "id13-" || xdmp:random()
+  let $binary := binary{ xs:hexBinary("DEADBEEF") }
+  let $instance13 := invoke(
+    function() {
+      model:create(
+        $model13, 
+        map:new((
+          map:entry("id", $id),
+          map:entry("file", $binary)
+        )), 
+        $TEST-COLLECTION
+      ),
+      xdmp:commit() 
+    }
+  )
+  let $value-id := domain:get-field-value(domain:get-model-field($model13, "id"), $instance13)
+  let $value-file := domain:get-field-value(domain:get-model-field($model13, "file"), $instance13)
+  return (
+    assert:not-empty($instance13),
+    assert:equal($id, xs:string($value-id)),
+    assert:equal( xdmp:binary-decode($binary, "UTF-8"), xdmp:binary-decode(fn:doc(xs:string($value-file)), "UTF-8"))
   )
 };
 

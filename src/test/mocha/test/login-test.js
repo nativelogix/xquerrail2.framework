@@ -4,7 +4,7 @@ var _ = require('lodash');
 var fs = require('fs');
 var assert = require('chai').assert;
 var expect = require('chai').expect;
-var request = require('request');
+var request = require('request').defaults({jar: true});
 var xml2js = require('xml2js');
 
 var parser = new xml2js.Parser({explicitArray: false});
@@ -32,7 +32,8 @@ function initialize(callback) {
     followRedirect: true
   };
 
-  request(options, callback);
+  // request(options, callback);
+  request(options, function(error, response, body) {setTimeout(function(){callback(error, response, body)}, 100)});
 };
 
 describe('Authentication features', function() {

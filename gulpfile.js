@@ -43,7 +43,6 @@ gulp.task('copy-xqy', function () {
 
 gulp.task('copy-no-xqy', function () {
   return gulp.src(['src/main/**/*.xsd', 'src/main/**/*.xsl'])
-    .pipe(header(fs.readFileSync('license.txt', 'utf8')))
     .pipe(gulp.dest('./dist'));
 });
 

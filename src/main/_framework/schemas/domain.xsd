@@ -1046,6 +1046,12 @@
           search:search to return suggestions for results.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
+    <xs:attribute name="metadata" type="xs:boolean">
+      <xs:annotation>
+        <xs:documentation>Determines if a field will be return within a search:search
+          semantics</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
     <xs:attribute name="constraintName" type="xs:NCName">
       <xs:annotation>
         <xs:documentation>Overrides the name of the given constraint used in building

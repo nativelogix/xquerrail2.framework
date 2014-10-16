@@ -824,25 +824,25 @@ declare function model:recursive-build(
              case "triple"         return model:build-triple($context,$current-value,$updates,$partial)
              case "langString"     return model:build-langString($context,$current-value,$updates,$partial)
              default return
-                if($type = ($domain:SIMPLE-TYPES,$domain:COMPLEX-TYPES)) then
-                    if(fn:exists($update-value)) then
-                        for $value in $update-value
-                        return
-                           element {domain:get-field-qname($context)}{
-                              $attributes,
-                              model:build-value($context,$value, $current-value)
-                            }
-                     else if($partial and $current-value) then
-                        for $value in $current-value
-                        return
-                           element {domain:get-field-qname($context)}{
-                              $attributes,
-                              model:build-value($context,$value, $current-value)
-                            }
-                     else element {domain:get-field-qname($context)}{
-                              $attributes,
-                              model:build-value($context, $default-value, $current-value)
+               if($type = ($domain:SIMPLE-TYPES,$domain:COMPLEX-TYPES)) then
+                  if(fn:exists($update-value)) then
+                      for $value in $update-value
+                      return
+                         element {domain:get-field-qname($context)}{
+                            $attributes,
+                            model:build-value($context,$value, $current-value)
                           }
+                   else if($partial eq fn:true() and fn:exists($current-value)) then
+                      for $value in $current-value
+                      return
+                         element {domain:get-field-qname($context)}{
+                            $attributes,
+                            model:build-value($context,$value, $current-value)
+                          }
+                   else element {domain:get-field-qname($context)}{
+                            $attributes,
+                            model:build-value($context, $default-value, $current-value)
+                        }
                 else if(domain:get-base-type($context) eq "instance") then
                          model:build-instance($context,$current,$updates,$partial)
                 else fn:error(xs:QName("UNKNOWN-TYPE"),"The type of " || $type || " is unknown ",$context)
@@ -1264,7 +1264,7 @@ declare function model:lookup($model as element(domain:model), $params as map:ma
 
 (:~Recursively Removes elements based on @listable = true :)
 declare function model:filter-list-result($field as element(),$result,$params) {
-      if(domain:navigation-field($field, "listable") = "false")
+      if(domain:navigation($field)/@listable eq "false")
       then ()
       else
           typeswitch($field)
@@ -1312,7 +1312,7 @@ declare function model:filter-list-result($field as element(),$result,$params) {
 declare function model:list($model as element(domain:model), $params as item())
 as element(list)?
 {
-  let $listable := fn:not(domain:navigation-field($model, "listable") eq "false")
+  let $listable := fn:not(domain:navigation($model)/@listable eq "false")
   return
   if(fn:not($listable))
   then fn:error(xs:QName("MODEL-NOT-LISTABLE"),fn:concat($model/@name, " is not listable"))
@@ -1359,8 +1359,8 @@ as element(list)?
     let $sort :=
       let $sort-field        := domain:get-param-value($params,"sidx")[1][. ne ""]
       let $sort-order        := domain:get-param-value($params,"sord")[1]
-      let $model-sort-field  := domain:navigation-field($model, "sortField")
-      let $model-order       := (domain:navigation-field($model, "sortOrder"), "ascending")[1]
+      let $model-sort-field  := domain:navigation($model)/@sortField
+      let $model-order       := (domain:navigation($model)/@sortOrder, "ascending")[1]
       let $domain-sort-field := $model//(domain:element|domain:attribute)[(domain:get-field-name-key(.),@name) = ($sort-field,$model-sort-field )][1]
       let $domain-sort-as :=
         if($domain-sort-field)
@@ -1382,7 +1382,7 @@ as element(list)?
       else ()
     (: 'start' is 1-based offset in records from 'page' which is 1-based offset in pages
      : which is defined by 'rows'. Perfectly fine to give just start and rows :)
-    let $page-size  := domain:navigation-field($model, "pageSize")
+    let $page-size  := domain:navigation($model)/@pageSize
     let $pageSize := xs:integer((domain:get-param-value($params, 'rows'), $page-size, 50)[1])
     let $page     := xs:integer((domain:get-param-value($params, 'page'),1)[1])
     let $start   := xs:integer((domain:get-param-value($params, 'start'),1)[1])
@@ -1671,7 +1671,7 @@ declare function model:build-search-options(
             for $prop in $properties[fn:not(domain:navigation/@searchable = "false")]
             let $prop-nav := domain:navigation($prop)
             let $type := (
-                domain:navigation-field($prop, "searchType"),
+                domain:navigation($prop)/@searchType,
                 if($prop-nav/(@suggestable|@facetable) = "true") then "range" else  "value")[1]
             let $facet-options := $prop-nav/search:facet-option
             let $term-options := $prop/domain:navigation/(search:term-option|search:weight)
@@ -1704,7 +1704,7 @@ declare function model:build-search-options(
                 }</search:constraint>
       let $suggestOptions :=
         for $prop in $properties[domain:navigation/@suggestable = "true"]
-        let $type := (domain:navigation-field($prop, "searchType"),"value")[1]
+        let $type := (domain:navigation($prop)/@searchType,"value")[1]
         let $collation := domain:get-field-collation($prop)
         let $prop-nav := domain:navigation($prop)
         let $facet-options := $prop-nav/search:facet-option
@@ -2407,7 +2407,7 @@ declare function find-params($model as element(domain:model),$params as map:map)
         let $opfield  := $parts/*:match/*:group[@nr eq 1]
         let $operator := $parts/*:match/*:group[@nr eq 2]
         let $field    := domain:get-model-field($model,$opfield)
-        let $stype    := (domain:navigation-field($field, "searchType"), "value")[1]
+        let $stype    := (domain:navigation($field)/@searchType, "value")[1]
         let $ns       := domain:get-field-namespace($field)
         let $qname    := fn:QName($ns,$field/@name)
         let $is-reference

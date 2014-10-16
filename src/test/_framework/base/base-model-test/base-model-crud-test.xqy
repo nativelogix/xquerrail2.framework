@@ -551,6 +551,41 @@ declare %test:case function model-document-binary-with-file-uri-create() as item
   )
 };
 
+declare %test:case function model-document-binary-with-filename-content-type-create() as item()*
+{
+  let $model13 := domain:get-model("model13")
+  let $id := "id13-" || xdmp:random()
+  let $text := "Testing binary Constructor"
+  let $filename := "dummy.txt"
+  let $content-type := "text/plain"
+  let $binary := binary { string-join(string-to-codepoints($text) ! (xdmp:integer-to-hex(.)), "") }
+  let $instance13 := invoke(
+    function() {
+      model:create(
+        $model13, 
+        map:new((
+          map:entry("id", $id),
+          map:entry("file", $binary),
+          map:entry(fn:concat("file", "_filename"), $filename),
+          map:entry(fn:concat("file", "_content-type"), $content-type)
+        )), 
+        $TEST-COLLECTION
+      ),
+      xdmp:commit() 
+    }
+  )
+  let $value-id := domain:get-field-value(domain:get-model-field($model13, "id"), $instance13)
+  let $value-file := domain:get-field-value(domain:get-model-field($model13, "file"), $instance13)
+  let $_ := xdmp:log(("$value-file", $value-file, xdmp:binary-decode(fn:doc(xs:string($value-file)), "UTF-8")))
+  return (
+    assert:not-empty($instance13),
+    assert:equal($id, xs:string($value-id)),
+    assert:equal( xdmp:binary-decode($binary, "UTF-8"), xdmp:binary-decode(fn:doc(xs:string($value-file)), "UTF-8")),
+    assert:equal( $content-type, xs:string($value-file/@content-type)),
+    assert:equal( $filename, xs:string($value-file/@filename))
+  )
+};
+
 (:declare %test:case function get-model-references-test() as item()*
 {
   let $model1 := domain:get-model("model1")

@@ -37,12 +37,13 @@ gulp.task('update-xqy', ['copy-no-xqy', 'copy-xqy', 'last-git-commit'], function
 
 gulp.task('copy-xqy', function () {
   return gulp.src(['src/main/**/*.xqy'])
-    .pipe(header(fs.readFileSync('license.txt', 'utf8')))
+    .pipe(header(fs.readFileSync('license.txt', 'utf8'), {comment: {start: '(:', line:':', end: ':)'}}))
     .pipe(gulp.dest('./dist'));
 });
 
 gulp.task('copy-no-xqy', function () {
   return gulp.src(['src/main/**/*.xsd', 'src/main/**/*.xsl'])
+    .pipe(header(fs.readFileSync('license.txt', 'utf8'), {comment: {start: '<!--', line:'', end: '-->'}}))
     .pipe(gulp.dest('./dist'));
 });
 
@@ -112,7 +113,7 @@ gulp.task('watch-update-xqy', function()  {
   gulp.src(['src/main/**/*.xqy'])
     .pipe(watch())
     .pipe(plumber()) // This will keeps pipes working after error event
-    .pipe(header(fs.readFileSync('license.txt', 'utf8')))
+    .pipe(header(fs.readFileSync('license.txt', 'utf8'), {comment: {start: '(:', line:':', end: ':)'}}))
     .pipe(gulp.dest('./dist'));
 });
 

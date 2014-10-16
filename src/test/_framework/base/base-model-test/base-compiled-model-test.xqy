@@ -47,10 +47,10 @@ declare %test:before-each function before-test() {
 declare %test:case function model1-navigation-test() as item()*
 {
   let $model1 := domain:get-model("model1")
-  let $listable := domain:navigation-field($model1, "listable")
-  let $removable := domain:navigation-field($model1, "removable")
-  let $searchable := domain:navigation-field($model1, "searchable")
-  let $page-size := domain:navigation-field($model1, "pageSize")
+  let $listable := domain:navigation($model1)/@listable/fn:data()
+  let $removable := domain:navigation($model1)/@removable/fn:data()
+  let $searchable := domain:navigation($model1)/@searchable/fn:data()
+  let $page-size := domain:navigation($model1)/@pageSize/fn:data()
   let $facet-option := xs:string(domain:navigation($model1)/search:facet-option)
   return (
     assert:not-empty($model1),
@@ -65,10 +65,10 @@ declare %test:case function model1-navigation-test() as item()*
 declare %test:case function model2-navigation-test() as item()*
 {
   let $model2 := domain:get-model("model2")
-  let $listable := domain:navigation-field($model2, "listable")
-  let $showable := domain:navigation-field($model2, "showable")
-  let $searchable := domain:navigation-field($model2, "searchable")
-  let $removable := domain:navigation-field($model2, "removable")
+  let $listable := domain:navigation($model2)/@listable/fn:data()
+  let $showable := domain:navigation($model2)/@showable/fn:data()
+  let $searchable := domain:navigation($model2)/@searchable/fn:data()
+  let $removable := domain:navigation($model2)/@removable/fn:data()
   return (
     assert:not-empty($model2),
     assert:equal($listable, fn:true(), "listable must be true"),
@@ -81,10 +81,10 @@ declare %test:case function model2-navigation-test() as item()*
 declare %test:case function model3-navigation-test() as item()*
 {
   let $model3 := domain:get-model("model3")
-  let $listable := domain:navigation-field($model3, "listable")
-  let $showable := domain:navigation-field($model3, "showable")
-  let $searchable := domain:navigation-field($model3, "searchable")
-  let $removable := domain:navigation-field($model3, "removable")
+  let $listable := domain:navigation($model3)/@listable/fn:data()
+  let $showable := domain:navigation($model3)/@showable/fn:data()
+  let $searchable := domain:navigation($model3)/@searchable/fn:data()
+  let $removable := domain:navigation($model3)/@removable/fn:data()
   return (
     assert:not-empty($model3),
     assert:equal($listable, fn:true(), "listable must be true (from application domain)"),
@@ -97,9 +97,9 @@ declare %test:case function model3-navigation-test() as item()*
 declare %test:case function domain-default-model4-navigation-test() as item()*
 {
   let $model4 := domain:get-model("model4")
-  let $listable := domain:navigation-field($model4, "listable")
-  let $showable := domain:navigation-field($model4, "showable")
-  let $removable := domain:navigation-field($model4, "removable")
+  let $listable := domain:navigation($model4)/@listable/fn:data()
+  let $showable := domain:navigation($model4)/@showable/fn:data()
+  let $removable := domain:navigation($model4)/@removable/fn:data()
   return (
     assert:not-empty($model4),
     assert:equal($listable, fn:true(), "listable must be true"),
@@ -113,9 +113,9 @@ declare %test:case function model1-element-name-navigation-test() as item()*
 {
   let $model1 := domain:get-model("model1")
   let $field-name := domain:get-model-field($model1, "name")
-  let $listable := domain:navigation-field($field-name, "listable")
-  let $removable := domain:navigation-field($field-name, "removable")
-  let $searchable := domain:navigation-field($field-name, "searchable")
+  let $listable := domain:navigation($field-name)/@listable/fn:data()
+  let $removable := domain:navigation($field-name)/@removable/fn:data()
+  let $searchable := domain:navigation($field-name)/@searchable/fn:data()
   return (
     assert:not-empty($model1),
     assert:equal($listable, fn:false(), "listable must be false"),
@@ -129,9 +129,9 @@ declare %test:case function model7-attribute-score-navigation-test() as item()*
 {
   let $model7 := domain:get-model("model7")
   let $score-field := domain:get-model-field($model7, "score")
-  let $listable := domain:navigation-field($score-field, "listable")
-  let $removable := domain:navigation-field($score-field, "removable")
-  let $searchable := domain:navigation-field($score-field, "searchable")
+  let $listable := domain:navigation($score-field)/@listable/fn:data()
+  let $removable := domain:navigation($score-field)/@removable/fn:data()
+  let $searchable := domain:navigation($score-field)/@searchable/fn:data()
   return (
     assert:not-empty($model7),
     assert:equal($listable, fn:false(), "listable must be false"),
@@ -145,10 +145,10 @@ declare %test:case function model10-versions-container-navigation-test() as item
 {
   let $model10 := domain:get-model("model10")
   let $versions-field := $model10/domain:container[@name eq "versions"] (:domain:get-model-field($model10, "versions"):)
-  let $listable := domain:navigation-field($versions-field, "listable")
-  let $removable := domain:navigation-field($versions-field, "removable")
-  let $searchable := domain:navigation-field($versions-field, "searchable")
-  let $showable := domain:navigation-field($versions-field, "showable")
+  let $listable := domain:navigation($versions-field)/@listable/fn:data()
+  let $removable := domain:navigation($versions-field)/@removable/fn:data()
+  let $searchable := domain:navigation($versions-field)/@searchable/fn:data()
+  let $showable := domain:navigation($versions-field)/@showable/fn:data()
   return (
     assert:not-empty($model10),
     assert:equal($listable, fn:true(), "listable must be true"),
@@ -163,11 +163,11 @@ declare %test:case function model10-version-element-in-container-navigation-test
 {
   let $model10 := domain:get-model("model10")
   let $version-field := domain:get-model-field($model10, "version")
-  let $listable := domain:navigation-field($version-field, "listable")
-  let $removable := domain:navigation-field($version-field, "removable")
-  let $searchable := domain:navigation-field($version-field, "searchable")
-  let $showable := domain:navigation-field($version-field, "showable")
-  let $editable := domain:navigation-field($version-field, "editable")
+  let $listable := domain:navigation($version-field)/@listable/fn:data()
+  let $removable := domain:navigation($version-field)/@removable/fn:data()
+  let $searchable := domain:navigation($version-field)/@searchable/fn:data()
+  let $showable := domain:navigation($version-field)/@showable/fn:data()
+  let $editable := domain:navigation($version-field)/@editable/fn:data()
   return (
     assert:not-empty($model10),
     assert:equal($listable, fn:false(), "listable must be false"),
@@ -182,9 +182,9 @@ declare %test:case function model11-facetable-should-not-inherit-test() as item(
 {
   let $model11 := domain:get-model("model11")
   let $child-field := domain:get-model-field($model11, "child")
-  let $child-facetable := domain:navigation-field($child-field, "facetable")
+  let $child-facetable := domain:navigation($child-field)/@facetable/fn:data()
   let $child-id-field := domain:get-model-field($model11, "childId")
-  let $child-id-facetable := domain:navigation-field($child-id-field, "facetable")
+  let $child-id-facetable := domain:navigation($child-id-field)/@facetable/fn:data()
   return (
     assert:not-empty($model11),
     assert:equal($child-facetable, fn:true(), "child@facetable must be true"),

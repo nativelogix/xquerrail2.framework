@@ -48,7 +48,7 @@ declare variable $MODEL-NAVIGATION-ATTRIBUTES := (
 );
 
 declare variable $FIELD-NAVIGATION-ATTRIBUTES := (
-  $MODEL-NAVIGATION-ATTRIBUTES, (:"facetable",:) "suggestable"
+  $MODEL-NAVIGATION-ATTRIBUTES, (:"facetable",:) "metadata", "suggestable"
 );
 
 (:~
@@ -171,7 +171,6 @@ declare function domain:resolve-cts-type($type as xs:string)
  : Gets the domain model from the given cache
  :)
 declare %private function domain:get-model-cache($key) {
-   xdmp:log("Reading Caching-" || $key,"debug"),
    map:get($DOMAIN-MODEL-CACHE,$key)
 };
 
@@ -179,7 +178,6 @@ declare %private function domain:get-model-cache($key) {
  : Sets the cache for a domain model
  :)
 declare %private function domain:set-model-cache($key,$model as element(domain:model)?) {
-   xdmp:log("Caching-" || $key,"debug"),
    map:put($DOMAIN-MODEL-CACHE,$key,$model)
 };
 
@@ -829,11 +827,24 @@ declare function domain:navigation(
   $field/domain:navigation
 };
 
-declare function domain:navigation-field(
+declare %private function domain:build-navigation-attribute(
   $field as element(),
-  $name as xs:string
+  $attribute-name as xs:string
 ) {
-  domain:navigation($field)/@*[./fn:local-name() eq $name]/fn:data()
+  attribute {$attribute-name} {
+    if ($field/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
+      ($field/domain:navigation/@*[./fn:local-name() eq $attribute-name])[fn:last()]
+    else if ($field/ancestor::domain:element/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
+      $field/ancestor::domain:element/domain:navigation/@*[./fn:local-name() eq $attribute-name]
+    else if ($field/ancestor::domain:container/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
+      $field/ancestor::domain:container/domain:navigation/@*[./fn:local-name() eq $attribute-name]
+    else if ($field/ancestor::domain:model/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
+      $field/ancestor::domain:model/domain:navigation/@*[./fn:local-name() eq $attribute-name]
+    else if ($field/ancestor::domain:domain/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
+      $field/ancestor::domain:domain/domain:navigation/@*[./fn:local-name() eq $attribute-name]
+    else
+      fn:false()
+  }
 };
 
 (:~
@@ -847,15 +858,7 @@ declare function domain:build-model-navigation(
       element domain:navigation {
         $MODEL-NAVIGATION-ATTRIBUTES ! (
           let $attribute-name := .
-          return
-            attribute {$attribute-name} {
-              if ($field/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
-                ($field/domain:navigation/@*[./fn:local-name() eq $attribute-name])[fn:last()]
-              else if ($field/ancestor::domain:domain/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
-                $field/ancestor::domain:domain/domain:navigation/@*[./fn:local-name() eq $attribute-name]
-              else
-                fn:false()
-            }
+          return domain:build-navigation-attribute($field, $attribute-name)
         ),
         $field/domain:navigation/@* [. except $field/domain:navigation/@*[fn:index-of($MODEL-NAVIGATION-ATTRIBUTES, ./fn:local-name()) > 0]],
         $field/domain:navigation/*
@@ -864,15 +867,7 @@ declare function domain:build-model-navigation(
       element domain:navigation {
         $FIELD-NAVIGATION-ATTRIBUTES ! (
           let $attribute-name := .
-          return
-            attribute {$attribute-name} {
-              if ($field/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
-                ($field/domain:navigation/@*[./fn:local-name() eq $attribute-name])[fn:last()]
-              else if ($field/ancestor::domain:model/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
-                $field/ancestor::domain:model/domain:navigation/@*[./fn:local-name() eq $attribute-name]
-              else
-                fn:false()
-            }
+          return domain:build-navigation-attribute($field, $attribute-name)
         ),
         $field/domain:navigation/@* [. except $field/domain:navigation/@*[fn:index-of($FIELD-NAVIGATION-ATTRIBUTES, ./fn:local-name()) > 0]],
         $field/domain:navigation/*
@@ -881,17 +876,7 @@ declare function domain:build-model-navigation(
       element domain:navigation {
         $FIELD-NAVIGATION-ATTRIBUTES ! (
           let $attribute-name := .
-          return
-            attribute {$attribute-name} {
-              if ($field/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
-                ($field/domain:navigation/@*[./fn:local-name() eq $attribute-name])[fn:last()]
-              else if ($field/ancestor::domain:container/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
-                $field/ancestor::domain:container/domain:navigation/@*[./fn:local-name() eq $attribute-name]
-              else if ($field/ancestor::domain:model/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
-                $field/ancestor::domain:model/domain:navigation/@*[./fn:local-name() eq $attribute-name]
-              else
-                fn:false()
-            }
+          return domain:build-navigation-attribute($field, $attribute-name)
         ),
         $field/domain:navigation/@* [. except $field/domain:navigation/@*[fn:index-of($FIELD-NAVIGATION-ATTRIBUTES, ./fn:local-name()) > 0]],
         $field/domain:navigation/*
@@ -900,19 +885,7 @@ declare function domain:build-model-navigation(
       element domain:navigation {
         $FIELD-NAVIGATION-ATTRIBUTES ! (
           let $attribute-name := .
-          return
-            attribute {$attribute-name} {
-              if ($field/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
-                ($field/domain:navigation/@*[./fn:local-name() eq $attribute-name])[fn:last()]
-              else if ($field/ancestor::domain:element/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
-                $field/ancestor::domain:element/domain:navigation/@*[./fn:local-name() eq $attribute-name]
-              else if ($field/ancestor::domain:container/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
-                $field/ancestor::domain:container/domain:navigation/@*[./fn:local-name() eq $attribute-name]
-              else if ($field/ancestor::domain:model/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
-                $field/ancestor::domain:model/domain:navigation/@*[./fn:local-name() eq $attribute-name]
-              else
-                fn:false()
-            }
+          return domain:build-navigation-attribute($field, $attribute-name)
         ),
         $field/domain:navigation/@* [. except $field/domain:navigation/@*[fn:index-of($FIELD-NAVIGATION-ATTRIBUTES, ./fn:local-name()) > 0]],
         $field/domain:navigation/*

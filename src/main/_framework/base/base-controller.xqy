@@ -31,6 +31,15 @@ declare option xdmp:mapping "false";
 declare variable $collation := "http://marklogic.com/collation/codepoint";
 
 (:~
+: Helper function to extract params for REST endpoint
+:)
+declare function controller:get-params() {
+  if (request:format() eq "json" and (request:method() eq "POST" or request:method() eq "PUT")) then request:body() 
+  else request:params()
+};
+
+
+(:~
  : Initiailizes the request to allow calling into request:* and response:* functions.
  : @param $request - Request map:map representing the request.
  : @return true if the request/response was initialized properly
@@ -184,12 +193,12 @@ declare function controller:info() {
  : Creates an instance of the model representing the controller
  :)
 declare function controller:create() {(
-  xdmp:log(("controller:create::",request:params()),"debug"),
+  xdmp:log(("controller:create::",controller:get-params()),"debug"),
   let $body := request:body()
   let $params := 
      if(fn:exists(request:body())) 
-     then if($body instance of binary() and xdmp:binary-size($body) gt 0) then  request:body() else request:params()
-     else request:params()
+     then if($body instance of binary() and xdmp:binary-size($body) gt 0) then  request:body() else controller:get-params()
+     else controller:get-params()
   return
     model:create(controller:model(),$params)
 )};
@@ -209,7 +218,7 @@ declare function controller:update()
 {
   model:update(
     controller:model(),
-    request:params(),
+    controller:get-params(),
     (),
     request:param("partial-update") = "true"
   )
@@ -222,7 +231,7 @@ declare function controller:delete()
 {
     model:delete(
        controller:model(),
-       request:params()
+       controller:get-params()
     )
 };
 
@@ -260,10 +269,9 @@ declare function controller:suggest()
  :)
 declare function controller:list()
 {
-    xdmp:log(("controller:list::",request:params()),"finest"),
     model:list(
       controller:model(),
-      request:params()
+      controller:get-params()
     )
 };
 

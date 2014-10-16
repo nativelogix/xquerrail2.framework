@@ -55,6 +55,7 @@
 	  <xs:enumeration value="delete"/>
 	  <xs:enumeration value="head"/>
 	  <xs:enumeration value="option"/>
+	  <xs:enumeration value="patch"/>
 	</xs:restriction>
       </xs:simpleType>
     </xs:attribute>

@@ -167,13 +167,8 @@ declare function request:parse($parameters) as map:map {
                  then xs:long($j)
                  else $j
             return (
-                    if(map:get($request,$fieldname))
-                    then (
-                         if(fn:not(map:get($request,$fieldname) = $j))
-                         then map:put($request,$fieldname,(map:get($request,$fieldname),$value))
-                         else ()
-                    )
-                    else map:put($request, $fieldname,$value)
+                if(map:contains($request,$fieldname)) then map:put($request,$fieldname,(map:get($request,$fieldname),$value))
+                else map:put($request, $fieldname,$value)
                 , (:Write out the filename info:)
                 if($filename) then (
                    map:put($request,fn:concat($PARAM-FILENAME-PREFIX,$i),$filename),
@@ -184,7 +179,7 @@ declare function request:parse($parameters) as map:map {
     let $_content-type := fn:normalize-space(fn:tokenize(xdmp:get-request-header("Content-Type"), ";")[1])
     let $is-multipart  := ($_content-type ! fn:normalize-space(.)) = "multipart/form-data"
     let $accept-types := xdmp:uri-format($_content-type)
-    let $_ := xdmp:log($_content-type,"debug")
+    let $_ := map:put($request, $CONTENT-TYPE, $_content-type)
     let $_ :=
         if($is-multipart)
         then (
@@ -196,6 +191,8 @@ declare function request:parse($parameters) as map:map {
          if ($_content-type = "application/json" or fn:contains($_content-type,"application/json"))
          then if(xdmp:get-request-method() = ("PUT","POST") and xdmp:get-request-body())
               then map:put($request, $BODY, xdmp:from-json(xdmp:get-request-body())[1])
+              else if(xdmp:get-request-method() = "PATCH" and xdmp:get-request-body())
+              then map:put($request, $BODY, xdmp:from-json(xdmp:get-request-body()))
               else ()
          else if($_content-type  = ("application/xml","text/xml"))
          then map:put($request, $BODY, xdmp:get-request-body("xml"))

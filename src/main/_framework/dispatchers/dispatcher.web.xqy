@@ -1,20 +1,4 @@
 xquery version "1.0-ml";
-(::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-   Copyright 2011 - Gary Vidal
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::)
-
 (:~
  : The controller centralizes request/response and controls access to the server.
  : The controller directs all requests to the rest interface.
@@ -208,77 +192,87 @@ declare function dispatcher:invoke-response($response,$request)
     let $action := request:action()[1]
     let $format := request:format()[1]
     let $debug  := request:debug()[1]
-    let $view-uri := fn:concat("/",$application,"/views/",$controller,"/",$controller,".",$action,".",$format,".xqy")        
+    let $view-uri := fn:concat("/",$application,"/views/",$controller,"/",$controller,".",$action,".",$format,".xqy")
     return
-        if($response instance of map:map) then 
-               if(response:set-response($response,$request)) then 
-                   if(response:is-download()) then (
-                            xdmp:set-response-content-type(response:content-type()),
-                            for $key in map:keys(response:response-headers())
-                            return 
-                                 xdmp:add-response-header($key,response:response-header($key)),
-                            response:body()
-                         )
-                    else 
-                       let $engine := config:get-engine($response)
-                       let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
-                       let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
-                       let $_ := 
-                           if(fn:not(dispatcher:view-exists($view-uri))) 
-                           then response:set-base(fn:true())
-                           else () 
-                       return
-                         xdmp:apply($engine-func,response:flush(),$request)
-               else $response
+      if($response instance of map:map) then 
+        if(response:set-response($response,$request)) then 
+          if(response:is-download()) then 
+          (
+            xdmp:set-response-content-type(response:content-type()),
+            for $key in map:keys(response:response-headers())
+            return xdmp:add-response-header($key,response:response-header($key)),
+            response:body()
+          )
           else 
-            if($format eq "json") then 
-                (:Initialize the JSON Response:)
-                let $_ := response:set-response(map:map(),$request)
-                let $_ := (response:set-format("json"))
-                let $_ :=  (response:set-body($response))
-                let $response := response:response()
-                let $engine := config:get-engine($response)
-                let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
-                let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
-                return
-                    xdmp:apply($engine-func,$response,$request)
-             else if($format eq "html") then 
-                (:Initialize the HTML Response:)
-                let $_ := response:set-response(map:map(),$request)
-                let $_ := (
-                    response:set-format("html"),
-                    response:set-template("main"),
-                    response:set-view($action)
-                )
-                let $_ := 
-                    if($action eq "get")         then response:set-view("show")
-                    else if($action eq "list")   then response:set-view("index")
-                    else if($action eq "search") then response:set-view("search")
-                    else response:set-action(request:action())
-                let $_ :=  (response:set-body($response))
-                let $response := response:response()
-                let $engine := config:get-engine($response)
-                let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
-                let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
-                return
-                    xdmp:apply($engine-func,$response,$request)
+            let $engine := config:get-engine($response)
+            let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
+            let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
+            let $_ := 
+            if(fn:not(dispatcher:view-exists($view-uri))) 
+              then response:set-base(fn:true())
+              else () 
+            return xdmp:apply($engine-func,response:flush(),$request)
+        else $response
+      else
+        if($format eq "json") then 
+          (:Initialize the JSON Response:)
+          let $_ := response:set-response(map:map(),$request)
+          let $_ := (response:set-format("json"))
+          let $_ :=  (response:set-body($response))
+          let $_ := 
+            if (fn:empty($response)) then response:set-response-code(404, "Resource not found")
+            else ()
+          let $response := response:response()
+          let $engine := config:get-engine($response)
+          let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
+          let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
+          return xdmp:apply($engine-func,$response,$request)
+        else if($format eq "html") then 
+          (:Initialize the HTML Response:)
+          let $_ := response:set-response(map:map(),$request)
+          let $_ := (
+            response:set-format("html"),
+            response:set-template("main"),
+            response:set-view($action)
+          )
+          let $_ := 
+            if($action eq "get")         then response:set-view("show")
+            else if($action eq "list")   then response:set-view("index")
+            else if($action eq "search") then response:set-view("search")
+            else response:set-action(request:action())
+          let $_ :=  (response:set-body($response))
+          let $response := response:response()
+          let $engine := config:get-engine($response)
+          let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
+          let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
+          return xdmp:apply($engine-func,$response,$request)
              (:Check to see if the XML has a view and if so use it:)
-             else if(dispatcher:view-exists($view-uri)) then 
-                let $_ := response:set-response(response:response(),$request)
-                let $_ :=  (response:set-body($response))
-                let $_ :=  if(response:view()) 
-                           then ()
-                           else (response:set-view($action)) 
-                let $response := response:response()
-                let $engine := config:get-engine($response)
-                let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
-                let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
-                return
-                    $engine-func($response,$request)
-             else if(fn:exists($response))
-                  then (xdmp:log(("NO VIEW",$view-uri),"debug"), $response)
-                  else fn:error(xs:QName("INVALID-RESPONSE"),"Invalid Response",($response))        
+        else if (fn:empty($response)) then
+          (
+          let $_ := response:set-response-code(404, "Resource not found")
+          let $response := response:response()
+          let $engine := config:get-engine($response)
+          let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
+          let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
+          return xdmp:apply($engine-func,$response,$request)
+          )
+        else if(dispatcher:view-exists($view-uri)) then 
+            let $_ := response:set-response(response:response(),$request)
+            let $_ :=  (response:set-body($response))
+            let $_ :=  if(response:view()) 
+                       then ()
+                       else (response:set-view($action)) 
+            let $response := response:response()
+            let $engine := config:get-engine($response)
+            let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
+            let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
+            return
+                $engine-func($response,$request)
+        else if(fn:exists($response)) then (xdmp:log(("NO VIEW",$view-uri),"debug"), $response)
+        else 
+          fn:error(xs:QName("INVALID-RESPONSE"),"Invalid Response",($response))        
 };
+
 try {
    (:Initialize Interceptors:)
    let $init := interceptor:before-request()

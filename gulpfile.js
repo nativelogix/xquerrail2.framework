@@ -7,7 +7,6 @@ var rename = require('gulp-rename');
 var clean = require('gulp-clean');
 var bump = require('gulp-bump');
 var template = require('gulp-template');
-var header = require('gulp-header');
 var git = require('gulp-git');
 var gitinfo = require('gulp-gitinfo')
 var es   = require('event-stream')
@@ -17,6 +16,7 @@ var mocha = require('gulp-mocha');
 var watch = require('gulp-watch');
 var plumber = require('gulp-plumber');
 var runSequence = require('run-sequence');
+var inject = require('gulp-inject-string');
 
 var ml;
 try {
@@ -37,13 +37,13 @@ gulp.task('update-xqy', ['copy-no-xqy', 'copy-xqy', 'last-git-commit'], function
 
 gulp.task('copy-xqy', function () {
   return gulp.src(['src/main/**/*.xqy'])
-    .pipe(header(fs.readFileSync('license.txt', 'utf8'), {comment: {start: '(:', line:':', end: ':)'}}))
+    .pipe(inject.after('xquery version "1.0-ml";', '\n(:~ ' + fs.readFileSync('license.txt', 'utf8') + ' :)'))
     .pipe(gulp.dest('./dist'));
 });
 
-gulp.task('copy-no-xqy', function () {
+gulp.task('copy-no-xqy', function(){
   return gulp.src(['src/main/**/*.xsd', 'src/main/**/*.xsl'])
-    .pipe(header(fs.readFileSync('license.txt', 'utf8'), {comment: {start: '<!--', line:'', end: '-->'}}))
+    .pipe(inject.after('<?xml version="1.0" encoding="UTF-8"?>', '\n<!-- ' + fs.readFileSync('license.txt', 'utf8') + ' -->'))
     .pipe(gulp.dest('./dist'));
 });
 
@@ -113,7 +113,7 @@ gulp.task('watch-update-xqy', function()  {
   gulp.src(['src/main/**/*.xqy'])
     .pipe(watch())
     .pipe(plumber()) // This will keeps pipes working after error event
-    .pipe(header(fs.readFileSync('license.txt', 'utf8'), {comment: {start: '(:', line:':', end: ':)'}}))
+    .pipe(inject.after('xquery version "1.0-ml";', '\n(:~ ' + fs.readFileSync('license.txt', 'utf8') + ' :)'))
     .pipe(gulp.dest('./dist'));
 });
 

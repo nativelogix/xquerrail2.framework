@@ -38,6 +38,7 @@
     "gulp-watch": "^0.6.5",
     "gulp-plumber": "^0.6.2",
     "run-sequence": "^1.0.1",
-    "tough-cookie": "^0.12.1"
+    "tough-cookie": "^0.12.1",
+    "gulp-inject-string": "0.0.2"
   }
 }

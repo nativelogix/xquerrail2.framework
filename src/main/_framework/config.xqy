@@ -704,3 +704,23 @@ declare function config:controller-base-path()  as xs:string
     "@"
     )[1]
  };
+ 
+(:~
+ : Sets default global validation model for application.
+ : To enable at application enable at <application><validation>true</validation></application>
+~:)
+declare function config:validate-mode()  as xs:boolean{
+    xs:boolean((
+        config:get-config()/config:validate,
+        fn:true()
+    )[1])
+};
+(:~
+ : Returns the validation mode 
+~:)
+declare function config:application-validate-mode($application-name) as xs:boolean {
+   (
+    config:get-application($application-name)/config:validate! xs:boolean(.),
+    config:validate-mode()
+   )[1]
+};

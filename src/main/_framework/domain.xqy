@@ -71,6 +71,12 @@ declare variable $VALUE-CACHE := map:map();
 (:~
  :Casts the value as a specific type
  :)
+
+(:~
+ : Default Validation Mode
+~:)
+declare variable $DEFAULT-VALIDATE-MODE := fn:false();
+
 declare function domain:cast-value($field as element(),$value as item()*)
 {
    if(fn:not(fn:exists($value))) then ()
@@ -2501,4 +2507,25 @@ declare function domain:get-field-languages($field as element()) {
    $field/ancestor::domain:domain/domain:language,
    fn:tokenize($field/@languages,"\s"),
    "en"))
+};
+
+(:~
+ : Returns the validation mode of the model by $model/@validation
+~:)
+declare function domain:get-model-validate-mode($model) {
+   if($model/@validate) 
+   then $model/@validate/xs:boolean(.)
+   else 
+    let $app-validation := domain:get-model-application($model)/config:validate
+    return
+      if(fn:exists($app-validation))
+      then xs:boolean($app-validation)
+      else config:validate-mode()
+};
+
+(:~
+ : Returns the application of the given domain
+~:)
+declare function domain:get-model-application($model) {
+   domain:get-application($model/ancestor::domain:domain/domain:name)
 };

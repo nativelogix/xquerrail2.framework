@@ -350,9 +350,12 @@ declare function model:create(
           if ($identity) then $identity
           else model:generate-uuid()
         (: Validate the parameters before trying to build the document :)
-        let $validation :=  () (:model:validate-params($model,$params,"create"):)
-        return
-         if(fn:count($validation) > 0)
+        let $validate := domain:get-model-validate-mode($model)
+        let $validation := 
+            if($validate) 
+            then model:validate-params($model,$params,"create")
+            else ()        return
+         if($validate and fn:count($validation) > 0)
          then (:fn:error(xs:QName("VALIDATION-ERROR"), fn:concat("The document trying to be created contains validation errors"), $validation):)
            <validationErrors> {$validation}</validationErrors>
          else
@@ -605,10 +608,14 @@ declare function model:update-partial(
    return
      if($current) then
         let $build := model:recursive-build($model,$current,$params,fn:true())
-        let $validation := ()(:model:validate-params($model,$params,"update"):)
+        let $validate   := domain:get-model-validate-mode($model) 
+        let $validation := 
+            if($validate) 
+            then model:validate-params($model,$params,"update")
+            else ()
         let $computed-collections := model:build-collections(($model/domain:collection,$collections),$model,$build)
         return
-            if(fn:count($validation) > 0) then
+            if($validate and fn:count($validation) > 0) then
                 fn:error(xs:QName("VALIDATION-ERROR"), fn:concat("The document trying to be updated contains validation errors"), $validation)
             else (
                 xdmp:document-insert(

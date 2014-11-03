@@ -64,3 +64,35 @@ declare %test:case function get-model-field-test() as item()* {
   )
 };
 
+declare %test:case function model-element-order-test() as item()* {
+  let $model2 := domain:get-model("model2")
+  (: model3 has sortValue attributes :)
+  let $model3 := domain:get-model("model3")
+  let $model2-field-names := $model2/domain:element/@name/fn:string()
+  let $model3-field-names := $model3/domain:element/@name/fn:string()
+
+  let $model3-ordered-field-names :=
+      for $field in $model3/domain:element
+      order by $field/@sortValue/fn:number()
+      return $field/@name/fn:string()
+
+  let $same-length := fn:count($model2-field-names) eq fn:count($model3-field-names)
+  let $same-values :=
+      some $model2-field-name in $model2-field-names
+      satisfies
+        $model2-field-name = $model3-field-names
+  let $order-different :=
+      some $model2-field-name in $model2-field-names
+      satisfies
+        fn:index-of($model2-field-names, $model2-field-name) ne fn:index-of($model3-field-names, $model2-field-name)
+  let $order-correct :=
+      every $model3-field-name in $model3-field-names
+      satisfies
+        fn:index-of($model3-field-names, $model3-field-name) eq fn:index-of($model3-ordered-field-names, $model3-field-name)
+  return (
+    assert:true($same-length, "Models have different field lengths"),
+    assert:true($same-values, "Models have different field values"),
+    assert:true($order-different, ("Sort value didn't change order. data:" || fn:string-join($model3-field-names,', '))),
+    assert:true($order-correct, "Model fields aren't in correct order")
+  )
+};

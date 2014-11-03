@@ -722,7 +722,9 @@ declare function domain:get-domain-model(
     $extension as xs:boolean
 ) as element(domain:model)+
 {
+  xdmp:log('domain:get-domain-model: ' || fn:string-join($model-names, ", ")),
   let $domain := config:get-domain($application)
+  let $_ := xdmp:log(("domain",$domain))
   let $models :=
      for $modelName in $model-names
      let $cache-key := fn:concat($application, ":" ,$modelName)
@@ -743,22 +745,7 @@ declare function domain:get-domain-model(
                   return
                       if(fn:not($extendedDomain)) then fn:error(xs:QName("NO-EXTENDS-MODEL"),"Missing Extension Model",fn:data($model/@extends))
                       else
-                         element { fn:node-name($model) } {
-                         $model/namespace::*,
-                         $model/@*,
-                         for $f in  $extendedDomain/(domain:element | domain:container | domain:attribute| domain:triple|domain:permission|domain:navigation)
-                         return
-                            element { fn:node-name($f) } {
-                                if($model/(@namespace-uri|@namespace))
-                                then $model/(@namespace-uri|@namespace)
-                                else if($f/@namespace)
-                                then $f/@namespace
-                                else $extendedDomain/@namespace
-                                , $f/@*[. except $f/@namespace]
-                                , $f/node()
-                            }
-                        , $model/node()
-                     }
+                         domain:extend-model($model, $extendedDomain)
             else $model
          return ($extends,domain:set-model-cache($cache-key,$extends))
     return
@@ -783,26 +770,7 @@ declare function domain:compile-model(
         if(fn:not($extendedDomain)) then
           fn:error(xs:QName("NO-EXTENDS-MODEL"),"Missing Extension Model",fn:data($model/@extends))
         else
-          element { fn:node-name($model) } {
-            $model/namespace::*,
-            $model/@*[. except $model/@extends],
-            for $node in (
-                for $f in $extendedDomain/(domain:element | domain:container | domain:attribute| domain:triple | domain:permission | domain:navigation)
-                return
-                element { fn:node-name($f) } {
-                  if($model/(@namespace-uri|@namespace)) then
-                    $model/(@namespace-uri|@namespace)
-                  else if($f/@namespace) then
-                    $f/@namespace
-                  else
-                    $extendedDomain/@namespace
-                  , $f/@*[. except $f/@namespace]
-                  , $f/node()
-                },
-                $model/node())
-            order by $node/@sortValue/fn:number()
-            return $node
-          }
+          domain:extend-model($model, $extendedDomain)
     else $model
 
   let $model :=
@@ -821,6 +789,29 @@ declare function domain:compile-model(
       domain:set-model-field-defaults($model)
     }/domain:model[@name = $model/@name]
   return $model
+};
+
+declare private function domain:extend-model($model as element(domain:model), $extendedDomain as element(domain:model)?) {
+  element { fn:node-name($model) } {
+    $model/namespace::*,
+    $model/@*[. except $model/@extends],
+    for $node in (
+        for $f in $extendedDomain/(domain:element | domain:container | domain:attribute| domain:triple | domain:permission | domain:navigation)
+        return
+        element { fn:node-name($f) } {
+          if($model/(@namespace-uri|@namespace)) then
+            $model/(@namespace-uri|@namespace)
+          else if($f/@namespace) then
+            $f/@namespace
+          else
+            $extendedDomain/@namespace
+          , $f/@*[. except $f/@namespace]
+          , $f/node()
+        },
+        $model/node())
+    order by $node/@sortValue/fn:number()
+    return $node
+  }
 };
 
 declare function domain:navigation(

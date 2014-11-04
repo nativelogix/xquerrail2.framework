@@ -722,9 +722,7 @@ declare function domain:get-domain-model(
     $extension as xs:boolean
 ) as element(domain:model)+
 {
-  xdmp:log('domain:get-domain-model: ' || fn:string-join($model-names, ", ")),
   let $domain := config:get-domain($application)
-  let $_ := xdmp:log(("domain",$domain))
   let $models :=
      for $modelName in $model-names
      let $cache-key := fn:concat($application, ":" ,$modelName)

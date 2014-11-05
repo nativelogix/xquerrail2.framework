@@ -22,7 +22,7 @@ function httpGet(model, action, data, callback) {
     followRedirect: true
   };
   request(options, function(error, response) {
-    return parseXml(model, error, response, callback);
+    return parseResponse(model, error, response, callback);
   });
 };
 
@@ -34,11 +34,11 @@ function httpPost(model, action, data, callback) {
     followRedirect: true
   };
   request(options, function(error, response) {
-    return parseXml(model, error, response, callback);
+    return parseResponse(model, error, response, callback);
   });
 };
 
-function parseXml(model, error, response, callback) {
+function parseResponse(model, error, response, callback) {
   if (response.statusCode === 500) {
     error = parseError(response);
   }

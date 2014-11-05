@@ -72,7 +72,7 @@ function remove(model, data, callback) {
   httpPost(model, 'delete', data, callback);
 };
 
-describe('CRUD features', function() {
+describe('JSON CRUD features', function() {
 
   before(function(done) {
     this.timeout(5000);

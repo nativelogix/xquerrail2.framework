@@ -137,6 +137,24 @@ $ex as element(error:error)
 };
 
 
+declare %private function dispatcher:dump-request() {
+  if (request:param("debug") eq "true") then (
+  	xdmp:log(
+      (
+        "DUMP-REQUEST", 
+        text{"url", request:url()}, 
+        text{"format", request:format()}, 
+        text{"method", request:method()}, 
+        "headers", xdmp:to-json(request:get-headers()), 
+        "params", xdmp:to-json(request:params()),
+        "body", request:body()
+      ), 
+      "info"
+    )
+	)
+	else ()
+};
+
 (:~
  :  Executes a named controller using REST methods interface
  :)
@@ -149,14 +167,13 @@ declare function dispatcher:invoke-controller()
    let $controller-location       := fn:concat(config:get-application($application)/@uri,'/controller/', $controller,'-controller.xqy')
    let $controller-uri            := fn:concat(config:get-application($application)/@namespace,'/controller/', $controller)
    let $_ := xdmp:log(
-		"dispatcher:invoke-controller(): $application = " || $application ||
-		"; $controller = " || $controller ||
-		"; $action = " || $action ||
-		"; $route = " || $route ||
-		"; $controller-location = " || $controller-location ||
-		"; $controller-uri = " || $controller-uri,
-		"debug"
-	)
+  		text {
+  		  "dispatcher:invoke-controller()", "$application", $application, "$controller", $controller, "$action", $action,
+  		  "$route", $route, "$controller-location", $controller-location, "$controller-uri", $controller-uri
+  		},
+  		"debug"
+  	)
+   let $_ := dispatcher:dump-request()
    (:The Result order is as  follows: controller, extension, base:)
    let $results := 
      if(dispatcher:controller-exists($controller-location) and

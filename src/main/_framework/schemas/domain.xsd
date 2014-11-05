@@ -706,6 +706,7 @@
         <xs:documentation>Returns default orderBy for multi-occurring elements.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
+    <xs:attribute name="sortValue" type="xs:decimal"/>
     <xs:attribute name="subject" type="xs:anyURI"/>
     <xs:attribute name="predicate" type="xs:anyURI"/>
     <xs:attribute name="object" type="xs:anyURI"/>

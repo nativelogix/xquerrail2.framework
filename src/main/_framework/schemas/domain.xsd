@@ -1495,6 +1495,11 @@
         <xs:documentation>Allows element to be repeated in UI</xs:documentation>
       </xs:annotation>
     </xs:attribute>
+    <xs:attribute name="template" type="xs:string">
+      <xs:annotation>
+        <xs:documentation>Html template in UI</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
     <xs:attribute name="gridWidth" type="xs:integer">
       <xs:annotation>
         <xs:documentation>Used when creating grid/list columns in list views</xs:documentation>

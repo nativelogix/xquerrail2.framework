@@ -162,7 +162,7 @@ declare function engine:render-json($node)
       else if($is-suggestable) then ()
       else if(domain:model-exists(fn:local-name($node))) then domain:get-model(fn:local-name($node))
       else ()
-   let $_ := xdmp:log(($model,"Body:::",xdmp:describe($node)),"debug")
+   let $_ := xdmp:log(("Body:::",xdmp:describe($node)),"debug")
    return
      if($is-listable and $model) then  
          xdmp:to-json(js:o((       

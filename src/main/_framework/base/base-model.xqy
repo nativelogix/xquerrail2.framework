@@ -2301,12 +2301,18 @@ declare function model:build-params-map-from-body(
 
 declare function model:convert-to-map(
     $model as element(domain:model),
-    $current as node()
+    $current as item()
 ) {
-    map:new((
-      for $field in $model//(domain:element|domain:attribute)
-        return map:entry(domain:get-field-name-key($field), domain:get-field-value($field, $current))
-    ))
+  typeswitch($current)
+    case map:map
+      return $current
+    case element()
+      return map:new((
+        for $field in $model//(domain:element|domain:attribute)
+          return map:entry(domain:get-field-name-key($field), domain:get-field-value($field, $current))
+      ))
+    default 
+      return ()
 };
 
 (:~

@@ -629,15 +629,25 @@
         </privilege>
       </privileges>
     </role>
+    <role>
+      <role-name>xquerrail2-anonymous</role-name>
+      <description/>
+      <collections/>
+      <external-names/>
+      <role-names/>
+      <permissions/>
+      <privileges/>
+    </role>
   </roles>
   <users xmlns="http://marklogic.com/xdmp/security">
     <user>
-      <user-name>@ml.app-name-user</user-name>
+      <user-name>@ml.default-user</user-name>
       <description>A user for the @ml.app-name application</description>
       <password>@ml.appuser-password</password>
       <role-names>
         <role-names>@ml.app-role</role-names>
         <role-names>xquerrail</role-names>
+        <role-names>xquerrail2-anonymous</role-names>
       </role-names>
       <permissions/>
       <collections/>

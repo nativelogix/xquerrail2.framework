@@ -29,7 +29,7 @@ var xquerrailCommon = (function(){
     };
     request(options, function(error, response, body) {setTimeout(function(){callback(error, response, body)}, 100)});
   };
-  
+
   function login(callback) {
     var options = {
       method: 'POST',
@@ -47,12 +47,11 @@ var xquerrailCommon = (function(){
   function logout(callback) {
     var options = {
       method: 'GET',
-      url: urlBase + '/logout',
+      url: settings.urlBase + '/logout',
       followRedirect: true
     };
 
     request(options, callback);
-    // expect(response.url).to.be.empty;
   };
 
   return {
@@ -60,7 +59,8 @@ var xquerrailCommon = (function(){
     username: settings.username,
     password: settings.password,
     initialize: initialize,
-    login: login
+    login: login,
+    logout: logout
   };
 })();
 

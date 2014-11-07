@@ -23,7 +23,7 @@
   <!--  TODO: Could not find any reference of library-suffix in xquerrail2.framework  -->
   <!--    <library-suffix value="-lib"/>-->
 
-    <anonymous-user value="xquerrail2-framework-user"/>
+    <anonymous-user value="xquerrail2-anonymous-user"/>
 
 <!--    <dispatcher resource="/main/xquerrail2/_framework/dispatchers/dispatcher.web.xqy"/>-->
 <!--    <controller resource="base/base-controller.xqy"/>-->

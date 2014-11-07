@@ -15,7 +15,6 @@ function random(prefix) {
 
 function httpGet(model, action, data, callback) {
   var options = {
-    // json: true,
     method: 'POST',
     url: xquerrailCommon.urlBase + '/' + model + '/' + action + '.xml',
     qs: data,
@@ -28,7 +27,6 @@ function httpGet(model, action, data, callback) {
 
 function httpPost(model, action, data, callback) {
   var options = {
-    // json: true,
     method: 'POST',
     url: xquerrailCommon.urlBase + '/' + model + '/' + action + '.xml',
     form: data,
@@ -40,11 +38,15 @@ function httpPost(model, action, data, callback) {
 };
 
 function parseXml(model, error, response, callback) {
-  var entity = response.body;
-  parser.parseString(entity, function (err, result) {
-    entity = (result !== null)?result[model]: undefined;
-    callback(error, response, entity);
-  });
+  if (response.body != undefined) {
+    var entity = response.body;
+    parser.parseString(entity, function (err, result) {
+      entity = (result !== null && result !== undefined)?result[model]: undefined;
+      callback(error, response, entity);
+    });
+  } else {
+    callback(error, response, undefined);
+  }
 };
 
 function create(model, data, callback) {
@@ -67,13 +69,31 @@ describe('XML CRUD features', function() {
 
   before(function(done) {
     this.timeout(5000);
-    xquerrailCommon.initialize(function(error, response, body) {
-      expect(response.statusCode).to.equal(200);
+    // xquerrailCommon.initialize(function(error, response, body) {
+      // expect(response.statusCode).to.equal(200);
       done();
-    });
+    // });
   });
 
   describe('model1', function() {
+    it('user not authenticated should return 401', function(done) {
+      var model = 'model1';
+      var action = 'get';
+      var j = request.jar()
+      var _request = request.defaults({jar:j})
+      var options = {
+        method: 'GET',
+        url: xquerrailCommon.urlBase + '/' + model + '/' + action + '.xml',
+        followRedirect: true
+      };
+      _request(options, function(error, response) {
+        return parseXml(model, error, response, function(error, response, entity) {
+          expect(response.statusCode).to.equal(401);
+          done();
+        });
+      });
+    });
+
     it('should create and get new entity', function(done) {
       xquerrailCommon.login(function() {
         var id = random('model1-id');

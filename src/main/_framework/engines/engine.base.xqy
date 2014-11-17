@@ -521,6 +521,42 @@ declare function engine:transform-role($node) {
      else for $content in $rolecontent return engine:consume($content)
   )  
 };
+
+declare function engine:transform-include-ng-templates($node)
+{
+  let $template-directory := config:application-templates-path(response:application())
+  let $ng-templates := 
+    if(xdmp:modules-database() eq 0) then (
+      let $template-directory := fn:concat(xdmp:modules-root(), $template-directory)
+      for $file in xdmp:filesystem-directory($template-directory)/*:entry
+      let $filename := xs:string($file/*:filename)
+      where $file/*:type eq "file" and fn:starts-with($filename, "ng-")
+      return fn:substring($filename, 1, fn:string-length($filename) - fn:string-length(".html.xqy"))
+    )
+    else (
+      xdmp:eval('declare variable $uri as xs:string external ;
+      for $file in xdmp:directory($uri)
+        let $filename := fn:tokenize(xdmp:node-uri($file), "/")[fn:last()]
+        return 
+          if (fn:ends-with($filename, ".html.xqy")) then fn:substring-before($filename, ".html.xqy")
+          else ()
+      ',
+      (fn:QName("","uri"), $template-directory),
+         <options xmlns="xdmp:eval">
+            <database>{xdmp:modules-database()}</database>
+         </options>   
+      )
+    ) 
+   
+   return $ng-templates ! (
+      engine:transform(
+        processing-instruction{"template"} {
+          "name='" || . || "'"
+        }
+      )
+    )
+};
+
 (:
   Core processing-instructions and any other data should be handled here
 :)
@@ -540,6 +576,7 @@ declare function engine:transform($node as item())
          case processing-instruction("xsl")      return engine:transform-xsl($node)
          case processing-instruction("to-json")  return engine:transform-to-json($node)
          case processing-instruction("role")     return engine:transform-role($node)
+         case processing-instruction("include-ng-templates") return engine:transform-include-ng-templates($node)
          case processing-instruction()           return engine:transform-dynamic($node)
          case element() return
            element {fn:node-name($node)}

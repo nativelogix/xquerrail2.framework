@@ -41,7 +41,7 @@ declare %test:before-each function before-test() {
 :)
 declare %test:case function test-anonymous-user() as item()*
 {
-  assert:equal(config:anonymous-user($CONFIG), "xquerrail2-framework-user")
+  assert:equal(config:anonymous-user($CONFIG), "xquerrail2-anonymous-user")
 };
 
 declare %test:case function test-anonymous-user-by-application() as item()*

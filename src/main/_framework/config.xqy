@@ -421,6 +421,11 @@ declare function config:application-stylesheet-directory($application)
 };
 
 
+declare function config:application-templates-path($application)
+{
+  fn:concat(config:application-directory($application), "/templates/")
+};
+
 (:~
  : Gets the default anonymous user defined by the default application.
  : IF not present then returns the config:get-config()/config:anonymous-user/@value

@@ -72,7 +72,6 @@ declare function ml-security:after-request(
           return xdmp:login($user, $password)
        else if($scope//config:allow-role = $roles or $scope/config:allow-role = "*" or fn:not($scope//config:deny-role  = $roles)) then
        (
-          xdmp:log(("$roles", $roles))
           (:if(request:param("returnUrl") != "" and request:param("returnUrl"))
           then request:set-redirect(request:param("returnUrl"))
           else (),

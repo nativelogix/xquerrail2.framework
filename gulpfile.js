@@ -136,7 +136,13 @@ gulp.task('release', ['build'], function () {
   // build is complete, release the kraken!
 });
 
-gulp.task('test', ['coverage', 'lint', 'mocha', 'xray']);
+gulp.task('test', function(cb) {
+    runSequence('coverage', 'lint', 'xray', 'mocha', function() {
+        console.log('Test completed.');
+        cb();
+    });
+});
+// gulp.task('test', ['coverage', 'lint', 'mocha', 'xray']);
 // gulp.task('default', ['test', 'clean', 'build']);
 gulp.task('default', function() {
     runSequence('test', 'clean', 'build', function() {

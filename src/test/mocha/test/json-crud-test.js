@@ -74,12 +74,12 @@ function remove(model, data, callback) {
 
 describe('JSON CRUD features', function() {
 
+  this.timeout(10000);
   before(function(done) {
-    this.timeout(5000);
-    // xquerrailCommon.initialize(function(error, response, body) {
-      // expect(response.statusCode).to.equal(200);
+    xquerrailCommon.initialize(function(error, response, body) {
+      expect(response.statusCode).to.equal(200);
       done();
-    // });
+    });
   });
 
   describe('model1', function() {

@@ -10,7 +10,7 @@ import module namespace js    = "http://xquerrail.com/helper/javascript" at "../
 import module namespace response = "http://xquerrail.com/response" at "../response.xqy";
 import module namespace base = "http://xquerrail.com/model/base" at "../base/base-model.xqy";
 
-declare namespace engine         = "http://xquerrail.com/engine";
+import module namespace engine         = "http://xquerrail.com/engine" at "../engines/engine.base.xqy";
 
 declare option xdmp:output "indent=yes";
 declare option xdmp:output "method=xml";
@@ -852,9 +852,13 @@ $field
   let $format   := response:format()
   let $template := processing-instruction{"template"}{fn:concat("name='",$field/domain:ui/@template,"'")}
   let $_ := response:set-context(form:get-field-id($field))
-  let $engine := config:get-engine(response:flush())
-  let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
-  let $engine-func := xdmp:function(xs:QName("engine:transform-template"),$engine-uri)
+  (:let $engine := config:get-engine(response:flush()):)
+  let $engine := engine:supported-engine((), response:flush())
+(:  let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy"):)
+(:  let $engine-func := xdmp:function(xs:QName("engine:transform-template"),$engine-uri):)
+  let $engine-func := engine:load-function($engine/@namespace, "transform-template")
+(:  xdmp:function(xs:QName("engine:transform-template")):)
+(:  let $engine-func := xdmp:function(xs:QName("engine:transform-template"),$engine-uri):)
   return
        xdmp:apply($engine-func,$template)
 };

@@ -14,12 +14,12 @@ import module namespace config      = "http://xquerrail.com/config"      at "../
 import module namespace domain      = "http://xquerrail.com/domain" at "../domain.xqy";
 import module namespace interceptor = "http://xquerrail.com/interceptor" at "../interceptor.xqy";
 import module namespace base        = "http://xquerrail.com/controller/base" at "../base/base-controller.xqy";
+import module namespace engine      = "http://xquerrail.com/engine" at "../engines/engine.base.xqy";
 
 declare namespace dispatcher     = "http://xquerrail.com/dispatcher";
 
 declare namespace extension      = "http://xquerrail.com/controller/extension";
 declare namespace controller     = "http://xquerrail.com/controller";
-declare namespace engine         = "http://xquerrail.com/engine";
 declare namespace html           = "http://www.w3.org/1999/xhtml";
 declare namespace error          = "http://marklogic.com/xdmp/error";
 
@@ -61,15 +61,15 @@ declare function dispatcher:extension-action-exists(
   $action as xs:string
 ) as xs:boolean {
    let $location :=  config:controller-extension()/@resource
-   let $eval := 
+   let $eval :=
       fn:string(<node>import module namespace func = "http://xquerrail.com/controller/extension" at '{fn:data($location)}';
        fn:function-available("func:{$action}",0)
      </node>)
-   let $exists :=       
+   let $exists :=
         try {xdmp:eval($eval)}catch($ex){(
            if($ex//error:code = (("XDMP-IMPMODNS","SVC-FILOPN")))
            then xdmp:log(fn:concat("action-not-exist::",$location,"::",$ex//error:format-string),"debug")
-           else xdmp:rethrow() 
+           else xdmp:rethrow()
            ,fn:false()
         )}
     return (
@@ -85,15 +85,15 @@ $controller-uri,
 $controller-location,
 $controller-action
 ) as xs:boolean {
-   let $eval := 
+   let $eval :=
       <node>import module namespace func = '{$controller-uri}' at '{$controller-location}';
        fn:function-available("func:{$controller-action}",0)
      </node>
-   return      
+   return
     try {xdmp:eval($eval)}catch($ex){(
        if($ex//error:code = (("XDMP-IMPMODNS","SVC-FILOPN")))
        then xdmp:log(fn:concat("action-not-exist::",$controller-uri,"-",$controller-action,"::",$ex//error:format-string),"debug")
-       else xdmp:rethrow() 
+       else xdmp:rethrow()
        ,fn:false()
     )}
 };
@@ -124,7 +124,7 @@ $ex as element(error:error)
 ){
   let $error-map := map:map()
   let $request := if(request:request() instance of map:map) then request:request() else map:map()
-  let $_:= 
+  let $_:=
     (
      map:put($error-map,"error",$ex),
      map:put($error-map,"request",request:request()),
@@ -137,11 +137,29 @@ $ex as element(error:error)
 };
 
 
+declare %private function dispatcher:dump-request() {
+  if (request:param("debug") eq "true") then (
+  	xdmp:log(
+      (
+        "DUMP-REQUEST",
+        text{"url", request:url()},
+        text{"format", request:format()},
+        text{"method", request:method()},
+        "headers", xdmp:to-json(request:get-headers()),
+        "params", xdmp:to-json(request:params()),
+        "body", request:body()
+      ),
+      "info"
+    )
+	)
+	else ()
+};
+
 (:~
  :  Executes a named controller using REST methods interface
  :)
 declare function dispatcher:invoke-controller()
-{ 
+{
    let $application as xs:string? := (request:application(),config:default-application())[1]
    let $controller as xs:string   := (request:controller(),config:default-controller())[1]
    let $action as xs:string       := (request:action())[1]
@@ -149,23 +167,22 @@ declare function dispatcher:invoke-controller()
    let $controller-location       := fn:concat(config:get-application($application)/@uri,'/controller/', $controller,'-controller.xqy')
    let $controller-uri            := fn:concat(config:get-application($application)/@namespace,'/controller/', $controller)
    let $_ := xdmp:log(
-		"dispatcher:invoke-controller(): $application = " || $application ||
-		"; $controller = " || $controller ||
-		"; $action = " || $action ||
-		"; $route = " || $route ||
-		"; $controller-location = " || $controller-location ||
-		"; $controller-uri = " || $controller-uri,
-		"debug"
-	)
+  		text {
+  		  "dispatcher:invoke-controller()", "$application", $application, "$controller", $controller, "$action", $action,
+  		  "$route", $route, "$controller-location", $controller-location, "$controller-uri", $controller-uri
+  		},
+  		"debug"
+  	)
+   let $_ := dispatcher:dump-request()
    (:The Result order is as  follows: controller, extension, base:)
-   let $results := 
+   let $results :=
      if(dispatcher:controller-exists($controller-location) and
         dispatcher:action-exists($controller-uri,$controller-location,$action)
-     ) then 
+     ) then
         let $controller-func := xdmp:function(fn:QName($controller-uri,$action),$controller-location)
         return
            $controller-func()
-     else if(dispatcher:extension-exists() and dispatcher:extension-action-exists($action)) then 
+     else if(dispatcher:extension-exists() and dispatcher:extension-action-exists($action)) then
           let $extension-init   :=  xdmp:function(xs:QName("extension:initialize"),config:controller-extension()/@resource)
           let $extension-action :=  xdmp:function(xs:QName("extension:" || $action),config:controller-extension()/@resource)
           return (
@@ -176,9 +193,9 @@ declare function dispatcher:invoke-controller()
      else if(fn:function-available("base:" || $action )) then (
           base:initialize(request:request()),
           base:invoke($action)
-          ) 
+          )
      else fn:error(xs:QName("ACTION-NOT-EXISTS"),"The action '" || $action || "' for controller '" || $controller || "' does not exist",($action,$controller))
-    return     
+    return
           $results
 };
 
@@ -194,40 +211,36 @@ declare function dispatcher:invoke-response($response,$request)
     let $debug  := request:debug()[1]
     let $view-uri := fn:concat("/",$application,"/views/",$controller,"/",$controller,".",$action,".",$format,".xqy")
     return
-      if($response instance of map:map) then 
-        if(response:set-response($response,$request)) then 
-          if(response:is-download()) then 
+      if($response instance of map:map) then
+        if(response:set-response($response,$request)) then
+          if(response:is-download()) then
           (
             xdmp:set-response-content-type(response:content-type()),
             for $key in map:keys(response:response-headers())
             return xdmp:add-response-header($key,response:response-header($key)),
             response:body()
           )
-          else 
-            let $engine := config:get-engine($response)
-            let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
-            let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
-            let $_ := 
-            if(fn:not(dispatcher:view-exists($view-uri))) 
+          else
+            let $engine := engine:supported-engine($request, $response)
+            let $_ :=
+            if(fn:not(dispatcher:view-exists($view-uri)))
               then response:set-base(fn:true())
-              else () 
-            return xdmp:apply($engine-func,response:flush(),$request)
+              else ()
+            return engine:initialize($engine, $request, $response)
         else $response
       else
-        if($format eq "json") then 
+        if($format eq "json") then
           (:Initialize the JSON Response:)
           let $_ := response:set-response(map:map(),$request)
           let $_ := (response:set-format("json"))
           let $_ :=  (response:set-body($response))
-          let $_ := 
+          let $_ :=
             if (fn:empty($response)) then response:set-response-code(404, "Resource not found")
             else ()
           let $response := response:response()
-          let $engine := config:get-engine($response)
-          let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
-          let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
-          return xdmp:apply($engine-func,$response,$request)
-        else if($format eq "html") then 
+          let $engine := engine:supported-engine($request, $response)
+          return engine:initialize($engine, $request, $response)
+        else if($format eq "html") then
           (:Initialize the HTML Response:)
           let $_ := response:set-response(map:map(),$request)
           let $_ := (
@@ -235,83 +248,79 @@ declare function dispatcher:invoke-response($response,$request)
             response:set-template("main"),
             response:set-view($action)
           )
-          let $_ := 
+          let $_ :=
             if($action eq "get")         then response:set-view("show")
             else if($action eq "list")   then response:set-view("index")
             else if($action eq "search") then response:set-view("search")
             else response:set-action(request:action())
           let $_ :=  (response:set-body($response))
           let $response := response:response()
-          let $engine := config:get-engine($response)
-          let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
-          let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
-          return xdmp:apply($engine-func,$response,$request)
+          let $engine := engine:supported-engine($request, $response)
+          return engine:initialize($engine, $request, $response)
              (:Check to see if the XML has a view and if so use it:)
         else if (fn:empty($response)) then
           (
           let $_ := response:set-response-code(404, "Resource not found")
           let $response := response:response()
-          let $engine := config:get-engine($response)
-          let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
-          let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
-          return xdmp:apply($engine-func,$response,$request)
+          let $engine := engine:supported-engine($request, $response)
+          return engine:initialize($engine, $request, $response)
           )
-        else if(dispatcher:view-exists($view-uri)) then 
+        else if(dispatcher:view-exists($view-uri)) then
             let $_ := response:set-response(response:response(),$request)
             let $_ :=  (response:set-body($response))
-            let $_ :=  if(response:view()) 
-                       then ()
-                       else (response:set-view($action)) 
+            let $_ :=  
+              if(response:view()) then ()
+              else (response:set-view($action))
             let $response := response:response()
-            let $engine := config:get-engine($response)
-            let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
-            let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
-            return
-                $engine-func($response,$request)
+            let $engine := engine:supported-engine($request, $response)
+            return engine:initialize($engine, $request, $response)
         else if(fn:exists($response)) then (xdmp:log(("NO VIEW",$view-uri),"debug"), $response)
-        else 
-          fn:error(xs:QName("INVALID-RESPONSE"),"Invalid Response",($response))        
+        else
+          fn:error(xs:QName("INVALID-RESPONSE"),"Invalid Response",($response))
 };
 
 try {
-   (:Initialize Interceptors:)
-   let $init := interceptor:before-request()
-   return
-       if(fn:normalize-space(request:redirect()) ne "" and fn:exists(request:redirect()))
-       then  (
-         xdmp:redirect-response(request:redirect()),
-         xdmp:log(xdmp:log(string-join(("dispatcher::after-request::[",request:redirect(),"]"),""),"debug"))
-       )  
-       else 
-         let $request := request:parse($init)
-         let $request  := interceptor:after-request(request:request())
-         return
-          if (response:has-error()) then
-            fn:error(xs:QName("RESPONSE-HAS-ERROR"))
-           else if(request:redirect()) then xdmp:redirect-response(request:redirect())
-           else 
-               let $response := 
-                  if(fn:normalize-space(request:redirect()) ne ""  and fn:exists(request:redirect()))
-                  then xdmp:redirect-response(request:redirect())
-                  else  
-                     let $response := dispatcher:invoke-controller()
-                     let $response := interceptor:before-response($request,$response)
-                     let $response :=  
-                        if(request:debug()) then (
-                            response:set-content-type("text/xml"),
-                            <debug>
-                                <request>{request:request()}</request>
-                                <response>{response:flush()}</response>
-                            </debug>
-                        ) else 
-                           if($response instance of element(html:html)) 
-                           then $response 
-                           else dispatcher:invoke-response($response,$request)
-               let $response :=  interceptor:after-response(request:request(),$response)
-         return
-           if(response:redirect()) then xdmp:redirect-response(response:redirect())
-           else $response
-   return  $response
+  (:Initialize Interceptors:)
+  let $init := interceptor:before-request()
+  return
+    if(fn:normalize-space(request:redirect()) ne "" and fn:exists(request:redirect())) then  (
+      xdmp:redirect-response(request:redirect()),
+      xdmp:log(xdmp:log(string-join(("dispatcher::after-request::[",request:redirect(),"]"),""),"debug"))
+    )
+    else
+      let $request := request:parse($init)
+      let $request  := interceptor:after-request(request:request())
+      return
+        if (response:has-error()) then
+          fn:error(xs:QName("RESPONSE-HAS-ERROR"))
+        else if(request:redirect()) then
+          xdmp:redirect-response(request:redirect())
+        else if(response:response-code() and response:response-code()[1] >= 400) then
+          xdmp:set-response-code(response:response-code()[1], response:response-code()[2])
+        else
+          let $response :=
+            if(fn:normalize-space(request:redirect()) ne ""  and fn:exists(request:redirect())) then
+              xdmp:redirect-response(request:redirect())
+            else
+              let $response := dispatcher:invoke-controller()
+              let $response := interceptor:before-response($request,$response)
+              let $response :=
+                if(request:debug()) then (
+                  response:set-content-type("text/xml"),
+                  <debug>
+                    <request>{request:request()}</request>
+                    <response>{response:flush()}</response>
+                  </debug>
+                )
+                else if($response instance of element(html:html)) then
+                  $response
+                else dispatcher:invoke-response($response,$request)
+              let $response :=  interceptor:after-response(request:request(),$response)
+              return
+                if(response:redirect()) then
+                  xdmp:redirect-response(response:redirect())
+                else $response
+              return  $response
 } catch($ex) {
-   dispatcher:error($ex)
+  dispatcher:error($ex)
 }

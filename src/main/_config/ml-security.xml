@@ -4,12 +4,12 @@
     <!-- anonymous should be set in _config/config.xml -->
     <!-- <anonymous-user value="anonymous"/> -->
     <scope context="app-test:base:login">
-        <allow-role>anonymous</allow-role>
+        <allow-role>xquerrail2-anonymous</allow-role>
     </scope>
     <scope context="app-test:base:logout">
-        <deny-role>anonymous</deny-role>
+        <deny-role>xquerrail2-anonymous</deny-role>
     </scope>
     <scope context="*">
-        <deny-role>anonymous</deny-role>
+        <deny-role>xquerrail2-anonymous</deny-role>
     </scope>
 </config>

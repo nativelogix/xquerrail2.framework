@@ -350,12 +350,9 @@ declare function model:create(
           if ($identity) then $identity
           else model:generate-uuid()
         (: Validate the parameters before trying to build the document :)
-        let $validate := domain:get-model-validate-mode($model)
-        let $validation := 
-            if($validate) 
-            then model:validate-params($model,$params,"create")
-            else ()        return
-         if($validate and fn:count($validation) > 0)
+        let $validation := model:validate-params($model,$params,"create")
+        return
+         if(fn:count($validation) > 0)
          then (:fn:error(xs:QName("VALIDATION-ERROR"), fn:concat("The document trying to be created contains validation errors"), $validation):)
            <validationErrors> {$validation}</validationErrors>
          else
@@ -608,14 +605,10 @@ declare function model:update-partial(
    return
      if($current) then
         let $build := model:recursive-build($model,$current,$params,fn:true())
-        let $validate   := domain:get-model-validate-mode($model) 
-        let $validation := 
-            if($validate) 
-            then model:validate-params($model,$params,"update")
-            else ()
+        let $validation := model:validate-params($model,$params,"update")
         let $computed-collections := model:build-collections(($model/domain:collection,$collections),$model,$build)
         return
-            if($validate and fn:count($validation) > 0) then
+            if(fn:count($validation) > 0) then
                 fn:error(xs:QName("VALIDATION-ERROR"), fn:concat("The document trying to be updated contains validation errors"), $validation)
             else (
                 xdmp:document-insert(
@@ -2138,6 +2131,8 @@ declare  function model:get-application-reference($field,$params){
 declare function model:validate-params($model as element(domain:model), $params as item()*,$mode as xs:string)
 as element(validationError)*
 {
+  if (fn:not(domain:model-validation-enabled($model))) then ()
+  else
    let $unique-constraints := domain:get-model-unique-constraint-fields($model)
    let $unique-search := domain:get-model-unique-constraint-query($model,$params,$mode)
    return
@@ -2308,12 +2303,18 @@ declare function model:build-params-map-from-body(
 
 declare function model:convert-to-map(
     $model as element(domain:model),
-    $current as node()
+    $current as item()
 ) {
-    map:new((
-      for $field in $model//(domain:element|domain:attribute)
-        return map:entry(domain:get-field-name-key($field), domain:get-field-value($field, $current))
-    ))
+  typeswitch($current)
+    case map:map
+      return $current
+    case element()
+      return map:new((
+        for $field in $model//(domain:element|domain:attribute)
+          return map:entry(domain:get-field-name-key($field), domain:get-field-value($field, $current))
+      ))
+    default 
+      return ()
 };
 
 (:~

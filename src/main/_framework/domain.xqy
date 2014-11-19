@@ -977,6 +977,12 @@ declare function domain:set-field-attributes($field as element()) as attribute()
     )
 };
 
+declare function domain:model-validation-enabled(
+  $model as element(domain:model)
+) as xs:boolean {
+  fn:false()
+};
+
 (:~
  : Returns a list of all defined controllers for a given application domain
  : @param $application-name - application domain name

@@ -1,6 +1,6 @@
 xquery version "1.0-ml";
 
-module namespace base = "http://xquerrail.com/engine";
+module namespace json-engine = "http://xquerrail.com/engine/json";
 
 import module namespace engine  = "http://xquerrail.com/engine" at "engine.base.xqy";
 import module namespace config = "http://xquerrail.com/config" at "../config.xqy";
@@ -23,8 +23,8 @@ declare option xdmp:output "method=xml";
 (:~
  : You initialize your variables
  :)
-declare variable $request := map:map() ;
-declare variable $response := map:map();
+declare variable $REQUEST := map:map() ;
+declare variable $RESPONSE := map:map();
 declare variable $context := map:map();
 
 (:~
@@ -33,7 +33,7 @@ declare variable $context := map:map();
  :)
 declare variable $custom-engine-tags as xs:QName*:=
 (
-  fn:QName("engine","to-json")
+  fn:QName("json-engine","to-json")
 );
 (:Set your engines custom transformer:)
 declare variable $custom-transform-function :=
@@ -41,11 +41,19 @@ declare variable $custom-transform-function :=
      xs:QName("engine:custom-transform"),
      "engine.json.xqy"
 );
+declare function json-engine:is-supported(
+  $request,
+  $response
+) as xs:boolean {
+  let $_ := response:initialize($response)
+  return (response:format() eq "json")
+};
+
 (:~
  : The Main Controller will call your initialize method
  : and register your engine with the engine.base.xqy
  :)
-declare function engine:initialize($_response,$_request){
+declare function json-engine:initialize($_request,$_response){
     (
       let $init :=
       (
@@ -55,17 +63,17 @@ declare function engine:initialize($_response,$_request){
            engine:register-tags($custom-engine-tags)
       )
       return
-       engine:render()
+       json-engine:render()
     )
 };
 
-declare function engine:get-view-uri($response) {
+declare function json-engine:get-view-uri($response) {
    if(response:base())
    then fn:concat("../base/views/base.",response:action(),".json.xqy")
    else fn:concat("/",request:application(),"/views/", request:controller(),"/",request:controller(), ".", response:view(),".json.xqy")
 };
 
-declare function engine:render-search-results($node) {
+declare function json-engine:render-search-results($node) {
     js:o((
       js:entry("response",js:o((
             js:kv("page",$node/@page),
@@ -148,7 +156,7 @@ declare function engine:render-search-results($node) {
     ))
   ))
 };
-declare function engine:render-json($node)
+declare function json-engine:render-json($node)
 {
    let $is-listable := $node instance of element(list)
    let $is-lookup   := $node instance of element(lookups)
@@ -162,7 +170,6 @@ declare function engine:render-json($node)
       else if($is-suggestable) then ()
       else if(domain:model-exists(fn:local-name($node))) then domain:get-model(fn:local-name($node))
       else ()
-   let $_ := xdmp:log(("Body:::",xdmp:describe($node)),"debug")
    return
      if($is-listable and $model) then
          xdmp:to-json(js:o((
@@ -188,7 +195,7 @@ declare function engine:render-json($node)
              ))))
           )))
      else if($is-searchable) then
-        engine:render-search-results($node)
+        json-engine:render-search-results($node)
      else if($is-suggestable) then
         xdmp:to-json(js:o((
             js:e("suggest", js:a($node/* ! fn:string(.)))
@@ -205,7 +212,7 @@ declare function engine:render-json($node)
   It is important that you only handle your custom tags and
   any content that is required to be consumed by your tags
  :)
-declare function engine:custom-transform($node as item())
+declare function json-engine:custom-transform($node as item())
 {
    $node
 };
@@ -215,7 +222,7 @@ declare function engine:custom-transform($node as item())
  : to initialize any specific response settings and
  : and start the rendering process
  :)
-declare function engine:render()
+declare function json-engine:render()
 {
    if(response:redirect())
    then xdmp:redirect-response(response:redirect())
@@ -238,7 +245,7 @@ declare function engine:render()
      return
         if(fn:exists($view))
         then  xdmp:to-json(if($view instance of json:object or $view instance of json:array) then $view else json:object($view))
-        else if(fn:exists(response:body())) then  engine:render-json(response:body())
+        else if(fn:exists(response:body())) then  json-engine:render-json(response:body())
         else ()
    )
 };

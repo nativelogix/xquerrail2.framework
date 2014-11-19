@@ -14,12 +14,12 @@ import module namespace config      = "http://xquerrail.com/config"      at "../
 import module namespace domain      = "http://xquerrail.com/domain" at "../domain.xqy";
 import module namespace interceptor = "http://xquerrail.com/interceptor" at "../interceptor.xqy";
 import module namespace base        = "http://xquerrail.com/controller/base" at "../base/base-controller.xqy";
+import module namespace engine      = "http://xquerrail.com/engine" at "../engines/engine.base.xqy";
 
 declare namespace dispatcher     = "http://xquerrail.com/dispatcher";
 
 declare namespace extension      = "http://xquerrail.com/controller/extension";
 declare namespace controller     = "http://xquerrail.com/controller";
-declare namespace engine         = "http://xquerrail.com/engine";
 declare namespace html           = "http://www.w3.org/1999/xhtml";
 declare namespace error          = "http://marklogic.com/xdmp/error";
 
@@ -221,14 +221,12 @@ declare function dispatcher:invoke-response($response,$request)
             response:body()
           )
           else
-            let $engine := config:get-engine($response)
-            let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
-            let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
+            let $engine := engine:supported-engine($request, $response)
             let $_ :=
             if(fn:not(dispatcher:view-exists($view-uri)))
               then response:set-base(fn:true())
               else ()
-            return xdmp:apply($engine-func,response:flush(),$request)
+            return engine:initialize($engine, $request, $response)
         else $response
       else
         if($format eq "json") then
@@ -240,10 +238,8 @@ declare function dispatcher:invoke-response($response,$request)
             if (fn:empty($response)) then response:set-response-code(404, "Resource not found")
             else ()
           let $response := response:response()
-          let $engine := config:get-engine($response)
-          let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
-          let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
-          return xdmp:apply($engine-func,$response,$request)
+          let $engine := engine:supported-engine($request, $response)
+          return engine:initialize($engine, $request, $response)
         else if($format eq "html") then
           (:Initialize the HTML Response:)
           let $_ := response:set-response(map:map(),$request)
@@ -259,32 +255,25 @@ declare function dispatcher:invoke-response($response,$request)
             else response:set-action(request:action())
           let $_ :=  (response:set-body($response))
           let $response := response:response()
-          let $engine := config:get-engine($response)
-          let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
-          let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
-          return xdmp:apply($engine-func,$response,$request)
+          let $engine := engine:supported-engine($request, $response)
+          return engine:initialize($engine, $request, $response)
              (:Check to see if the XML has a view and if so use it:)
         else if (fn:empty($response)) then
           (
           let $_ := response:set-response-code(404, "Resource not found")
           let $response := response:response()
-          let $engine := config:get-engine($response)
-          let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
-          let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
-          return xdmp:apply($engine-func,$response,$request)
+          let $engine := engine:supported-engine($request, $response)
+          return engine:initialize($engine, $request, $response)
           )
         else if(dispatcher:view-exists($view-uri)) then
             let $_ := response:set-response(response:response(),$request)
             let $_ :=  (response:set-body($response))
-            let $_ :=  if(response:view())
-                       then ()
-                       else (response:set-view($action))
+            let $_ :=  
+              if(response:view()) then ()
+              else (response:set-view($action))
             let $response := response:response()
-            let $engine := config:get-engine($response)
-            let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy")
-            let $engine-func := xdmp:function(xs:QName("engine:initialize"),$engine-uri)
-            return
-                $engine-func($response,$request)
+            let $engine := engine:supported-engine($request, $response)
+            return engine:initialize($engine, $request, $response)
         else if(fn:exists($response)) then (xdmp:log(("NO VIEW",$view-uri),"debug"), $response)
         else
           fn:error(xs:QName("INVALID-RESPONSE"),"Invalid Response",($response))

@@ -127,7 +127,7 @@ declare %test:case function test-default-controller() as item()*
 
 declare %test:case function test-default-engine() as item()*
 {
-  assert:equal(config:default-engine(), "engine.html")
+  assert:equal(config:default-engine(), $config:DEFAULT-ENGINES-CONFIGURATION/config:engines/config:engine[1])
 };
 
 declare %test:case function test-default-format() as item()*

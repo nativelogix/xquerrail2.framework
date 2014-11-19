@@ -1,6 +1,6 @@
 xquery version "1.0-ml";
 
-module namespace base = "http://xquerrail.com/engine";
+module namespace html-engine = "http://xquerrail.com/engine/html";
     
 import module namespace engine  = "http://xquerrail.com/engine"     at "engine.base.xqy";
 import module namespace config = "http://xquerrail.com/config"      at "../config.xqy";
@@ -22,7 +22,7 @@ declare option xdmp:ouput "omit-xml-declaration=yes";
 
 (:Internal Holders for request, response and context:)
 declare variable $request := map:map() ;
-declare variable $response := map:map();
+declare variable $RESPONSE := map:map();
 declare variable $context := map:map();
 
 (:~
@@ -31,41 +31,49 @@ declare variable $context := map:map();
 declare variable $engine-tags := 
 (  
 
-     xs:QName("engine:title"),
-     xs:QName("engine:include-metas"),
-     xs:QName("engine:include-http-metas"),
-     xs:QName("engine:application-script"),
-     xs:QName("engine:application-stylesheet"),
-     xs:QName("engine:controller-script"),
-     xs:QName("engine:controller-stylesheet"),
-     xs:QName("engine:controller-list"),
-     xs:QName("engine:flash-message"),
-     xs:QName("engine:resource"),
-     xs:QName("engine:javascript-include"),
-     xs:QName("engine:stylesheet-include"),
-     xs:QName("engine:resource-include"),
-     xs:QName("engine:image-tag"),
-     xs:QName("engine:controller-link"),
-     xs:QName("engine:grid"),
-     xs:QName("engine:grid.column"),
-     xs:QName("engine:form")
+     xs:QName("html-engine:title"),
+     xs:QName("html-engine:include-metas"),
+     xs:QName("html-engine:include-http-metas"),
+     xs:QName("html-engine:application-script"),
+     xs:QName("html-engine:application-stylesheet"),
+     xs:QName("html-engine:controller-script"),
+     xs:QName("html-engine:controller-stylesheet"),
+     xs:QName("html-engine:controller-list"),
+     xs:QName("html-engine:flash-message"),
+     xs:QName("html-engine:resource"),
+     xs:QName("html-engine:javascript-include"),
+     xs:QName("html-engine:stylesheet-include"),
+     xs:QName("html-engine:resource-include"),
+     xs:QName("html-engine:image-tag"),
+     xs:QName("html-engine:controller-link"),
+     xs:QName("html-engine:grid"),
+     xs:QName("html-engine:grid.column"),
+     xs:QName("html-engine:form")
      (:xs:QName("engine:form.field"):)
 );
+
+declare function html-engine:is-supported(
+  $request,
+  $response
+) as xs:boolean {
+  let $_ := response:initialize($response)
+  return (response:format() eq "html")
+};
 
 (:~
  : Initialize the engine passing the request and response for the given object.
 ~:)
-declare function engine:initialize($resp,$req){ 
+declare function html-engine:initialize($request,$response) {
     (
       let $init := 
       (
-           response:initialize($resp),
-           xdmp:set($response,$resp),
+           response:initialize($response),
+           xdmp:set($RESPONSE,$response),
            engine:set-engine-transformer(xdmp:function(xs:QName("engine:custom-transform"),"engine.html.xqy")),
            engine:register-tags($engine-tags)
       )
       return
-       engine:render()
+       html-engine:render()
     )
 };
 (:~
@@ -82,7 +90,7 @@ declare variable $xhtml-1.1 :=          '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTM
 (:~
  : Returns a <meta/> element for use in http header
 ~:)
-declare function engine:transform-include_metas($node as node())
+declare function html-engine:transform-include_metas($node as node())
 {
   response:metas()
 };
@@ -90,7 +98,7 @@ declare function engine:transform-include_metas($node as node())
 (:~
  :  Renders out HTTP meta elements to header
 ~:)
-declare function engine:transform-http_metas($node as node())
+declare function html-engine:transform-http_metas($node as node())
 {
   response:httpmetas()
 };
@@ -99,13 +107,13 @@ declare function engine:transform-http_metas($node as node())
  : Custom Tag for rendering Label or Title of Controller.  This is set using the
  : response:set-title("MY Title") function during controller invocation
 ~:)
-declare function engine:transform-title($node as node())
+declare function html-engine:transform-title($node as node())
 {
    response:title()
 };
 
-declare function engine:resource-file-exists($path as xs:string) as xs:boolean {
-  (config:property("ignore-missing-resource", "true") eq "true") or base:module-file-exists($path)
+declare function html-engine:resource-file-exists($path as xs:string) as xs:boolean {
+  (config:property("ignore-missing-resource", "true") eq "true") or engine:module-file-exists($path)
 };
 
 (:~
@@ -113,7 +121,7 @@ declare function engine:resource-file-exists($path as xs:string) as xs:boolean {
  : script is defined in the template the system will check to see if the
  : file exists on the system before rendering any output
 ~:)
-declare function engine:transform-controller-script($node)
+declare function html-engine:transform-controller-script($node)
 {
   let $script-directory := config:application-script-directory(response:application())
   let $script-uri := 
@@ -136,7 +144,7 @@ declare function engine:transform-controller-script($node)
  : script is defined in the template the system will check to see if the
  : file exists on the system before rendering any output
 ~:)
-declare function engine:transform-controller-stylesheet($node)
+declare function html-engine:transform-controller-stylesheet($node)
 {
   let $stylesheet-directory := config:application-stylesheet-directory(response:application())
   let $stylesheet-uri := fn:concat($stylesheet-directory,if(fn:ends-with($stylesheet-directory,"/")) then () else "/",response:controller(),".css")
@@ -155,7 +163,7 @@ declare function engine:transform-controller-stylesheet($node)
  : script is defined in the template the system will check to see if the
  : file exists on the system before rendering any output
 ~:)
-declare function engine:transform-application-script($node)
+declare function html-engine:transform-application-script($node)
 {
   let $script-directory := config:application-script-directory(response:application())
   let $script-uri := 
@@ -164,9 +172,9 @@ declare function engine:transform-application-script($node)
       if(fn:ends-with($script-directory,"/")) then () else "/",
       response:application(),".js"
     )
-  let $_ := xdmp:log(($script-uri, engine:resource-file-exists($script-uri)), "debug")
+  let $_ := xdmp:log(($script-uri, html-engine:resource-file-exists($script-uri)), "debug")
   return 
-  if(response:controller() ne "" and engine:resource-file-exists($script-uri)) 
+  if(response:controller() ne "" and html-engine:resource-file-exists($script-uri)) 
   then element script {
           attribute type{"text/javascript"},
           attribute src {$script-uri},
@@ -179,7 +187,7 @@ declare function engine:transform-application-script($node)
  : script is defined in the template the system will check to see if the
  : file exists on the system before rendering any output
 ~:)
-declare function engine:transform-application-stylesheet($node)
+declare function html-engine:transform-application-stylesheet($node)
 {
   let $stylesheet-directory := config:application-stylesheet-directory(response:application())
   let $stylesheet-uri := 
@@ -187,7 +195,7 @@ declare function engine:transform-application-stylesheet($node)
         if(fn:ends-with($stylesheet-directory,"/")) 
         then () else "/",response:application(),".css")
    return 
-  if(response:controller() ne "" and engine:resource-file-exists($stylesheet-uri))  
+  if(response:controller() ne "" and html-engine:resource-file-exists($stylesheet-uri))  
   then element link {
           attribute type{"text/css"},
           attribute href {$stylesheet-uri},
@@ -201,7 +209,7 @@ declare function engine:transform-application-stylesheet($node)
  : script is defined in the template the system will check to see if the
  : file exists on the system before rendering any output
 ~:)
-declare function engine:transform-javascript-include($node)
+declare function html-engine:transform-javascript-include($node)
 {
   let $script-directory := config:resource-directory() 
   let $resource := fn:data($node) ! fn:replace(.,'&quot;','')  ! fn:normalize-space(.)
@@ -214,7 +222,7 @@ declare function engine:transform-javascript-include($node)
         if(fn:ends-with($script-directory,"/")) then () else "/",
         ".js")
   return 
-  if(engine:resource-file-exists($script-uri)) 
+  if(html-engine:resource-file-exists($script-uri)) 
   then element script {
           attribute type{"text/javascript"},
           attribute src {$script-uri},
@@ -225,7 +233,7 @@ declare function engine:transform-javascript-include($node)
 (:~
  :  Creates a jqGrid Control based on the columns specified
  :)
-declare function engine:transform-grid($node) {
+declare function html-engine:transform-grid($node) {
    let $gridoptions  := xdmp:value("<grid " || fn:data($node) || "/>")
    let $gridender    := $node/following-sibling::processing-instruction("endgrid")
    let $gridcolumns  := $node/following-sibling::processing-instruction("grid.column")[. >> $node]
@@ -291,7 +299,7 @@ declare function engine:transform-grid($node) {
         ))
    let $script := 
        <script type="text/javascript">
-        {form:context($response)}
+        {form:context($RESPONSE)}
         var _id = null;
         var toolbarMode = {$editButtons};
         /*initialize your grid model*/
@@ -328,7 +336,7 @@ declare function engine:transform-grid($node) {
 (:~
  : Engine Transform Form
 ~:)
-declare function engine:transform-form($node  as processing-instruction("form")) {
+declare function html-engine:transform-form($node  as processing-instruction("form")) {
   let $form := xdmp:value("<form "||fn:data($node)|| " />")
   let $endform := $node/following-sibling::processing-instruction("endform")
   let $model :=
@@ -363,7 +371,7 @@ declare function engine:transform-form($node  as processing-instruction("form"))
  : script is defined in the template the system will check to see if the
  : file exists on the system before rendering any output
 ~:)
-declare function engine:transform-stylesheet-include($node)
+declare function html-engine:transform-stylesheet-include($node)
 {
   let $resource := fn:data($node) ! fn:replace(.,"&quot;","") ! fn:normalize-space(.)
   let $stylesheet-directory :=  config:resource-directory() 
@@ -374,7 +382,7 @@ declare function engine:transform-stylesheet-include($node)
         config:property("css-path"),
         $resource,".css")
    return 
-  if(engine:resource-file-exists($stylesheet-uri))  
+  if(html-engine:resource-file-exists($stylesheet-uri))  
   then element link {
           attribute type{"text/css"},
           attribute href {$stylesheet-uri},
@@ -383,7 +391,7 @@ declare function engine:transform-stylesheet-include($node)
           }
   else fn:error(xs:QName("INCLUDE-ERROR"),"Invalid path:" || $stylesheet-uri)
 };
-declare function engine:transform-image-tag($node)
+declare function html-engine:transform-image-tag($node)
 {
   let $resource := fn:data($node) ! fn:replace(.,"&quot;","") ! fn:normalize-space(.)
   let $image-directory :=  config:resource-directory() 
@@ -394,7 +402,7 @@ declare function engine:transform-image-tag($node)
         "images/",
         $resource,".css")
    return 
-  if(engine:resource-file-exists($image-uri))  
+  if(html-engine:resource-file-exists($image-uri))  
   then element img {
           attribute src {$image-uri},
           text{""}
@@ -406,7 +414,7 @@ declare function engine:transform-image-tag($node)
  : script is defined in the template the system will check to see if the
  : file exists on the system before rendering any output
 ~:)
-declare function engine:transform-resource-include($node)
+declare function html-engine:transform-resource-include($node)
 {
   let $resource := fn:data($node) ! fn:replace(.,"&quot;","") ! fn:normalize-space(.)
   let $resource-directory :=  config:resource-directory() 
@@ -438,7 +446,7 @@ declare function engine:transform-resource-include($node)
  :  This can be used during app generation to quickly test
  :  New controllers. 
  :)
-declare function engine:transform-controller-list($node)
+declare function html-engine:transform-controller-list($node)
 {
   let $attributes := xdmp:value(fn:concat("<attributes ", fn:data($node),"/>"))
   return
@@ -467,12 +475,12 @@ declare function engine:transform-controller-list($node)
  :  This can be used during app generation to quickly test
  :  New controllers. 
  :)
-declare function engine:transform-flash-message($node)
+declare function html-engine:transform-flash-message($node)
 {
    response:flash(fn:data($node))
 };
 
-declare function engine:transform-controller-link($node) {
+declare function html-engine:transform-controller-link($node) {
  let $attributes := xdmp:value(fn:concat("<attributes ", fn:data($node),"/>"))
  let $controller := $attributes/@controller
  let $action := ($attributes/@action,"index")[1]
@@ -491,7 +499,7 @@ declare function engine:transform-controller-link($node) {
  : If the redirect does not map to an existing route then 
  : will throw invalid redirect error.
 ~:)
-declare function engine:redirect($path)
+declare function html-engine:redirect($path)
 {
      let $controller := response:controller()
      let $action     := $path
@@ -509,10 +517,10 @@ declare function engine:redirect($path)
 (:~
  : Renders the HTML response.
 ~:)
-declare function engine:render()
+declare function html-engine:render()
 {
    if(response:redirect()) 
-   then engine:redirect(response:redirect())
+   then html-engine:redirect(response:redirect())
    else 
    (
      (:Set the response content type:)
@@ -528,7 +536,7 @@ declare function engine:render()
      if(response:partial()) 
      then engine:render-view()
      else if(response:template()) 
-     then engine:render-template($response)
+     then engine:render-template($RESPONSE)
      else if(response:view())
      then engine:render-view()
      else if(response:body()) 
@@ -540,28 +548,28 @@ declare function engine:render()
  : Custom Transformer handles HTML specific templates and
  : Tags.
 ~:)
-declare function engine:custom-transform($node as node())
+declare function html-engine:custom-transform($node as node())
 {  
    if(engine:visited($node))
    then  ()    
    else(
        typeswitch($node)
-         case processing-instruction("title") return engine:transform-title($node)
-         case processing-instruction("include-http-metas") return engine:transform-http_metas($node)
-         case processing-instruction("include-metas") return engine:transform-include_metas($node)
-         case processing-instruction("javascript-include") return engine:transform-javascript-include($node)
-         case processing-instruction("stylesheet-include") return engine:transform-stylesheet-include($node)
-         case processing-instruction("resource-include") return engine:transform-resource-include($node)
-         case processing-instruction("image-tag") return engine:transform-image-tag($node)
-         case processing-instruction("controller-script") return engine:transform-controller-script($node)
-         case processing-instruction("controller-stylesheet") return engine:transform-controller-stylesheet($node)
-         case processing-instruction("controller-list") return engine:transform-controller-list($node)
-         case processing-instruction("controller-link") return engine:transform-controller-link($node)
-         case processing-instruction("flash-message") return engine:transform-flash-message($node)
-         case processing-instruction("grid")   return engine:transform-grid($node)
-         case processing-instruction("application-script") return engine:transform-application-script($node)
-         case processing-instruction("application-stylesheet") return engine:transform-application-stylesheet($node)
-         case processing-instruction("form") return engine:transform-form($node)    
+         case processing-instruction("title") return html-engine:transform-title($node)
+         case processing-instruction("include-http-metas") return html-engine:transform-http_metas($node)
+         case processing-instruction("include-metas") return html-engine:transform-include_metas($node)
+         case processing-instruction("javascript-include") return html-engine:transform-javascript-include($node)
+         case processing-instruction("stylesheet-include") return html-engine:transform-stylesheet-include($node)
+         case processing-instruction("resource-include") return html-engine:transform-resource-include($node)
+         case processing-instruction("image-tag") return html-engine:transform-image-tag($node)
+         case processing-instruction("controller-script") return html-engine:transform-controller-script($node)
+         case processing-instruction("controller-stylesheet") return html-engine:transform-controller-stylesheet($node)
+         case processing-instruction("controller-list") return html-engine:transform-controller-list($node)
+         case processing-instruction("controller-link") return html-engine:transform-controller-link($node)
+         case processing-instruction("flash-message") return html-engine:transform-flash-message($node)
+         case processing-instruction("grid")   return html-engine:transform-grid($node)
+         case processing-instruction("application-script") return html-engine:transform-application-script($node)
+         case processing-instruction("application-stylesheet") return html-engine:transform-application-stylesheet($node)
+         case processing-instruction("form") return html-engine:transform-form($node)    
          case processing-instruction() return engine:transform($node) 
          default return engine:transform($node)
      )    

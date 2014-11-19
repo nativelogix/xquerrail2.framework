@@ -26,6 +26,17 @@ declare option xdmp:mapping "false";
  : Defines the default base path for engines
  :)
 declare variable $DEFAULT-ENGINE-PATH      := fn:concat(config:framework-path(), "/engines");
+
+declare variable $DEFAULT-ENGINES-CONFIGURATION :=
+  <config xmlns="http://xquerrail.com/config" xmlns:engine="http://xquerrail.com/engine">
+    <engines>
+      <engine format="html" namespace="http://xquerrail.com/engine/html" uri="{$DEFAULT-ENGINE-PATH || '/engine.html.xqy'}"/>
+      <engine format="json" namespace="http://xquerrail.com/engine/json" uri="{$DEFAULT-ENGINE-PATH || '/engine.json.xqy'}"/>
+      <engine format="xml" namespace="http://xquerrail.com/engine/xml" uri="{$DEFAULT-ENGINE-PATH || '/engine.xml.xqy'}"/>
+    </engines>
+  </config>
+;
+
 (:~
  : Defines the default base path for all interceptors
  :)
@@ -528,34 +539,32 @@ declare function config:get-route-module() {
    )[1]
 };
 
-(:~
- : Returns the engine for processing requests satisfying the response:format()
- : If no format matching an engine is found then the config:get-config()/config:default-engine/@value is returned
- :)
-declare function config:get-engine($response as map:map)
-{
-   let $_ := response:initialize($response)
-   return
-     if(response:format() eq "html")
-     then "engine.html"
-     else if(response:format() eq "xml")
-     then "engine.xml"
-     else if(response:format() eq "json")
-     then "engine.json"
-     else config:default-engine()(:fn:string(config:get-config()/config:default-engine/@value):)
+declare function config:get-engines-configuration(
+) as element (config:config) {
+  try {
+    config:get-resource(config:resolve-config-path("engines.xml"))
+  } catch ($exception) {
+    $DEFAULT-ENGINES-CONFIGURATION
+  }
+};
+
+declare function config:get-engines (
+) as element(config:engine)* {
+  config:get-engines-configuration()/config:engines/config:engine
+};
+
+declare function config:get-engine-extensions (
+) as element(config:engine)* {
+  config:get-engines-configuration()/config:extensions/config:engine
 };
 
 (:~
- : Returns the default engine from the configuration at
- : config:get-config()/config:default-engine/@value
- : or "engine.html"
+ : Returns the default engine from the configuration - basically the first engine registered
+ : TODO: Not sure if this function is still required.
  :)
-declare function config:default-engine() as xs:string
-{
-  (
-    xs:string(config:get-config()/config:default-engine/@value),
-    "engine.html"
-  )[1]
+declare function config:default-engine(
+) as element(config:engine) {
+  $DEFAULT-ENGINES-CONFIGURATION/config:engines/config:engine[1]
 };
 
 (:~
@@ -679,12 +688,14 @@ declare function config:property(
       else if($default) then $default
       else fn:error(xs:QName("INVALID-PROPERTY"),"Missing Property Configuration")
 };
+
 (:~
  : Returns the configurations for any controller extension
 ~:)
 declare function config:controller-extension() {
    config:get-config()/config:controller-extension
 };
+
 (:~
  : Returns default path for the controller.
  :)

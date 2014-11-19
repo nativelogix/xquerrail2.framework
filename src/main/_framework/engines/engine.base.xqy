@@ -16,12 +16,98 @@ declare default function namespace "http://www.w3.org/2005/xpath-functions";
 
 declare option xdmp:mapping "false";
 
-
 declare variable $engine-transformer as xdmp:function? := xdmp:function(xs:QName("engine:transformer"));
 declare variable $visitor := map:map();
 declare variable $_child-engine-tags := map:map();
 declare variable $_helpers := map:map();
 declare variable $_plugins := map:map();
+
+declare variable $IS-SUPPORTED-ENGINE-FUNCTION := "is-supported";
+declare variable $INITIALIZE-ENGINE-FUNCTION := "initialize";
+declare variable $TRANSFORM-ENGINE-FUNCTION := "custom-transform";
+
+declare private variable $USE-MODULES-DB := (xdmp:modules-database() ne 0);
+
+declare %private function engine:get-eval-options() {
+  if ($USE-MODULES-DB) then
+    <options xmlns="xdmp:eval">
+      <database>{xdmp:modules-database()}</database>
+    </options>
+  else
+    ()
+};
+
+declare function engine:find-by-namespace(
+  $namespace as xs:string
+) as element(config:engine) {
+  (
+    config:get-engine-extensions()[@namespace eq $namespace],
+    config:get-engines()[@namespace eq $namespace]
+  )[1]
+};
+
+declare function engine:load-function(
+  $engine as element(config:engine),
+(:  $namespace as xs:string,:)
+  $functions as xs:string*
+) {
+(:  let $engine := config:get-engines()[@namespace eq $namespace]:)
+(:  let $namespace := :)
+  let $import := "import module namespace fp = '" || $engine/@namespace || "'" || (if (fn:exists($engine/@uri)) then " at '" || $engine/@uri || "'" else "") || ";"
+  let $_ := xdmp:log(text{"engine:load-function", $engine/@namespace, $functions, $import}, "debug")
+  return xdmp:eval(
+    '
+    xquery version "1.0-ml";'
+    || $import ||
+    'declare variable $functions as xs:string* external;
+    for $f in xdmp:functions()
+      where 
+        fn:namespace-uri-from-QName(xdmp:function-name($f)) eq "' || $engine/@namespace || '" and
+        fn:exists(fn:index-of($functions, fn:local-name-from-QName(xdmp:function-name($f))))
+      return
+        $f
+    ',
+    (
+    map:new(
+      map:entry("functions", $functions)
+    )),
+    engine:get-eval-options()
+  )
+};
+
+declare function engine:supported-engine(
+  $request,
+  $response
+) {
+  let $engine := 
+    for $engine in config:get-engines()
+    let $is-supported-fn := engine:load-function($engine, $IS-SUPPORTED-ENGINE-FUNCTION)
+    return
+      if (fn:exists($is-supported-fn) and $is-supported-fn($request, $response) eq fn:true()) then $engine 
+      else ()
+  return 
+    if (fn:empty($engine)) then fn:error(xs:QName("NO-ENGINE-FOUND"))
+    else $engine
+};
+
+declare function engine:initialize(
+  $engine as element(config:engine),
+  $request,
+  $response
+) {
+    let $_ :=
+      for $engine-extension in config:get-engine-extensions()
+      let $_ := xdmp:log(("$engine-extension", $engine-extension))
+      let $initialize-fn := engine:load-function($engine-extension, $INITIALIZE-ENGINE-FUNCTION)
+      return
+        if (fn:exists($initialize-fn)) then $initialize-fn($request, $response) 
+        else ()
+        
+    let $initialize-fn := engine:load-function($engine, $INITIALIZE-ENGINE-FUNCTION)
+    return
+      if (fn:exists($initialize-fn)) then $initialize-fn($request, $response) 
+      else ()
+};
 
 (:~
  : registers a plugin with the engine
@@ -69,19 +155,19 @@ declare function engine:register-tags($tagnames as xs:QName*)
 {
   for $tag in $tagnames
   return
-    map:put($_child-engine-tags,fn:string($tag),$tag)
+    map:put($_child-engine-tags, fn:local-name-from-QName($tag),$tag)
 };
 (:~
  : Check to see if a tag has been registered with the engine
  :)
-declare function engine:tag-is-registered(
+declare function engine:registered-tag(
   $tag as xs:string
-)
-{
-  if(fn:exists(map:get($_child-engine-tags,fn:string($tag)))) 
+) {
+  map:get($_child-engine-tags, $tag)
+(:  if(fn:exists(map:get($_child-engine-tags, fn:local-name-from-QName($tag)))) 
   then fn:true()
   else fn:false()
-};
+:)};
 
 (:~
  : Marks that a node has been visited during transformation
@@ -455,10 +541,11 @@ declare function engine:transform-view($node)
 declare function engine:transform-dynamic($node as node())
 {
   let $engine-tag-qname := fn:concat("engine:",fn:local-name($node))
-  let $is-registered := engine:tag-is-registered($engine-tag-qname)
+  let $engine-tag-qname := fn:local-name($node)
+  let $registered-tag := engine:registered-tag($engine-tag-qname)
   return 
-        if($is-registered) 
-        then xdmp:apply($engine-transformer,$node)
+        if(fn:exists($registered-tag)) 
+        then engine:load-function(engine:find-by-namespace(fn:namespace-uri-from-QName($registered-tag)), $TRANSFORM-ENGINE-FUNCTION)($node)
         else 
           let $name := fn:local-name($node)
           let $func-name := xs:QName(fn:concat("tag:apply"))
@@ -522,41 +609,6 @@ declare function engine:transform-role($node) {
   )  
 };
 
-declare function engine:transform-include-ng-templates($node)
-{
-  let $template-directory := config:application-templates-path(response:application())
-  let $ng-templates := 
-    if(xdmp:modules-database() eq 0) then (
-      let $template-directory := fn:concat(xdmp:modules-root(), $template-directory)
-      for $file in xdmp:filesystem-directory($template-directory)/*:entry
-      let $filename := xs:string($file/*:filename)
-      where $file/*:type eq "file" and fn:starts-with($filename, "ng-")
-      return fn:substring($filename, 1, fn:string-length($filename) - fn:string-length(".html.xqy"))
-    )
-    else (
-      xdmp:eval('declare variable $uri as xs:string external ;
-      for $file in xdmp:directory($uri)
-        let $filename := fn:tokenize(xdmp:node-uri($file), "/")[fn:last()]
-        return 
-          if (fn:ends-with($filename, ".html.xqy")) then fn:substring-before($filename, ".html.xqy")
-          else ()
-      ',
-      (fn:QName("","uri"), $template-directory),
-         <options xmlns="xdmp:eval">
-            <database>{xdmp:modules-database()}</database>
-         </options>   
-      )
-    ) 
-   
-   return $ng-templates ! (
-      engine:transform(
-        processing-instruction{"template"} {
-          "name='" || . || "'"
-        }
-      )
-    )
-};
-
 (:
   Core processing-instructions and any other data should be handled here
 :)
@@ -576,7 +628,6 @@ declare function engine:transform($node as item())
          case processing-instruction("xsl")      return engine:transform-xsl($node)
          case processing-instruction("to-json")  return engine:transform-to-json($node)
          case processing-instruction("role")     return engine:transform-role($node)
-         case processing-instruction("include-ng-templates") return engine:transform-include-ng-templates($node)
          case processing-instruction()           return engine:transform-dynamic($node)
          case element() return
            element {fn:node-name($node)}

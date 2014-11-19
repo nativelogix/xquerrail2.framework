@@ -350,7 +350,7 @@ declare function model:create(
           if ($identity) then $identity
           else model:generate-uuid()
         (: Validate the parameters before trying to build the document :)
-        let $validation :=  () (:model:validate-params($model,$params,"create"):)
+        let $validation := model:validate-params($model,$params,"create")
         return
          if(fn:count($validation) > 0)
          then (:fn:error(xs:QName("VALIDATION-ERROR"), fn:concat("The document trying to be created contains validation errors"), $validation):)
@@ -605,7 +605,7 @@ declare function model:update-partial(
    return
      if($current) then
         let $build := model:recursive-build($model,$current,$params,fn:true())
-        let $validation := ()(:model:validate-params($model,$params,"update"):)
+        let $validation := model:validate-params($model,$params,"update")
         let $computed-collections := model:build-collections(($model/domain:collection,$collections),$model,$build)
         return
             if(fn:count($validation) > 0) then
@@ -2131,6 +2131,8 @@ declare  function model:get-application-reference($field,$params){
 declare function model:validate-params($model as element(domain:model), $params as item()*,$mode as xs:string)
 as element(validationError)*
 {
+  if (fn:not(domain:model-validation-enabled($model))) then ()
+  else
    let $unique-constraints := domain:get-model-unique-constraint-fields($model)
    let $unique-search := domain:get-model-unique-constraint-query($model,$params,$mode)
    return

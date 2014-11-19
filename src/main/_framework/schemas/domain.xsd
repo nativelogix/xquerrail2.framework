@@ -706,6 +706,7 @@
         <xs:documentation>Returns default orderBy for multi-occurring elements.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
+    <xs:attribute name="sortValue" type="xs:decimal"/>
     <xs:attribute name="subject" type="xs:anyURI"/>
     <xs:attribute name="predicate" type="xs:anyURI"/>
     <xs:attribute name="object" type="xs:anyURI"/>
@@ -1493,6 +1494,11 @@
     <xs:attribute name="repeatable" type="xs:boolean">
       <xs:annotation>
         <xs:documentation>Allows element to be repeated in UI</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="template" type="xs:string">
+      <xs:annotation>
+        <xs:documentation>Html template in UI</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="gridWidth" type="xs:integer">

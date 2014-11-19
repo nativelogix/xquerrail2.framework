@@ -8,7 +8,7 @@ import module namespace cache = "http://xquerrail.com/cache" at "../../../main/_
 
 declare option xdmp:mapping "false";
 
-declare variable $ANONYMOUS-USER := "xquerrail2-framework-user";
+declare variable $ANONYMOUS-USER := "xquerrail2-anonymous-user";
 
 declare variable $TEST-APPLICATION :=
 <application xmlns="http://xquerrail.com/config">

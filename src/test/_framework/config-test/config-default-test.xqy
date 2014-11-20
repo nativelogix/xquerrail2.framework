@@ -30,7 +30,7 @@ declare %test:teardown function teardown() as empty-sequence()
 
 declare %test:before-each function before-test() {
   (
-    app:reset(), 
+    app:reset(),
     app:bootstrap($TEST-APPLICATION),
     xdmp:set($CONFIG, config:get-config())
   )
@@ -76,6 +76,7 @@ declare %test:case function application-script-directory-test() as item()*
 declare %test:case function application-stylesheet-directory-test() as item()*
 {
   let $application := config:default-application()
+  let $_ := xdmp:log($application)
   return
   assert:equal(config:application-stylesheet-directory($application), "/test/_framework/config-test/app-test/resources/css/")
 };
@@ -139,7 +140,7 @@ declare %test:case function test-default-template() as item()*
 {
   let $application := config:default-application()
   return
-  assert:equal(config:default-template($application), "/test/_framework/config-test/app-test/templates")
+  assert:equal(config:default-template($application), "templates")
 };
 
 declare %test:case function test-error-handler() as item()*

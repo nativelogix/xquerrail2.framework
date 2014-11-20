@@ -188,14 +188,10 @@ declare function config:resolve-application (
     attribute name { $application/@name },
     attribute uri { $uri },
     attribute namespace { $application/@namespace },
-    $application/* ! (if(./@resource or ./@value) then (
+    $application/* ! (if(./@resource) then (
       element { fn:QName("http://xquerrail.com/config", fn:local-name(.)) } {
         if (./@resource) then
           attribute resource { config:resolve-path($uri, ./@resource) }
-        else ()
-        ,
-        if (./@value) then
-          attribute value { config:resolve-path($uri, ./@value) }
         else ()
       }
     ) else .)
@@ -284,6 +280,12 @@ declare function config:default-controller() as xs:string
  : config:get-config()/config:default-template/@value
  :)
 declare function config:default-template($application-name) as xs:string {
+  xdmp:log((
+    text{"config:get-application($application-name)/config:default-template/@value/fn:string()", config:get-application($application-name)/config:default-template/@value/fn:string()},
+    text{"config:get-config()/config:application/config:default-template/@value", config:get-config()/config:application/config:default-template/@value}
+  )
+  ,"debug"
+  ),
   (
     config:get-application($application-name)/config:default-template/@value/fn:string(),
     config:get-config()/config:default-template/@value/fn:string(),
@@ -413,7 +415,7 @@ declare function config:application-namespace($application) as xs:string
 declare function config:application-script-directory($application)
 {
   (
-    xs:string(config:get-application($application)/config:script-directory/@value),
+    xs:string(config:get-application($application)/config:script-directory/@resource),
     config:resource-directory()
   )[1]
 };
@@ -426,7 +428,7 @@ declare function config:application-script-directory($application)
 declare function config:application-stylesheet-directory($application)
 {
   (
-    xs:string(config:get-application($application)/config:stylesheet-directory/@value),
+    xs:string(config:get-application($application)/config:stylesheet-directory/@resource),
     config:resource-directory()
   )[1]
 };

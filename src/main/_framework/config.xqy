@@ -206,18 +206,22 @@ declare function config:resolve-application (
  : @param $uri - The URI specifying the resource.  The resource is managed from the filesystem then the file is invoked as an xml file.
  :)
 declare function config:get-resource($uri as xs:string) {
-    if(xdmp:modules-database() = 0 )
-    then xdmp:unquote(
-            xdmp:binary-decode(
-                xdmp:external-binary(fn:concat(xdmp:modules-root(),$uri)),"utf8")
+  if(xdmp:modules-database() = 0) then
+    let $file-path := fn:concat(xdmp:modules-root(), $uri)
+    return
+      if (xdmp:filesystem-file-exists($file-path)) then
+        xdmp:unquote(
+          xdmp:binary-decode(xdmp:external-binary($file-path),"utf8")
          )/element()
-    else
-      xdmp:eval("fn:doc('" || $uri || "')/element()",
+      else ()
+  else
+    xdmp:eval(
+      "fn:doc('" || $uri || "')/element()",
       (),
       <options xmlns="xdmp:eval">
-         <database>{xdmp:modules-database()}</database>
+        <database>{xdmp:modules-database()}</database>
       </options>
-      )
+    )
 };
 
 (:~
@@ -479,7 +483,7 @@ declare function config:get-domain($application-name as xs:string) as element(do
         return $domain/domain:domain
       default
         return fn:error(xs:QName("NO-DOMAIN-FOUND"))
-  return 
+  return
     if ($domain) then $domain
     else fn:error(xs:QName("NO-DOMAIN-FOUND"))
 };
@@ -543,11 +547,10 @@ declare function config:get-route-module() {
 
 declare function config:get-engines-configuration(
 ) as element (config:config) {
-  try {
-    config:get-resource(config:resolve-config-path("engines.xml"))
-  } catch ($exception) {
+  (
+    config:get-resource(config:resolve-config-path("engines.xml")),
     $DEFAULT-ENGINES-CONFIGURATION
-  }
+  )[1]
 };
 
 declare function config:get-engines (
@@ -639,14 +642,14 @@ declare function config:interceptor-config() as xs:string?
  :)
 declare function config:resource-handler() {
   if (config:get-config()/config:resource-handler) then (
-    if (config:get-config()/config:resource-handler/@resource) then 
+    if (config:get-config()/config:resource-handler/@resource) then
       config:get-config()/config:resource-handler
     else
       <resource-handler resource="{config:resolve-framework-path("handlers/resource.handler.xqy")}"/>
   )[1]
   else
     ()
-  
+
 };
 
 (:~

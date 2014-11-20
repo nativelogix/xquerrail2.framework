@@ -852,13 +852,8 @@ $field
   let $format   := response:format()
   let $template := processing-instruction{"template"}{fn:concat("name='",$field/domain:ui/@template,"'")}
   let $_ := response:set-context(form:get-field-id($field))
-  (:let $engine := config:get-engine(response:flush()):)
   let $engine := engine:supported-engine((), response:flush())
-(:  let $engine-uri := fn:concat($config:DEFAULT-ENGINE-PATH,"/",$engine,".xqy"):)
-(:  let $engine-func := xdmp:function(xs:QName("engine:transform-template"),$engine-uri):)
-  let $engine-func := engine:load-function($engine/@namespace, "transform-template")
-(:  xdmp:function(xs:QName("engine:transform-template")):)
-(:  let $engine-func := xdmp:function(xs:QName("engine:transform-template"),$engine-uri):)
+  let $engine-func := engine:load-function($engine, $engine:TRANSFORM-ENGINE-FUNCTION)
   return
        xdmp:apply($engine-func,$template)
 };

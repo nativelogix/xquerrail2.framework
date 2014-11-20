@@ -18,8 +18,10 @@
   </model>
   <model name="model3" persistence="document" label="Model #3" extends="base" namespace-uri="http://marklogic.com/model/model3" key="uuid" keyLabel="id">
     <document root="models">/test/mocha/model3.xml</document>
-    <element name="id" type="string" label="Id"></element>
-    <element name="name" type="string" label="Name"/>
+    <element name="id" type="string" label="Id"/>
+    <element name="name" type="string" label="Name">
+      <ui template="model3-name" />
+    </element>
     <element name="dummyModel" type="reference" reference="model:model1:reference" label="Model #1"/>
   </model>
   <controller name="model1" model="model1" label="Model #1" class="class"/>

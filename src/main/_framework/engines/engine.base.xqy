@@ -48,13 +48,9 @@ declare function engine:find-by-namespace(
 
 declare function engine:load-function(
   $engine as element(config:engine),
-(:  $namespace as xs:string,:)
   $functions as xs:string*
 ) {
-(:  let $engine := config:get-engines()[@namespace eq $namespace]:)
-(:  let $namespace := :)
   let $import := "import module namespace fp = '" || $engine/@namespace || "'" || (if (fn:exists($engine/@uri)) then " at '" || $engine/@uri || "'" else "") || ";"
-  let $_ := xdmp:log(text{"engine:load-function", $engine/@namespace, $functions, $import}, "debug")
   return xdmp:eval(
     '
     xquery version "1.0-ml";'
@@ -97,7 +93,6 @@ declare function engine:initialize(
 ) {
     let $_ :=
       for $engine-extension in config:get-engine-extensions()
-      let $_ := xdmp:log(("$engine-extension", $engine-extension))
       let $initialize-fn := engine:load-function($engine-extension, $INITIALIZE-ENGINE-FUNCTION)
       return
         if (fn:exists($initialize-fn)) then $initialize-fn($request, $response) 

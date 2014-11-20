@@ -34,7 +34,7 @@ declare variable $collation := "http://marklogic.com/collation/codepoint";
 : Helper function to extract params for REST endpoint
 :)
 declare function controller:get-params() {
-  if (request:format() eq "json" and (request:method() eq "POST" or request:method() eq "PUT")) then request:body() 
+  if (request:format() eq "json" and (request:method() eq "POST" or request:method() eq "PUT")) then request:body()
   else request:params()
 };
 
@@ -195,8 +195,8 @@ declare function controller:info() {
 declare function controller:create() {(
   xdmp:log(("controller:create::",controller:get-params()),"debug"),
   let $body := request:body()
-  let $params := 
-     if(fn:exists(request:body())) 
+  let $params :=
+     if(fn:exists(request:body()))
      then if($body instance of binary() and xdmp:binary-size($body) gt 0) then  request:body() else controller:get-params()
      else controller:get-params()
   return
@@ -446,23 +446,23 @@ declare function controller:findAndModify() {
 
 declare function controller:login()
 {
-  let $username   := request:param("username")[1] 
+  let $username   := request:param("username")[1]
   let $password   := request:param("password")[1]
-  let $returnUrl  := request:param("returnUrl")
-  return 
-  if($username ne "" or $password ne "") then     
+  let $returnUrl  := request:param("returnUrl")[1]
+  return
+  if($username ne "" or $password ne "") then
     let $is-logged-in := xdmp:login($username,$password)
     return
-    if($is-logged-in) then 
+    if($is-logged-in) then
     (
-      if($returnUrl ne "" and $returnUrl) then 
+      if($returnUrl ne "" and $returnUrl) then
         response:redirect($returnUrl)
-      else 
+      else
         response:redirect("/"),
         response:flush()
-    ) 
-    else 
-    ( 
+    )
+    else
+    (
       response:set-flash("login","Invalid Username or Password"),
 (:      response:set-controller("base"),:)
       response:set-template("login"),
@@ -470,11 +470,11 @@ declare function controller:login()
       response:set-title("Login"),
       response:response()
     )
-  else 
+  else
   (
     if(request:param("login") = "login") then
       response:set-flash("login","Please enter username and password")
-    else 
+    else
       (),
 (:    response:set-controller("base"),:)
     response:set-template("login"),

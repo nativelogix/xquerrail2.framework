@@ -24,9 +24,4 @@
     </element>
   </model>
 
-  <!-- Generic imbedded element has an ID, what else? -->
-  <model name="abstract1" persistence="abstract" key="id">
-    <attribute name="id" type="id" label="Object ID"/>           
-  </model>
-
 </domain>

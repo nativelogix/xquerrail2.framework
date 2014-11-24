@@ -253,7 +253,7 @@ declare %test:case function model-document-update-test() as item()*
   )
 };
 
-declare %test:case function model-document-new-abstract-different-namespace-test() as item()*
+declare %test:case function model-document-new-different-namespace-test() as item()*
 {
   let $model1 := domain:get-model("model1")
   let $instance1 := eval(
@@ -270,9 +270,9 @@ declare %test:case function model-document-new-abstract-different-namespace-test
   let $value-id := domain:get-field-value(domain:get-model-field($model1, "id"), $instance1)
   let $value-name := domain:get-field-value(domain:get-model-field($model1, "name"), $instance1)
   return (
-    assert:not-empty($instance1),
-    assert:not-empty($instance1/model1:uuid),
-    assert:not-empty($instance1/model1:create-user)
+    assert:not-empty($instance1, "instance1 should not be empty"),
+    assert:not-empty($instance1/model1:uuid, "model1:uuid should no be empty"),
+    assert:not-empty($instance1/model1:create-user, "model1:create-user should no be empty")
   )
 };
 

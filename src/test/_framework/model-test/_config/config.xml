@@ -1,0 +1,29 @@
+<config xmlns="http://xquerrail.com/config" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://xquerrail.com/domain file:..schemas/config.xsd"
+    >
+    <!--Configurations-->
+  
+    <routes-config resource="test-routes.xml"/>
+
+    <anonymous-user value="xquerrail2-anonymous-user"/> 
+    
+  <default-application value="app-test"/>
+  
+  <model-extension resource="/test/_framework/model-test/_extensions/test-model.extension.xqy"/>
+    
+    <!--Register Your Application(s) Here-->
+  <application name="app-test" namespace="http://xquerrail.com/app-test" uri="/test/_framework/model-test/app-test">
+      <domain resource="domains/application-domain.xml" />
+      <script-directory value="resources/js/"/>
+      <stylesheet-directory value="resources/css/"/>
+      <default-template value="main"/>
+    </application>
+
+    <!--Interceptors-->
+    <properties>
+        <property name="resource-path" resource="js"/>
+        <property name="css-path" resource="css"/>
+        <property name="js-path"  resource="js"/>
+    </properties>    
+</config>

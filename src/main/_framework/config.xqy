@@ -284,12 +284,6 @@ declare function config:default-controller() as xs:string
  : config:get-config()/config:default-template/@value
  :)
 declare function config:default-template($application-name) as xs:string {
-  xdmp:log((
-    text{"config:get-application($application-name)/config:default-template/@value/fn:string()", config:get-application($application-name)/config:default-template/@value/fn:string()},
-    text{"config:get-config()/config:application/config:default-template/@value", config:get-config()/config:application/config:default-template/@value}
-  )
-  ,"debug"
-  ),
   (
     config:get-application($application-name)/config:default-template/@value/fn:string(),
     config:get-config()/config:default-template/@value/fn:string(),
@@ -361,11 +355,18 @@ declare function config:resource-directory() as xs:string
    else fn:data(config:get-config()/config:resource-directory/@resource)
 };
 
+declare function config:get-base-model-location(
+) as xs:string {
+  config:get-base-model-location(())
+};
+
 (:~
  : Returns the base-model location as defined in the config.xml
  : @param $model-name - Returns the location of the model if defined in the calling application.
  :)
-declare function config:get-base-model-location($model-name as xs:string) {
+declare function config:get-base-model-location(
+  $model-name as xs:string?
+) as xs:string {
   let $model-suffix := config:model-suffix()
   let $path := fn:concat("/model/", $model-name, $model-suffix, ".xqy")
   return
@@ -375,7 +376,7 @@ declare function config:get-base-model-location($model-name as xs:string) {
 };
 
 declare function config:default-view-directory() {
-   fn:concat(config:framework-path(), "/base/views")
+  fn:concat(config:framework-path(), "/base/views")
 };
 (:~
  : Returns the base-view-directory defined in the configuration
@@ -397,8 +398,10 @@ declare function config:base-view-directory() as xs:string {
  :)
 declare function config:application-directory($application) as xs:string
 {
-  if($application instance of element(config:application)) then xs:string($application/@uri)
-  else xs:string(config:get-application($application)/@uri)
+  let $application := if (fn:exists($application)) then $application else config:default-application()
+  return
+    if($application instance of element(config:application)) then xs:string($application/@uri)
+    else xs:string(config:get-application($application)/@uri)
 };
 (:~
  : Get the current application namespace defined by config:get-config()set-domain-cache/config:application/@namespace
@@ -407,8 +410,9 @@ declare function config:application-directory($application) as xs:string
  :)
 declare function config:application-namespace($application) as xs:string
 {
-   if($application instance of element(config:application))
-   then xs:string($application/@namespace)
+  let $application := if (fn:exists($application)) then $application else config:default-application()
+  return
+   if($application instance of element(config:application)) then xs:string($application/@namespace)
    else xs:string(config:get-application($application)/@namespace)
 };
 (:~
@@ -437,10 +441,50 @@ declare function config:application-stylesheet-directory($application)
   )[1]
 };
 
+declare function config:application-views-path(
+  $application-name as xs:string?
+) as xs:string {
+  fn:concat(config:application-directory($application-name), "/views/")
+};
 
-declare function config:application-templates-path($application)
-{
-  fn:concat(config:application-directory($application), "/templates/")
+declare function config:application-templates-path(
+  $application-name as xs:string?
+) as xs:string {
+  fn:concat(config:application-directory($application-name), "/templates/")
+};
+
+declare function config:application-models-path(
+  $application-name as xs:string?
+) as xs:string {
+  fn:concat(config:application-directory($application-name), "/models/")
+};
+
+declare function config:application-controllers-path(
+  $application-name as xs:string?
+) as xs:string {
+  let $path := fn:concat(config:application-directory($application-name), "/controllers/")
+  let $old-path := fn:concat(config:application-directory($application-name), "/controller/")
+  return
+  if(xdmp:modules-database() = 0) then
+      if (xdmp:filesystem-directory(fn:concat(xdmp:modules-root(), $path))) then
+        $path
+      else (
+        xdmp:log(text{"controllers-path", $path, "does not exist. Please rename controller to controllers"}),
+        $old-path
+      )
+  else
+    xdmp:eval(
+      "if (fn:exists(xdmp:directory('" || $path || "'))) then
+        $path
+       else (
+        xdmp:log(text{'controllers-path', $path, 'does not exist. Please rename controller to controllers'}),
+        $old-path
+       )",
+      (),
+      <options xmlns="xdmp:eval">
+        <database>{xdmp:modules-database()}</database>
+      </options>
+    )
 };
 
 (:~
@@ -695,10 +739,70 @@ declare function config:property(
 };
 
 (:~
+ : Returns controller location for given application and controller names
+~:)
+declare function config:controller-location(
+  $application-name as xs:string?,
+  $controller-name as xs:string
+) as xs:string {
+   fn:concat(config:application-controllers-path($application-name), $controller-name, config:controller-suffix(), '.xqy')
+};
+
+(:~
+ : Returns controller namespace for given application and controller names
+~:)
+declare function config:controller-uri(
+  $application-name as xs:string?,
+  $controller-name as xs:string
+) as xs:string {
+   fn:concat(
+    config:application-namespace($application-name), 
+    if (fn:contains(config:application-controllers-path($application-name), "controllers")) then "/controllers/" else "/controller/", 
+    $controller-name
+  )
+};
+
+(:~
+ : Returns controller location for given application and controller names
+~:)
+declare function config:model-location(
+  $application-name as xs:string?,
+  $model-name as xs:string
+) as xs:string {
+   fn:concat(config:application-models-path($application-name), $model-name, config:model-suffix(), '.xqy')
+};
+
+(:~
+ : Returns controller namespace for given application and controller names
+~:)
+declare function config:model-uri(
+  $application-name as xs:string?,
+  $model-name as xs:string
+) as xs:string {
+   fn:concat(
+    config:application-namespace($application-name), 
+    "/models/", 
+    $model-name
+  )
+};
+
+declare function config:model-extension-location(
+) as xs:string? {
+  config:model-extension()/@resource
+};
+
+(:~
  : Returns the configurations for any controller extension
 ~:)
 declare function config:controller-extension() {
    config:get-config()/config:controller-extension
+};
+
+(:~
+ : Returns the configurations for any model extension
+~:)
+declare function config:model-extension() {
+   config:get-config()/config:model-extension
 };
 
 (:~

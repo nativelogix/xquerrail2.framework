@@ -38,7 +38,7 @@ declare function app:bootstrap($application as element(config:application)?) as 
     app:set-path($application)
     ,
     for $application in config:get-applications()
-      return app:load-application(xs:string($application/@name))
+      return load-application(xs:string($application/@name))
     )
 };
 
@@ -49,10 +49,10 @@ declare %private function app:load-application(
   let $application-path := fn:concat(config:application-directory($application-name), "/domains/application-domain.xml")
   let $_ := xdmp:log(text{"config:load-domain", $application-name, "$application-path", $application-path}, "debug")
   let $domain-config := config:get-resource($application-path)
-  let $domain := app:load-domain($application-name, $domain-config)
+  let $domain := load-domain($domain-config)
   let $config := config:get-config()
   let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config), fn:true())
-  let $domain := app:update-domain($application-name, $domain)
+  let $domain := update-domain($domain)
   let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config))
   let $_ := app:custom-bootstrap($application-name)
   return $domain
@@ -97,10 +97,9 @@ declare %private function app:load-config(
 };
 
 declare %private function app:load-domain(
-  $application-name as xs:string,
   $domain as element(domain:domain)
 ) {
-    let $app-path := config:application-directory($application-name)
+    let $app-path := config:application-directory($domain/*:name)
     let $imports :=
         for $import in $domain/domain:import
         return
@@ -119,8 +118,7 @@ declare %private function app:load-domain(
        }
 };
 
-declare %private function app:update-domain(
-  $application-name as xs:string,
+declare %private function update-domain(
   $domain
 ) {
   element domain:domain {
@@ -128,7 +126,7 @@ declare %private function app:update-domain(
     $domain/namespace::*,
     $domain/@*,
     $domain/*[. except $domain/domain:model],
-    $domain/domain:model ! (domain:compile-model($application-name, .))
+    $domain/domain:model ! (domain:compile-model(.))
   }
 };
 

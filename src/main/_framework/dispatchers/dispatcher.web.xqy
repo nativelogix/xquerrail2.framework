@@ -164,8 +164,8 @@ declare function dispatcher:invoke-controller()
    let $controller as xs:string   := (request:controller(),config:default-controller())[1]
    let $action as xs:string       := (request:action())[1]
    let $route  as xs:string?      := request:route()[1]
-   let $controller-location       := config:controller-location($application, $controller) (:fn:concat(config:get-application($application)/@uri,'/controller/', $controller,'-controller.xqy'):)
-   let $controller-uri            := config:controller-uri($application, $controller) (:fn:concat(config:get-application($application)/@namespace,'/controller/', $controller):)
+   let $controller-location       := fn:concat(config:get-application($application)/@uri,'/controller/', $controller,'-controller.xqy')
+   let $controller-uri            := fn:concat(config:get-application($application)/@namespace,'/controller/', $controller)
    let $_ := xdmp:log(
   		text {
   		  "dispatcher:invoke-controller()", "$application", $application, "$controller", $controller, "$action", $action,

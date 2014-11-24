@@ -78,6 +78,7 @@ declare function ml-security:after-request(
           xdmp:log(("Not-Redirecting::",xdmp:get-current-user(), $context,$scope),"debug"):)
        )
        else (
+        xdmp:log(text{"request:format()", request:format()}),
         if (request:format() eq "html") then (
           if(request:param("returnUrl") and request:param("returnUrl") !="")
           then request:set-redirect(request:param("returnUrl"))

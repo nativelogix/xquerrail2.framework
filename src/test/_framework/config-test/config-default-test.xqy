@@ -106,11 +106,6 @@ declare %test:case function test-controller-extension() as item()*
   assert:empty(config:controller-extension())
 };
 
-declare %test:case function test-model-extension() as item()*
-{
-  assert:empty(config:model-extension())
-};
-
 declare %test:case function test-controller-suffix() as item()*
 {
   assert:equal(config:controller-suffix(), "-controller")
@@ -182,46 +177,6 @@ declare %test:case function test-get-applications() as item()*
     assert:not-empty($applications),
     assert:equal(fn:count($applications), 1)
   )
-};
-
-declare %test:case function test-application-templates-path() as item()*
-{
-  assert:equal(config:application-templates-path(config:default-application()), "/test/_framework/config-test/app-test/templates/")
-};
-
-declare %test:case function test-application-views-path() as item()*
-{
-  assert:equal(config:application-views-path(config:default-application()), "/test/_framework/config-test/app-test/views/")
-};
-
-declare %test:case function test-application-controllers-path() as item()*
-{
-  assert:equal(config:application-controllers-path(config:default-application()), "/test/_framework/config-test/app-test/controllers/")
-};
-
-declare %test:case function test-application-models-path() as item()*
-{
-  assert:equal(config:application-models-path(config:default-application()), "/test/_framework/config-test/app-test/models/")
-};
-
-declare %test:case function test-model-location() as item()*
-{
-  assert:equal(config:model-location(config:default-application(), "model1"), "/test/_framework/config-test/app-test/models/model1-model.xqy")
-};
-
-declare %test:case function test-model-uri() as item()*
-{
-  assert:equal(config:model-uri(config:default-application(), "model1"), fn:concat(config:application-namespace(config:default-application()), "/models/model1"))
-};
-
-declare %test:case function test-controller-location() as item()*
-{
-  assert:equal(config:controller-location(config:default-application(), "model1"), "/test/_framework/config-test/app-test/controllers/model1-controller.xqy")
-};
-
-declare %test:case function test-controller-uri() as item()*
-{
-  assert:equal(config:controller-uri(config:default-application(), "model1"), fn:concat(config:application-namespace(config:default-application()), "/controllers/model1"))
 };
 
 declare %test:case function test-get-base-model-location() as item()*

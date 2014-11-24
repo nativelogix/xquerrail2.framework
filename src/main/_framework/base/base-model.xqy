@@ -289,6 +289,7 @@ declare function model:create-reference-cache($model,$instance) {
             text {$cache-keylabel-value}
          }
    return (
+      xdmp:log(("CACHE-INSTANCE::",$reference),"finest"),
       model:set-cache-reference($model,($cache-key-value,$cache-keylabel-value),$reference)
    )
 
@@ -1175,7 +1176,7 @@ declare function model:delete-binary-dependencies(
       if(fn:doc-available($value)) then
         xdmp:document-delete($value)
       else (
-         xdmp:log(fn:concat("DELETE-FILE-MISSING::field=",$field/@name," value=",$value))
+         xdmp:log(fn:concat("DELETE-FILE-MISSING::field=",$field/@name," value=",$value),"debug")
       )
       else ()(:Binary not set so dont do anything:)
 };
@@ -1277,6 +1278,7 @@ declare function model:filter-list-result($field as element(),$result,$params) {
             case element(domain:element) return
                    let $value := domain:get-field-value($field,$result)
                    let $fieldtype := domain:get-base-type($field)
+                   let $log := xdmp:log(("field-base::",$field/@name,$fieldtype),"finest")
                    for $val in $value
                    return
                      switch($fieldtype)
@@ -1462,6 +1464,7 @@ declare function model:list-params(
                   if($op and $sf and $sv) then
                   operator-to-cts($field-elem,$op, $sv)
                   else ()
+            let $log := xdmp:log(("rules::", $rules),"debug")
             return
                if($groupOp eq "OR") then
                    cts:or-query((
@@ -1889,10 +1892,11 @@ declare function model:get-function-cache(
   let $tokens := fn:tokenize($reference/@reference, ":")
   let $type := $tokens[2]
   let $reference-function-name := $tokens[3]
-  let $function-arity := 3
-  let $funct := model:get-function-cache(domain:get-model-function((), $type, $reference-function-name, $function-arity, fn:false()))
+  let $path := config:get-base-model-location($type)
+  let $ns   := "http://xquerrail.com/model/base"
+  let $funct := model:get-function-cache(xdmp:function(fn:QName($ns, $reference-function-name)))
   return
-    if (fn:exists($funct)) then
+    if(fn:function-available($reference-function-name)) then
       let $model := domain:get-domain-model($type)
       (: TODO: Temporary fix or maybe not :)
       let $node-name := xs:string($reference/@name)
@@ -1903,7 +1907,7 @@ declare function model:get-function-cache(
         ))
       return $funct($reference, $model, $map)
     else
-      fn:error(xs:QName("ERROR"), "No Reference function available.")
+      fn:error(xs:QName("ERROR"), "No Reference function avaliable.")
  };
 
 (:~
@@ -1931,12 +1935,95 @@ declare function model:set-cache-reference($model as element(domain:model),$keys
 declare function model:get-cache-reference($model as element(domain:model),$keys as xs:string) {
      $keys ! map:get($REFERENCE-CACHE,fn:concat(xdmp:hash64(xdmp:describe($model)),"::", .))
 };
-
+(:~
+ : This function will create a sequence of nodes that represent each
+ : model for inlining in other references.
+ : @node-name reference element attribute name
+ : @param $ids a sequence of ids for models to be extracted
+ : @return a sequence of packageType
+ :)
+ (:
 declare function model:reference(
-  $context as element(),
-  $model as element(domain:model),
-  $params as item()*
-) as element()? {
+    $context as element(),
+    $target as element(domain:model),
+    $params as item()*)
+as element()?
+{
+    xdmp:log($params),
+    let $keyLabel := fn:data($target/@keyLabel)
+    let $key := fn:data($target/@key)
+    let $key-field :=  domain:get-model-key-field( $target)
+    let $keyLabel-field := domain:get-model-keyLabel-field($target)
+    let $key-value := fn:data(domain:get-field-value($key-field,$params))
+    let $keyField-value := fn:data(domain:get-field-value($keyLabel-field,$params))
+    let $context-value := domain:get-field-value($context,$params)
+    let $cached := model:get-cache-reference($target,($key-value,$keyField-value,$context-value))
+    let $match-values := ($key-value,$keyField-value,$context-value)
+    return
+    if($cached) then (xdmp:log(("cached::",$cached),"debug"),$cached)
+    else
+        let $query :=
+          cts:and-query((
+               cts:or-query((
+                   typeswitch($key-field)
+                      case element(domain:attribute) return (
+                           domain:get-field-query($keyLabel-field,$match-values),
+                           domain:get-field-query($key-field, $match-values)
+                      )
+                      default return (
+                           domain:get-field-query($key-field, $match-values),
+                           domain:get-field-query($keyLabel-field,$match-values)
+                      )
+               )),
+               domain:get-base-query($target)
+           ))
+     let $parms := map:entry( domain:get-field-id($key-field),$context-value)
+     let $values :=
+         if($target/@persistence = "directory") then
+               cts:value-tuples((
+                  domain:get-field-tuple-reference($key-field),
+                  domain:get-field-tuple-reference($keyLabel-field)
+                  ),
+                  ("limit=1"),
+                  $query
+               )
+          else
+            let $get :=  model:get($target,$parms)
+            return
+             if(fn:exists($get)) then $get
+             else (  )
+     let $targetReference :=
+        if(fn:exists($values) and $target/@persistence = "directory")
+        then json:array-values($values)
+        else  (
+           domain:get-field-value($key-field,$values),
+           domain:get-field-value($keyLabel-field,$values)
+        )
+     let $name := fn:data($target/@name)
+     let $reference := element {domain:get-field-qname($target)} {
+            attribute ref-type { "model" },
+            attribute ref-id   {fn:data($targetReference[1])},
+            attribute ref      { $name },
+            text {fn:data($targetReference[2])}
+         }
+     return
+       if(fn:exists($targetReference)) then (
+          model:set-cache-reference($target,($keyField-value,$key-value),$reference),
+          $reference
+       )
+       else if(fn:exists($keyField-value) or fn:exists($key-value)) then
+           fn:error(xs:QName("INVALID-REFERENCE-ERROR"),"Invalid Reference",
+               fn:string-join(("fieldname:",fn:data($target/@name),"values:",$keyField-value,$key-value)," ")
+           )
+       else ()
+};
+:)
+declare function model:reference(
+    $context as element(),
+    $model as element(domain:model),
+    $params as item()*)
+as element()?
+{
   let $keyLabel := fn:data($model/@keyLabel)
   let $key := fn:data($model/@key)
   let $modelReference := model:get($model,$params)

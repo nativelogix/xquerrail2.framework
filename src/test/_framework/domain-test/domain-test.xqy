@@ -53,6 +53,7 @@ declare %test:case function app-get-setting-test() as item()*
 declare %test:case function get-model-field-test() as item()* {
   let $model1 := domain:get-model("model1")
   let $field := $model1/domain:element[./@name/fn:string() eq "name"]
+  let $_ := xdmp:log(("$model1", $model1, "$field", $field))
   let $field-name := "name"
   let $field-key-id := domain:get-field-id($field)
   let $fiel-key-name := domain:get-field-name-key($field)
@@ -95,42 +96,3 @@ declare %test:case function model-element-order-test() as item()* {
     assert:true($order-correct, "Model fields aren't in correct order")
   )
 };
-
-declare %test:case function model-inheritance-one-level-test() as item()* {
-  let $model4 := domain:get-model("model4")
-  let $field := domain:get-model-field($model4, "id")
-  let $_ := xdmp:log(("$model4", $model4, "$field", $field))
-  return (
-    assert:not-empty($model4),
-    assert:not-empty($field),
-    assert:equal($field/@type/fn:string(), "string", "Field id type must be string"),
-    assert:equal(fn:count($field), 1, "Field id must be unique")
-  )
-};
-
-declare %test:case function model-inheritance-two-level-test() as item()* {
-  let $model5 := domain:get-model("model5")
-  let $field-id := domain:get-model-field($model5, "id")
-  let $field-content := domain:get-model-field($model5, "content")
-  return (
-    assert:not-empty($model5),
-    assert:not-empty($field-id),
-    assert:equal($field-id/@type/fn:string(), "string", "Field id type must be string"),
-    assert:equal(fn:count($field-id), 1, "Field id must be unique"),
-    assert:not-empty($field-content),
-    assert:equal($field-content/@type/fn:string(), "schema-element", "Field content type must be schema-element"),
-    assert:equal(fn:count($field-content), 1, "Field id must be unique")
-  )
-};
-
-declare %test:case function model-inheritance-default-value-test() as item()* {
-  let $model5 := domain:get-model("model5")
-  let $field-type := domain:get-model-field($model5, "type")
-  return (
-    assert:not-empty($model5),
-    assert:not-empty($field-type),
-    assert:equal($field-type/@default/fn:string(), "table", "Field Type Default must be table"),
-    assert:equal(fn:count($field-type), 1, "Field type must be unique")
-  )
-};
-

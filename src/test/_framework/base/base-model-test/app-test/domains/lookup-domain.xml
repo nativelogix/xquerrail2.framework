@@ -4,6 +4,17 @@
     xsi:schemaLocation="http://xquerrail.com/domain ../../_framework/schemas/domain.xsd">
   <name>lookup</name>
   <model name="lookupBase" label="Lookup Base" persistence="abstract" extends="base" key="uuid" keyLabel="code" class="lookup">
+    <element name="uuid" type="identity" identity="true" label="Globally Unique Identifier"  >
+      <navigation  searchable="true" sortable="true" facetable="false"  />
+      <constraint  />
+      <ui type="hidden" colWidth="0" />
+    </element>
+    <element name="create-user" type="create-user" label="Created User">
+      <ui type="hidden" colWidth="0"/>
+    </element>
+    <element name="created" type="create-timestamp" label="Created Date">
+      <ui type="hidden" colWidth="0"/>
+    </element>
     <element name="code" type="string" label="Code">
       <navigation newable="true" editable="false"/>
       <constraint required="true" />

@@ -466,7 +466,7 @@ declare function config:application-controllers-path(
   let $old-path := fn:concat(config:application-directory($application-name), "/controller/")
   return
   if(xdmp:modules-database() = 0) then
-      if (xdmp:filesystem-directory(fn:concat(xdmp:modules-root(), $path))) then
+      if (xdmp:filesystem-file-exists(fn:concat(xdmp:modules-root(), $path))) then
         $path
       else (
         xdmp:log(text{"controllers-path", $path, "does not exist. Please rename controller to controllers"}),

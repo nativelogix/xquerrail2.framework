@@ -170,15 +170,15 @@ declare function domain:resolve-cts-type($type as xs:string)
 (:~
  : Gets the domain model from the given cache
  :)
-declare %private function domain:get-model-cache($key) {
-   map:get($DOMAIN-MODEL-CACHE,$key)
+declare %private function domain:get-model-cache($application-name, $model-name) {
+   map:get($DOMAIN-MODEL-CACHE, fn:concat($application-name, ":" , $model-name))
 };
 
 (:~
  : Sets the cache for a domain model
  :)
-declare %private function domain:set-model-cache($key,$model as element(domain:model)?) {
-   map:put($DOMAIN-MODEL-CACHE,$key,$model)
+declare %private function domain:set-model-cache($application-name, $model-name, $model as element(domain:model)?) {
+   map:put($DOMAIN-MODEL-CACHE, fn:concat($application-name, ":" , $model-name), $model)
 };
 
 (:~
@@ -701,76 +701,118 @@ declare function domain:get-model(
  : @param - returns a domain model given a
  :)
 declare function domain:get-domain-model(
-$model-name as xs:string+) {
-    domain:get-domain-model(config:default-application(), $model-name,fn:true())
+  $model-name as xs:string+
+) as element(domain:model)* {
+  domain:get-domain-model(config:default-application(), $model-name,fn:true())
 };
 
 declare function domain:get-domain-model(
-$application-name as xs:string,
-$model-name as xs:string*
-) {
-    domain:get-domain-model($application-name,$model-name,fn:true())
+  $application-name as xs:string,
+  $model-name as xs:string*
+) as element(domain:model)* {
+  domain:get-domain-model($application-name,$model-name,fn:true())
 };
+
 (:~
  : @param $application - Name of the application
  : @param $domain-name - Name of the domain model
  : @param $extension - If true then returns the extension fields, false returns the raw model
  :)
 declare function domain:get-domain-model(
-    $application as xs:string,
-    $model-names as xs:string+,
-    $extension as xs:boolean
-) as element(domain:model)+
-{
+  $application as xs:string,
+  $model-names as xs:string+,
+  $extension as xs:boolean
+) as element(domain:model)+ {
   let $domain := config:get-domain($application)
   let $models :=
      for $modelName in $model-names
-     let $cache-key := fn:concat($application, ":" ,$modelName)
-     let $cached := domain:get-model-cache($cache-key)
+     let $cached := domain:get-model-cache($application, $modelName)
      return
         if($cached) then $cached
         else
-          let $model := $domain/domain:model[cts:contains(.,cts:element-attribute-value-query(xs:QName("domain:model"),xs:QName("name"),$modelName))]
+          let $model := domain:find-model-by-name($domain, $modelName)
           let $_ := if($model) then () else fn:error(xs:QName("NO-MODEL"),"Missing Model",$modelName)
-          let $extends :=
-              if($model/@extends) then
-                  let $extendedDomain := $domain/domain:model[cts:contains(.,
-                    cts:element-attribute-value-query(
-                       xs:QName("domain:model"),
-                       xs:QName("name"),
-                       $model/@extends))
-                ]
-                  return
-                      if(fn:not($extendedDomain)) then fn:error(xs:QName("NO-EXTENDS-MODEL"),"Missing Extension Model",fn:data($model/@extends))
-                      else
-                         domain:extend-model($model, $extendedDomain)
-            else $model
-         return ($extends,domain:set-model-cache($cache-key,$extends))
+          let $_ := fn:exactly-one($model)
+          return ($model,domain:set-model-cache($application, $modelName, $model))
     return
         if($models)
         then element domain:domain { $domain/namespace::*, $domain/@*, $domain/domain:name, $domain/*[. except $domain/domain:model], $models } / domain:model
         else fn:error(xs:QName("NO-DOMAIN-MODEL"), "Model does not exist",$model-names)
 };
 
+declare %private function domain:find-model-by-name(
+  $domain as element(domain:domain),
+  $name as xs:string?
+) {
+  if (fn:empty($name)) then ()
+  else $domain/domain:model[
+    cts:contains(
+      .,
+      cts:element-attribute-value-query(
+        xs:QName("domain:model"),
+        xs:QName("name"),
+        $name
+      )
+    )
+  ]
+};
+
+(:~
+ : Recursively construct an extended domain model
+ : @param $model - Model to return, after optionally merging in extension fields
+ :)
+declare %private function domain:extend-model(
+  $domain as element(domain:domain),
+  $model as element(domain:model)
+) as element(domain:model) {
+  if($model/@extends) then
+    let $baseName := fn:string($model/@extends)
+    let $baseModel := domain:find-model-by-name($domain, $baseName)
+    return 
+      if(fn:not($baseModel)) then
+        fn:error(xs:QName("NO-EXTENDS-MODEL"),"Missing Extension Base Model", $baseName)
+      else
+        element { fn:node-name($model) } {
+          $model/namespace::*,
+          $model/@*,
+          attribute domain:extension { fn:string-join( ($baseName, $baseModel/@extension), ' ' ) },
+          for $field in  $baseModel/(domain:element | domain:container | domain:attribute| domain:triple)
+            let $fieldName := domain:get-field-qname( $field )
+            let $fieldNS := (domain:get-field-namespace($model), fn:namespace-uri-from-QName( $fieldName )) [1]
+            let $overlap := $model/(domain:element | domain:container | domain:attribute| domain:triple)
+                            [fn:node-name(.) eq fn:node-name($field)]
+                            [domain:get-field-qname(.) eq $fieldName]
+            return 
+              if( $overlap ) then
+                 if( fn:data($overlap/@override) or fn:data($model/@override) ) then 
+                  comment { (if(fn:data($overlap/@override)) then "Field" else "Model")||" @override "||$fieldName }
+                 else
+                  fn:error(xs:QName("EXTENDS-MODEL-OVERLAP"),"Extension Model Overlap requires @override", (text{"model", $model/@name, "base", $baseName, "field", $fieldName}))
+              else
+                element { fn:node-name($field) } {
+                  (: Copy all attributes except namespace or namespace-uri :)
+                  $field/@*[. except ($field/@namespace, $field/@namespace-uri)], 
+                  (: Create a resolved namespace attribute :)
+                  if( $fieldNS ) then attribute namespace { $fieldNS  } else (),
+                  (: If the base field doesn't have a model definition, add one :)
+                  if( fn:not( $field/@domain:model ) )
+                    then attribute domain:model { $baseName }
+                    else (),
+                  (: Now copy field children :)
+                  $field/node()
+                },
+          domain:build-model-navigation($model),
+          $model/node()[. except $model/(domain:navigation)]
+        }
+  else $model
+};
+
 declare function domain:compile-model(
+  $application-name as xs:string,
   $model as element(domain:model)
 ) {
   let $domain := $model/ancestor::domain:domain
-  let $model :=
-    if($model/@extends) then
-      let $extendedDomain := $domain/domain:model[cts:contains(.,
-        cts:element-attribute-value-query(
-          xs:QName("domain:model"),
-          xs:QName("name"),
-          $model/@extends))
-        ]
-      return
-        if(fn:not($extendedDomain)) then
-          fn:error(xs:QName("NO-EXTENDS-MODEL"),"Missing Extension Model",fn:data($model/@extends))
-        else
-          domain:extend-model($model, $extendedDomain)
-    else $model
-
+  let $model := domain:sort-model(domain:extend-model($domain, $model))
   let $model :=
     element domain:domain {
       $domain/*[. except $domain/domain:model[@name = $model/@name]],
@@ -789,26 +831,15 @@ declare function domain:compile-model(
   return $model
 };
 
-declare private function domain:extend-model($model as element(domain:model), $extendedDomain as element(domain:model)?) {
+declare %private function domain:sort-model(
+  $model as element(domain:model)
+) as element(domain:model) {
   element { fn:node-name($model) } {
     $model/namespace::*,
     $model/@*[. except $model/@extends],
-    for $node in (
-        for $f in $extendedDomain/(domain:element | domain:container | domain:attribute| domain:triple | domain:permission | domain:navigation)
-        return
-        element { fn:node-name($f) } {
-          if($model/(@namespace-uri|@namespace)) then
-            $model/(@namespace-uri|@namespace)
-          else if($f/@namespace) then
-            $f/@namespace
-          else
-            $extendedDomain/@namespace
-          , $f/@*[. except $f/@namespace]
-          , $f/node()
-        },
-        $model/node())
-    order by $node/@sortValue/fn:number()
-    return $node
+    for $node in $model/*
+      order by $node/@sortValue/fn:number()
+      return $node
   }
 };
 
@@ -822,9 +853,12 @@ declare %private function domain:build-navigation-attribute(
   $field as element(),
   $attribute-name as xs:string
 ) {
-  attribute {$attribute-name} {
+  let $base-model := domain:find-model-by-name($field/ancestor::domain:domain, $field/@extends)
+  return attribute {$attribute-name} {
     if ($field/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
-      ($field/domain:navigation/@*[./fn:local-name() eq $attribute-name])[fn:last()]
+      ($field/domain:navigation/@*[./fn:local-name() eq $attribute-name])
+    else if (fn:exists($field/@extends) and $base-model/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
+      $base-model/domain:navigation/@*[./fn:local-name() eq $attribute-name]
     else if ($field/ancestor::domain:element/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
       $field/ancestor::domain:element/domain:navigation/@*[./fn:local-name() eq $attribute-name]
     else if ($field/ancestor::domain:container/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
@@ -2181,7 +2215,6 @@ declare function domain:get-field-xml-value(
     let $type := domain:get-base-type($field)
     let $path := domain:get-field-xpath($field)
     let $expr := fn:concat("$value", $path)
-    let $_    := xdmp:log(("domain:get-field-xpath",$type,$field,$path),"finest")
     let $func :=
       switch($type)
         case "simple" return xdmp:with-namespaces(domain:declared-namespaces($field),xdmp:value(fn:concat("function($value){", $expr, "}")))
@@ -2280,13 +2313,13 @@ declare function domain:get-param-value(
 ) {
   switch(domain:get-value-type($params))
     case "json" return
-        if($params instance of json:object)
-        then <x>{$params}</x>//json:entry[@key = $key]//json:value/node()
-        else $params//json:entry[@key = $key]//json:value/node()
-    case "param" return map:get($params,$key)
-    case "xml" return  $params//*[fn:local-name(.) = $key]/node()
+      if($params instance of json:object) then <x>{$params}</x>//json:entry[@key = $key]//json:value/node()
+      else $params//json:entry[@key = $key]//json:value/node()
+    case "param"
+      return map:get($params,$key)
+    case "xml"
+      return $params//*[fn:local-name(.) = $key]/node()
     default return ()
-
 };
 (:~
  :
@@ -2328,10 +2361,10 @@ declare function domain:module-exists(
  : $function-arity is optional
  :)
 declare function domain:module-function-exists(
-$module-namespace as xs:string,
-$module-location as xs:string,
-$function-name as xs:string,
-$function-arity as xs:integer?
+  $module-namespace as xs:string,
+  $module-location as xs:string,
+  $function-name as xs:string,
+  $function-arity as xs:integer?
 ) as xs:boolean {
    let $eval :=
       <node>import module namespace func = '{$module-namespace}' at '{$module-location}';
@@ -2353,18 +2386,21 @@ $function-arity as xs:integer?
 (:
  : get a module function  (generic)
  : this should be refactored along with the module code in domain.xqy
+ : TODO : Add support for model extension registered in module location
  : @author jjl
  :)
  declare function domain:get-module-function(
-    $module-namespace as xs:string,
-    $module-location as xs:string,
-    $function-name as xs:string,
-    $function-arity as xs:integer?
+  $module-uri as xs:string?,
+  $module-location as xs:string,
+  $function-name as xs:string,
+  $function-arity as xs:integer?
  ) as xdmp:function? {
-    if( domain:module-exists( $module-location )
-        and domain:module-function-exists( $module-namespace, $module-location, $function-name, $function-arity ) )
-    then xdmp:function( fn:QName( $module-namespace, $function-name ), $module-location )
-    else ()
+  if(
+    domain:module-exists( $module-location ) and 
+    domain:module-function-exists( $module-uri, $module-location, $function-name, $function-arity )
+  ) then 
+    xdmp:function( fn:QName( $module-uri, $function-name ), $module-location )
+  else ()
  };
 
 (:
@@ -2372,15 +2408,15 @@ $function-arity as xs:integer?
  : @author jjl
  :)
  declare function domain:get-model-module-function(
-    $application-name as xs:string?,
-    $model-name as xs:string,
-    $action as xs:string
+  $application-name as xs:string?,
+  $model-name as xs:string,
+  $action as xs:string,
+  $function-arity as xs:integer?
  ) as xdmp:function? {
-    let $application := config:get-application( ($application-name, config:default-application())[1] )
-    let $module-namespace := fn:concat($application/@namespace,'/model/', $model-name)
-    let $module-location  := fn:concat($application/@uri,'/models/', $model-name,'-model.xqy')
-    return
-        domain:get-module-function( $module-namespace, $module-location, $action, 2 )
+  let $module-location := config:model-location($application-name, $model-name)
+  let $module-uri := config:model-uri($application-name, $model-name)
+  return
+    domain:get-module-function( $module-uri, $module-location, $action, $function-arity )
  };
 
  (:
@@ -2389,35 +2425,48 @@ $function-arity as xs:integer?
   : Either that or we add get-model-extension-function and put that in the sequence in
   : get-model-function
   :)
- declare function domain:get-model-base-function(
-     $action as xs:string
- ) as xdmp:function? {
-    let $module-namespace := "http://xquerrail.com/model/base"
-    let $module-location  := config:get-base-model-location('')
-    return
-        domain:get-module-function( $module-namespace, $module-location, $action, 2 )
+declare function domain:get-model-base-function(
+  $action as xs:string,
+  $function-arity as xs:integer?
+) as xdmp:function? {
+  let $module-namespace := "http://xquerrail.com/model/base"
+  let $module-location  := config:get-base-model-location()
+  return
+    domain:get-module-function( $module-namespace, $module-location, $action, $function-arity )
  };
 
  (:
  : get a model function, either from model-module or base-module
- :
  :)
- declare function domain:get-model-function(
-    $application-name as xs:string?,
-    $model-name as xs:string,
-    $action as xs:string,
-    $fatal as xs:boolean?
+declare function domain:get-model-function(
+  $application-name as xs:string?,
+  $model-name as xs:string,
+  $action as xs:string,
+  $function-arity as xs:integer?,
+  $fatal as xs:boolean?
  ) as xdmp:function? {
-    (
-        domain:get-model-module-function( $application-name, $model-name, $action ),
-        (: domain:get-model-extension-function(..), :)
-        domain:get-model-base-function( $action ),
-        if( $fatal )
-            then fn:error(xs:QName("ACTION-NOT-EXISTS"), "The action '" || $action || "' for model '" || $model-name || "' does not exist")
-            else ()
-    )[1]
+  fn:head((
+    domain:get-model-module-function( $application-name, $model-name, $action, $function-arity),
+    domain:get-model-extension-function($action, $function-arity), 
+    domain:get-model-base-function($action, $function-arity),
+    if($fatal) then 
+      fn:error(xs:QName("ACTION-NOT-EXISTS"), "The action '" || $action || "' for model '" || $model-name || "' does not exist")
+    else ()
+  ))
 };
 
+declare function domain:get-model-extension-function(
+  $action as xs:string,
+  $function-arity as xs:integer?
+ ) as xdmp:function? {
+  let $module-uri := "http://xquerrail.com/model/extension"
+  let $module-locations := config:model-extension-location()
+  return fn:head(
+    for $loc in $module-locations 
+      return domain:get-module-function($module-uri, $loc, $action, $function-arity)
+  )
+};
+ 
 (:~
  : Returns all models for all domains
 :)

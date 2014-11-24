@@ -1,24 +1,38 @@
 <domain xmlns="http://xquerrail.com/domain"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xmlns:search = "http://marklogic.com/appservices/search"
-    xsi:schemaLocation="http://xquerrail.com/domain ../../_framework/schemas/domain.xsd">
-
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:search = "http://marklogic.com/appservices/search"
+  xsi:schemaLocation="http://xquerrail.com/domain https://raw.githubusercontent.com/nativelogix/xquerrail2.framework/master/src/main/_framework/schemas/domain.xsd">
+  
   <model name="model1" persistence="document" label="Model #1" extends="base" namespace-uri="http://marklogic.com/model/model1" key="uuid" keyLabel="id">
     <document root="templates">/test/model1.xml</document>
     <element name="id" type="string" label="Id"></element>
     <element name="name" type="string" label="Name"/>
   </model>
-
+  
   <!-- BEGIN models used for tesing order of elements -->
   <model name="model2" persistence="document" label="Model #2" extends="base" namespace-uri="http://marklogic.com/model/model2" key="uuid" keyLabel="id">
     <document root="templates">/test/model2.xml</document>
     <element name="id" type="string" label="Id"></element>
     <element name="name" type="string" label="Name"/>
   </model>
+
   <model name="model3" persistence="document" label="Model #3" extends="base" namespace-uri="http://marklogic.com/model/model3" key="uuid" keyLabel="id">
     <document root="templates">/test/model3.xml</document>
     <element name="id" type="string" label="Id" sortValue="1"></element>
     <element name="name" type="string" label="Name" sortValue="0"/>
   </model>
   <!-- END models used for tesing order of elements -->
+
+  <model name="model4" persistence="document" extends="abstract1" override="true">
+    <attribute name="id" type="string"/>
+    <element name="title" type="string"/>
+    <element name="content" type="string"/>
+    <element override="true" name="type" type="string" default="biblio"/>
+  </model>
+  
+  <model name="model5" persistence="document" extends="model4">
+    <element name="content" type="schema-element" override="true"/>
+    <element override="true" name="type" type="string" default="table"/>
+  </model>
+
 </domain>

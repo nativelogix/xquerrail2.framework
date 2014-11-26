@@ -3,10 +3,12 @@
   xmlns:search = "http://marklogic.com/appservices/search"
   xsi:schemaLocation="http://xquerrail.com/domain https://raw.githubusercontent.com/nativelogix/xquerrail2.framework/master/src/main/_framework/schemas/domain.xsd">
   
-  <model name="model1" persistence="document" label="Model #1" extends="base" namespace-uri="http://marklogic.com/model/model1" key="uuid" keyLabel="id">
-    <document root="templates">/test/model1.xml</document>
+  <model name="model1" persistence="directory" label="Model #1" extends="base" namespace-uri="http://marklogic.com/model/model1" key="uuid" keyLabel="id">
+    <directory>/test/model1/</directory>
     <element name="id" type="string" label="Id"/>
     <element name="name" type="string" label="Name"/>
+    <element name="description" type="string" label="Description"/>
+    <element name="tags" type="string" label="Tags" occurrence="*"/>
   </model>
   
   <model name="model2" persistence="document" label="Model #2" extends="base" namespace-uri="http://marklogic.com/model/model2" key="uuid" keyLabel="id">

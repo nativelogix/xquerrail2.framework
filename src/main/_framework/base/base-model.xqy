@@ -622,6 +622,52 @@ declare function model:update-partial(
        fn:error(xs:QName("ERROR"), "Trying to update a document that does not exist.")
 };
 
+declare function model:patch(
+  $model as element(domain:model),
+  $instance as element(),
+  $params as item()*
+) {
+  let $instance := model:convert-to-map($model, $instance)
+  return (
+    $params ! (
+      let $item := .
+      let $operation := map:get($item, "op")
+      let $path := map:get($item, "path")
+      let $value := map:get($item, "value")
+      let $field := domain:get-model-field($model, $path)
+      let $field := 
+        if (fn:exists($field)) then $field
+        else fn:error(xs:QName("FIELD-NOT-FOUND"), text{"Could not find field from path", $path, "in model", $model/@name})
+      let $key := domain:get-field-name-key($field)
+      return
+        if (fn:empty($field)) then
+          (xdmp:log(text{"Cannot find field from", $path}, "info"))
+        else
+          if ($operation eq "add") then
+          (
+            map:put($instance, $key, (map:get($instance, $key), $value))
+          )
+          else if ($operation eq "remove") then
+          (
+            map:delete($instance, $key)
+          )
+          else if ($operation eq "replace") then
+          (
+            map:put($instance, $key, $value)
+          )
+          else if ($operation eq "test") then
+          (
+            if (map:get($instance, $key) eq $value) then ()
+            else fn:error(xs:QName("PATCH-TEST-FAILED"), text{"Test failed", "path", $path, "value", $value})
+          )
+          else
+          (fn:error(xs:QName("OPERATION-NOT-IMPLEMENTED"), text{"Operation", $operation, "not implemented"}))
+    )
+    ,
+    model:update($model, $instance)
+  )
+};
+
 (:~
  : Overloaded method to support existing controller functions for adding collections
  :)
@@ -1136,8 +1182,8 @@ declare function model:delete(
 {
   let $params := domain:fire-before-event($model,"delete",$params)
   let $current := model:get($model,$params)
-  let $is-referenced := domain:is-model-referenced($model,$current)
   let $is-current := if($current) then () else fn:error(xs:QName("DELETE-ERROR"),"Could not find a matching document")
+  let $is-referenced := domain:is-model-referenced($model,$current)
   return
     try {
       if($is-referenced) then

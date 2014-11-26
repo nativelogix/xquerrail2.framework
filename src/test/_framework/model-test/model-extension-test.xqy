@@ -11,7 +11,7 @@ import module namespace model = "http://xquerrail.com/model/base" at "../../../.
 
 declare option xdmp:mapping "false";
 
-declare variable $TEST-COLLECTION := "base-model-reference-test";
+declare variable $TEST-COLLECTION := "model-extension-test";
 
 declare variable $TEST-APPLICATION :=
 <application xmlns="http://xquerrail.com/config">

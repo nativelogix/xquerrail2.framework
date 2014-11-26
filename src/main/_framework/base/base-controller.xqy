@@ -103,6 +103,7 @@ declare function controller:invoke($action)
          else if($action eq "list")   then controller:list()
          else if($action eq "search") then controller:search()
          else if($action eq "put")    then controller:put()
+         else if($action eq "patch")    then controller:patch()
          else if($action eq "post")   then controller:post()
          else if($action eq "binary") then controller:binary()
          (:HTML:)
@@ -221,6 +222,14 @@ declare function controller:update()
     controller:get-params(),
     (),
     request:param("partial-update") = "true"
+  )
+};
+
+declare function controller:patch() {
+  model:patch(
+    controller:model(),
+    controller:get(),
+    json:array-values(request:body())
   )
 };
 

@@ -106,6 +106,13 @@ declare function domain:cast-value($field as element(),$value as item()*)
         default return $value
 };
 (:~
+ : Returns the cts scalar type for all types.  The default is "string"
+:)
+declare function domain:get-field-scalar-type($field as element())
+{
+  domain:resolve-cts-type($field/@type)
+};
+(:~
  : Returns if the value is castable to the given value based on the field/@type
  : @param $field Domain element (element|attribute|container)
  :)

@@ -466,7 +466,7 @@ declare function config:application-controllers-path(
   let $old-path := fn:concat(config:application-directory($application-name), "/controller/")
   return
   if(xdmp:modules-database() = 0) then
-      if (xdmp:filesystem-directory(fn:concat(xdmp:modules-root(), $path))) then
+      if (xdmp:filesystem-file-exists(fn:concat(xdmp:modules-root(), $path))) then
         $path
       else (
         xdmp:log(text{"controllers-path", $path, "does not exist. Please rename controller to controllers"}),
@@ -756,8 +756,8 @@ declare function config:controller-uri(
   $controller-name as xs:string
 ) as xs:string {
    fn:concat(
-    config:application-namespace($application-name), 
-    if (fn:contains(config:application-controllers-path($application-name), "controllers")) then "/controllers/" else "/controller/", 
+    config:application-namespace($application-name),
+    if (fn:contains(config:application-controllers-path($application-name), "controllers")) then "/controllers/" else "/controller/",
     $controller-name
   )
 };
@@ -780,8 +780,8 @@ declare function config:model-uri(
   $model-name as xs:string
 ) as xs:string {
    fn:concat(
-    config:application-namespace($application-name), 
-    "/models/", 
+    config:application-namespace($application-name),
+    "/models/",
     $model-name
   )
 };

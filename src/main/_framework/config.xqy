@@ -756,8 +756,8 @@ declare function config:controller-uri(
   $controller-name as xs:string
 ) as xs:string {
    fn:concat(
-    config:application-namespace($application-name), 
-    if (fn:contains(config:application-controllers-path($application-name), "controllers")) then "/controllers/" else "/controller/", 
+    config:application-namespace($application-name),
+    if (fn:contains(config:application-controllers-path($application-name), "controllers")) then "/controllers/" else "/controller/",
     $controller-name
   )
 };
@@ -780,8 +780,8 @@ declare function config:model-uri(
   $model-name as xs:string
 ) as xs:string {
    fn:concat(
-    config:application-namespace($application-name), 
-    "/models/", 
+    config:application-namespace($application-name),
+    "/models/",
     $model-name
   )
 };

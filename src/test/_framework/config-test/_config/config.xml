@@ -14,6 +14,7 @@
 
     <!--Register Your Application(s) Here-->
     <application name="app-test" namespace="http://xquerrail.com/app-test" uri="/test/_framework/config-test/app-test">
+      <bootstrap resource="custom-bootstrap.xqy"/>
       <domain resource="domains/application-domain.xml" />
       <script-directory resource="resources/js/"/>
       <stylesheet-directory resource="resources/css/"/>

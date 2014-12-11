@@ -635,7 +635,7 @@ declare function model:patch(
       let $path := map:get($item, "path")
       let $value := map:get($item, "value")
       let $field := domain:get-model-field($model, $path)
-      let $field := 
+      let $field :=
         if (fn:exists($field)) then $field
         else fn:error(xs:QName("FIELD-NOT-FOUND"), text{"Could not find field from path", $path, "in model", $model/@name})
       let $key := domain:get-field-name-key($field)
@@ -856,8 +856,12 @@ declare function model:recursive-build(
              }
       (: Build out any domain Elements :)
       case element(domain:element) return
-         let $attributes :=
-             $context/domain:attribute ! model:recursive-build(.,$current, $updates,$partial)
+        let $attributes := $context/domain:attribute ! (
+          if (domain:field-is-multivalue($context)) then
+            ()
+          else
+            model:recursive-build(.,$current, $updates,$partial)
+        )
          let $default-value  := (fn:data($context/@default),"")[1]
          let $occurrence := ($context/@occurrence,"?")
          return
@@ -871,7 +875,13 @@ declare function model:recursive-build(
              default return
                if($type = ($domain:SIMPLE-TYPES,$domain:COMPLEX-TYPES)) then
                   if(fn:exists($update-value)) then
-                      for $value in $update-value
+                     let $current-value := domain:get-field-value-node($context,$current)
+                     (:let $default-value := fn:data($context/@default):)
+                     let $update-value := domain:get-field-value-node($context, $updates)
+                      for $value at $position in $update-value
+                      let $attributes := $context/domain:attribute ! (
+                        model:build-attribute(., $current-value, $update-value[$position], $partial, fn:true())
+                      )
                       return
                          element {domain:get-field-qname($context)}{
                             $attributes,
@@ -893,7 +903,7 @@ declare function model:recursive-build(
                 else fn:error(xs:QName("UNKNOWN-TYPE"),"The type of " || $type || " is unknown ",$context)
 
       (: Build out any domain Attributes :)
-      case element(domain:attribute) return model:build-attribute($context,$current,$updates,$partial)
+      case element(domain:attribute) return model:build-attribute($context,$current,$updates,$partial, fn:false())
       case element(domain:triple) return model:build-triple($context,$current,$updates,$partial)
       (: Build out any domain Containers :)
       case element(domain:container) return
@@ -915,8 +925,9 @@ declare function model:build-attribute(
    $context as node(),
    $current as node()?,
    $updates as item(),
-   $partial as xs:boolean
-){
+   $partial as xs:boolean,
+   $relative as xs:boolean
+) {
     let $type := fn:data($context/@type)
     let $key  := domain:get-field-id($context)
     let $current-value := domain:get-field-value($context,$current)
@@ -925,8 +936,14 @@ declare function model:build-attribute(
     let $localname := fn:data($context/@name)
     let $default   := (fn:data($context/@default),"")[1]
     let $occurrence := ($context/@occurrence,"?")
-    let $values := domain:get-field-value($context,$updates)
-    return (
+    let $values := domain:get-field-value($context,$updates, $relative)
+(:      if ($position > 0) then (
+        let $value := domain:get-field-value($context,$updates, fn:true())
+        return $value
+      )
+      else
+        domain:get-field-value($context,$updates)
+:)    return (
       if(fn:exists($values)) then
       attribute {(fn:QName("",$localname))}{
         model:build-value($context, $values,$current-value)
@@ -2091,7 +2108,7 @@ declare function model:validate-params($model as element(domain:model), $params 
 as element(validationError)*
 {
   if (fn:not(domain:model-validation-enabled($model))) then ()
-  else
+  else (
    let $unique-constraints := domain:get-model-unique-constraint-fields($model)
    let $unique-search := domain:get-model-unique-constraint-query($model,$params,$mode)
    return
@@ -2224,6 +2241,7 @@ as element(validationError)*
                      else ()
             default return ()
             )
+  )
 };
 
 (:~
@@ -2272,7 +2290,7 @@ declare function model:convert-to-map(
         for $field in $model//(domain:element|domain:attribute)
           return map:entry(domain:get-field-name-key($field), domain:get-field-value($field, $current))
       ))
-    default 
+    default
       return ()
 };
 
@@ -2651,7 +2669,7 @@ declare function model:build-from-json(
           default return fn:error(xs:QName("UNKNOWN-COMPLEX-TYPE"),"The type of " || $type || " is unknown ",$context)
 
      (: Build out any domain Attributes :)
-     case element(domain:attribute) return model:build-attribute($context,$current,$updates,$partial)
+     case element(domain:attribute) return model:build-attribute($context,$current,$updates,$partial, fn:false())
      case element(domain:triple) return model:build-triple($context,$current,$updates,$partial)
      (: Build out any domain Containers :)
      case element(domain:container) return

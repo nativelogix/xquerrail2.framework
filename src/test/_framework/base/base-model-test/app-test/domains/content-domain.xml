@@ -8,7 +8,7 @@
     <navigation listable="true" pageSize="20">
       <search:facet-option>frequency-order</search:facet-option>
     </navigation>
-    <element name="id" type="string" label="Id"></element> 
+    <element name="id" type="string" label="Id"></element>
     <element name="name" type="string" label="Name">
       <navigation listable="false" searchable="true"></navigation>
     </element>
@@ -16,38 +16,38 @@
   <model name="model2" persistence="document" label="Model #2" extends="base" namespace-uri="http://marklogic.com/model/model2" key="uuid" keyLabel="id">
     <document root="models">/test/model2.xml</document>
     <navigation listable="true" showable="true"></navigation>
-    <element name="id" type="string" label="Id"></element> 
+    <element name="id" type="string" label="Id"></element>
     <element name="name" type="string" label="Name"/>
-    
+
     <element name="model1" type="reference" reference="model:model1:reference" label="Model #1"/>
   </model>
   <model name="model3" persistence="document" label="Model #3" extends="base" namespace-uri="http://marklogic.com/model/model3" key="uuid" keyLabel="id">
     <document root="models">/test/model3.xml</document>
-    <element name="id" type="string" label="Id"></element> 
+    <element name="id" type="string" label="Id"></element>
     <element name="name" type="string" label="Name"/>
     <element name="dummyModel" type="reference" reference="model:model1:reference" label="Model #1"/>
   </model>
   <model name="model4" persistence="directory" label="Model #4" extends="base" namespace-uri="http://marklogic.com/model/model4" key="uuid" keyLabel="id">
     <directory>/test/model4/</directory>
-    <element name="id" type="string" label="Id"></element> 
+    <element name="id" type="string" label="Id"></element>
     <element name="name" type="string" label="Name"/>
   </model>
   <model name="model5" persistence="directory" label="Model #5" extends="base" namespace-uri="http://marklogic.com/model/model5" key="uuid" keyLabel="id">
     <directory>/test/model5/</directory>
-    <element name="id" type="string" label="Id"></element> 
+    <element name="id" type="string" label="Id"></element>
     <element name="name" type="string" label="Name"/>
     <element name="model1" type="model1" label="Model #1"/>
   </model>
   <model name="model6" persistence="directory" label="Model #6" extends="base" key="uuid" keyLabel="id">
     <directory>/test/model6/</directory>
-    <attribute name="id" type="string" label="Id"></attribute> 
+    <attribute name="id" type="string" label="Id"></attribute>
     <attribute name="score" type="string" label="Score"></attribute>
     <element name="name" type="string" label="Name"/>
   </model>
   <model name="model7" persistence="directory" label="Model #7" extends="base" key="uuid" keyLabel="id">
     <directory>/test/model7/</directory>
     <navigation listable="true"></navigation>
-    <attribute name="id" type="string" label="Id"></attribute> 
+    <attribute name="id" type="string" label="Id"></attribute>
     <attribute name="score" type="integer" label="Score">
       <navigation listable="false" searchable="true"></navigation>
     </attribute>
@@ -55,7 +55,7 @@
   </model>
   <model name="abstract1" persistence="abstract" label="Abstract" extends="base" key="uuid" keyLabel="id">
     <directory>/test/model7/</directory>
-    <attribute name="id" type="id"/> 
+    <attribute name="id" type="id"/>
     <attribute name="flag2" type="boolean" label="Flag #2"></attribute>
     <attribute name="score" type="integer" label="Score"></attribute>
     <element name="flag" type="boolean" label="Flag"/>
@@ -63,12 +63,12 @@
   </model>
   <model name="model8" persistence="directory" label="Model #8" extends="base" key="uuid" keyLabel="id">
     <directory>/test/model8/</directory>
-    <attribute name="id" type="string" label="Id"></attribute> 
+    <attribute name="id" type="string" label="Id"></attribute>
     <element name="abstract" type="abstract1" label="Abstract"/>
   </model>
   <model name="model9" persistence="directory" label="Model #9" extends="base" key="uuid" keyLabel="id">
     <directory>/test/model9/</directory>
-    <attribute name="id" type="string" label="Id"></attribute> 
+    <attribute name="id" type="string" label="Id"></attribute>
     <element name="type" type="reference" reference="application:model:selector('lookup')" label="Reference Type"/>
   </model>
   <model name="version" persistence="abstract" label="Version">
@@ -78,7 +78,7 @@
   </model>
   <model name="model10" persistence="directory" label="Model #10" extends="base" key="uuid" keyLabel="id">
     <directory>/test/model10/</directory>
-    <attribute name="id" type="string" label="Id"></attribute> 
+    <attribute name="id" type="string" label="Id"></attribute>
     <container name="versions" label="Versions">
       <navigation listable="true" searchable="true"></navigation>
       <element name="version" type="version" label="Version" occurrence="*">
@@ -86,8 +86,8 @@
       </element>
     </container>
   </model>
-  <model name="abstract2" persistence="abstract" label="Abstract" extends="base" key="uuid" keyLabel="name">
-    <attribute name="id" type="id"/> 
+  <model name="abstract2" persistence="abstract" label="Abstract" key="id" keyLabel="name">
+    <attribute name="id" type="id"/>
     <attribute name="name" type="string" label="Name"/>
   </model>
   <model name="model11" persistence="directory" label="Model #11" extends="base" key="uuid" keyLabel="id">
@@ -95,12 +95,12 @@
     <navigation listable="true"></navigation>
     <element name="id" type="string" label="Id"/>
     <element name="abstract" type="abstract2" label="Abstract"/>
-    <element name="child" type="string" label="Abstract">
+    <element name="child" type="string" label="Child">
       <navigation facetable="true"></navigation>
-      <attribute name="childId" type="string"/> 
+      <attribute name="childId" type="string"/>
     </element>
   </model>
-  
+
   <model name="model12" persistence="document" label="Model #12" key="id" keyLabel="id">
     <document root="models12">/test/model12.xml</document>
     <binaryDirectory>/test/file12/$(id)/</binaryDirectory>
@@ -109,13 +109,45 @@
     </element>
     <element name="file" type="binary" label="File"/>
   </model>
-  
+
   <model name="model13" persistence="document" label="Model #13" key="id" keyLabel="id">
     <document root="models13">/test/model13.xml</document>
     <element name="id" type="identity" identity="true" >
       <ui type="hidden"/>
     </element>
     <element name="file" type="binary" label="File" fileURI="/test/file13/$(id)"/>
+  </model>
+
+  <model name="group" persistence="abstract" label="group" key="id" keyLabel="id">
+    <attribute name="id" type="id"/>
+    <attribute name="seq" type="string"/>
+    <attribute name="count" type="integer"/>
+    <element name="text" type="string" label="Text" />
+  </model>
+
+  <model name="model14" persistence="directory" label="Model #14" key="id" keyLabel="id">
+    <directory root="models14">/test/model14/</directory>
+    <element name="id" type="identity" identity="true" />
+    <container name="groups" label="Groups">
+      <element name="group" type="group" label="Group" occurrence="*"/>
+    </container>
+  </model>
+
+  <model name="model15" persistence="directory" label="Model #15" key="id" keyLabel="id">
+    <directory root="models14">/test/model15/</directory>
+    <element name="id" type="identity" identity="true" />
+    <container name="groups" label="Groups">
+      <element name="group" type="string" label="Group" occurrence="*">
+        <attribute name="seq" type="string"/>
+        <attribute name="count" type="integer"/>
+      </element>
+    </container>
+  </model>
+
+  <model name="model16" persistence="directory" label="Model #16" extends="base" key="uuid" keyLabel="id">
+    <directory>/test/model16/$(id)</directory>
+    <element name="id" type="string" label="Id"></element>
+    <element name="name" type="string" label="Name"/>
   </model>
 
 </domain>

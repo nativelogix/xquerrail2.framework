@@ -19,14 +19,14 @@ declare variable $TEST-APPLICATION :=
 </application>
 ;
 
-declare variable $INSTANCE1 := 
+declare variable $INSTANCE1 :=
 <model1 xmlns="http://marklogic.com/model/model1">
   <id>convert-to-map-model1-id</id>
   <name>crud-model1-name</name>
 </model1>
 ;
 
-declare variable $INSTANCE10 := 
+declare variable $INSTANCE10 :=
 <model1 id="convert-to-map-model10-id" xmlns="http://xquerrail.com/app-test">
   <versions>
     <version id="n100000">
@@ -45,15 +45,12 @@ declare variable $INSTANCE2 := map:new((
 
 declare %test:setup function setup() as empty-sequence()
 {
-  let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION))
-  return ()
+  (app:reset(), app:bootstrap($TEST-APPLICATION))[0]
 };
 
 declare %test:teardown function teardown() as empty-sequence()
 {
-  (
-    xdmp:log("*** TEARDOWN ***")
-   )
+  ()
 };
 
 declare %test:case function convert-to-map-simple-test() as item()*
@@ -61,7 +58,7 @@ declare %test:case function convert-to-map-simple-test() as item()*
   let $model1 := domain:get-model("model1")
   let $instance := model:new($model1, $INSTANCE1)
   let $map := model:convert-to-map($model1, $instance)
-  return 
+  return
   (
     assert:true(map:contains($map, "id")),
     assert:true(map:contains($map, "name"))
@@ -73,7 +70,7 @@ declare %test:case function convert-to-map-with-container-test() as item()*
   let $model10 := domain:get-model("model10")
   let $instance := model:new($model10, $INSTANCE10)
   let $map := model:convert-to-map($model10, $instance)
-  return 
+  return
   (
     assert:true(map:contains($map, "id")),
     assert:true(map:contains($map, "versions.version"))
@@ -86,7 +83,7 @@ declare %test:case function xml-to-map-to-xml-test() as item()*
   let $doc := model:new($model1, $INSTANCE1)
   let $map := model:convert-to-map($model1, $doc)
   let $doc2 := model:new($model1, $map)
-  return 
+  return
   (
     assert:not-empty($doc),
     assert:not-empty($doc2),
@@ -99,7 +96,7 @@ declare %test:case function map-to-xml-to-map-test() as item()*
   let $model1 := domain:get-model("model1")
   let $doc := model:new($model1, $INSTANCE2)
   let $map := model:convert-to-map($model1, $doc)
-  return 
+  return
   (
     assert:equal(map:get($INSTANCE2, "id"), map:get($map, "id")),
     assert:equal(map:get($INSTANCE2, "name"), map:get($map, "name"))

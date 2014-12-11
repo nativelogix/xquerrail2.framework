@@ -9,6 +9,7 @@ import module namespace model = "http://xquerrail.com/model/base" at "../../../.
 import module namespace setup = "http://xquerrail.com/test/setup";
 
 declare namespace model1 = "http://marklogic.com/model/model1";
+declare namespace app-test = "http://xquerrail.com/app-test";
 
 declare option xdmp:mapping "false";
 
@@ -21,25 +22,33 @@ declare variable $TEST-APPLICATION :=
 </application>
 ;
 
-declare variable $INSTANCE1 := 
+declare variable $INSTANCE1 :=
 <model1 xmlns="http://marklogic.com/model/model1">
   <id>crud-model1-id</id>
   <name>crud-model1-name</name>
 </model1>
 ;
 
-declare variable $INSTANCE2 := 
+declare variable $INSTANCE2 :=
 <model2 xmlns="http://marklogic.com/model/model2">
   <id>model2-id</id>
   <name>model2-name</name>
 </model2>
 ;
 
-declare variable $INSTANCE4 := 
+declare variable $INSTANCE4 :=
 <model4 xmlns="http://marklogic.com/model/model4">
   <id>model4-id</id>
   <name>model4-name</name>
 </model4>
+;
+
+declare variable $INSTANCE11 :=
+<model11 xmlns="http://xquerrail.com/app-test">
+  <id>model11-id</id>
+  <abstract name="model11-abstract-name" />
+  <child childId="child-id-model11" />
+</model11>
 ;
 
 declare variable $CONFIG := ();
@@ -56,7 +65,7 @@ declare %test:teardown function teardown() {
   xdmp:invoke-function(
     function() {
       xdmp:collection-delete($TEST-COLLECTION)
-      , xdmp:commit() 
+      , xdmp:commit()
     },
     <options xmlns="xdmp:eval">
       <transaction-mode>update</transaction-mode>
@@ -64,10 +73,10 @@ declare %test:teardown function teardown() {
   )
 };
 
-declare %test:before-each function before-test() {
+(:declare %test:before-each function before-test() {
   app:bootstrap($TEST-APPLICATION)
 };
-
+:)
 declare %test:case function model1-model2-exist-test() as item()*
 {
   let $model1 := domain:get-model("model1")
@@ -82,7 +91,7 @@ declare %test:case function model-document-new-test() as item()*
 {
   let $model1 := domain:get-model("model1")
   let $instance1 := model:new(
-    $model1, 
+    $model1,
     map:new((
       map:entry("id", "1234"),
       map:entry("name", "name-1")
@@ -113,12 +122,32 @@ declare %test:case function model-directory-new-test() as item()*
   )
 };
 
+declare %test:case function model-directory-element-attribute-new-test() as item()*
+{
+  let $model11 := domain:get-model("model11")
+  let $instance11 := model:new(
+    $model11,
+    $INSTANCE11
+  )
+  let $value-id := domain:get-field-value(domain:get-model-field($model11, "id"), $instance11)
+  let $value-child-id := domain:get-field-value(domain:get-model-field($model11, "childId"), $instance11)
+  let $abstract-value := domain:get-field-value(domain:get-model-field($model11, "abstract"), $instance11)
+  let $abstract-name-value := domain:get-field-value(domain:get-model-field(domain:get-model("abstract2"), "name"), $abstract-value)
+  let $_ := xdmp:log(($model11, $instance11, $INSTANCE11))
+  return (
+    assert:not-empty($instance11),
+    assert:equal("model11-id", xs:string($value-id)),
+    assert:equal("child-id-model11", xs:string($value-child-id)),
+    assert:equal("model11-abstract-name", xs:string($abstract-name-value))
+  )
+};
+
 declare %test:case function model-document-new-keep-identity-test() as item()*
 {
   let $random := setup:random()
   let $model1 := domain:get-model("model1")
   let $instance1 := model:new(
-    $model1, 
+    $model1,
     map:new((
       map:entry("uuid", $random),
       map:entry("id", "id-" || $random),
@@ -126,7 +155,7 @@ declare %test:case function model-document-new-keep-identity-test() as item()*
     ))
   )
   let $identity-value := xs:string(domain:get-field-value(domain:get-model-identity-field($model1), $instance1))
-  
+
   return (
     assert:not-empty($instance1),
     assert:equal($identity-value, $random, "uuid must be equal to " || $random)
@@ -138,18 +167,18 @@ declare %test:case function model-document-new-create-keep-identity-test() as it
   let $random := setup:random()
   let $model1 := domain:get-model("model1")
   let $new-instance1 := model:new(
-    $model1, 
+    $model1,
     map:new((
       map:entry("id", "id-" || $random),
       map:entry("name", "name-" || $random)
     ))
   )
   let $identity-value := xs:string(domain:get-field-value(domain:get-model-identity-field($model1), $new-instance1))
-  
+
   let $instance1 := eval(
     function() {
       model:create(
-        $model1, 
+        $model1,
         $new-instance1,
         $TEST-COLLECTION
       )
@@ -169,7 +198,7 @@ declare %test:ignore function model-directory-create-test() as item()*
   let $instance4 := eval(
     function() {
       model:create(
-        $model4, 
+        $model4,
         $INSTANCE4,
         $TEST-COLLECTION
       )
@@ -190,7 +219,7 @@ declare %private function invoke($fn as function(*)) {
       xdmp:apply(
         $fn
       ),
-      xdmp:commit() 
+      xdmp:commit()
     },
     <options xmlns="xdmp:eval">
       <isolation>different-transaction</isolation>
@@ -222,7 +251,7 @@ declare %test:case function model-document-update-test() as item()*
   let $identity-field := domain:get-model-identity-field($model1)
   let $name-field := domain:get-model-field($model1, "name")
   let $find := model:find(
-    $model1, 
+    $model1,
     map:new((
       map:entry("id", "crud-model1-id")
     ))
@@ -231,17 +260,17 @@ declare %test:case function model-document-update-test() as item()*
   let $update1 := eval(
     function() {
       model:update(
-        $model1, 
+        $model1,
         map:new((
           map:entry("uuid", $identity-value),
           map:entry("name", "new-name")
-        )), 
+        )),
         $TEST-COLLECTION
       )
     }
   )
   let $find := model:find(
-    $model1, 
+    $model1,
     map:new((
       map:entry("id", "crud-model1-id")
     ))
@@ -259,7 +288,7 @@ declare %test:case function model-document-new-different-namespace-test() as ite
   let $instance1 := eval(
     function() {
       model:new(
-        $model1, 
+        $model1,
         map:new((
           map:entry("id", "1234"),
           map:entry("name", "name-1")
@@ -282,21 +311,21 @@ declare %test:case function model-document-create-test() as item()*
   let $instance1 := eval(
     function() {
       model:create(
-        $model1, 
+        $model1,
         map:new((
           map:entry("id", "1234"),
           map:entry("name", "name-1")
-        )), 
+        )),
         $TEST-COLLECTION
       )
     }
   )
 (:  let $instance1 := model:create(
-    $model1, 
+    $model1,
     map:new((
       map:entry("id", "1234"),
       map:entry("name", "name-1")
-    )), 
+    )),
     $TEST-COLLECTION
   )
 :)  let $value-id := domain:get-field-value(domain:get-model-field($model1, "id"), $instance1)
@@ -314,11 +343,11 @@ declare %test:case function model-document-create-from-xml-with-attribute-test()
   let $instance6 := eval(
     function() {
       model:create(
-        $model6, 
+        $model6,
         <model6 xmlns="http://xquerrail.com/app-test" score="10" id="666666">
           <name>name-6</name>
         </model6>
-        , 
+        ,
         $TEST-COLLECTION
       )
     }
@@ -340,12 +369,12 @@ declare %test:case function model-document-create-from-map-with-attribute-test()
   let $instance6 := eval(
     function() {
       model:create(
-        $model6, 
+        $model6,
         map:new((
           map:entry("id", "66666666"),
           map:entry("score", 10),
           map:entry("name", "name-6")
-        )), 
+        )),
         $TEST-COLLECTION
       )
     }
@@ -369,12 +398,12 @@ declare %test:case function model-find-by-attribute-test() as item()*
   let $instance6 := invoke(
     function() {
       model:create(
-        $model6, 
+        $model6,
         map:new((
           map:entry("id", $id),
           map:entry("score", 10),
           map:entry("name", "name-6")
-        )), 
+        )),
         $TEST-COLLECTION
       )
     }
@@ -404,11 +433,11 @@ declare %test:case function model-document-create-from-xml-with-integer-attribut
   let $instance7 := eval(
     function() {
       model:create(
-        $model7, 
+        $model7,
         <model7 xmlns="http://xquerrail.com/app-test" score="10" id="777777">
           <name>name-7</name>
         </model7>
-        , 
+        ,
         $TEST-COLLECTION
       )
     }
@@ -431,12 +460,12 @@ declare %test:case function model-document-create-from-map-with-integer-attribut
   let $instance7 := eval(
     function() {
       model:create(
-        $model7, 
+        $model7,
         map:new((
           map:entry("id", "77777777"),
           map:entry("score", 10),
           map:entry("name", "name-7")
-        )), 
+        )),
         $TEST-COLLECTION
       )
     }
@@ -457,7 +486,7 @@ declare %test:case function model-document-create-multiple-reference-instances-t
 {
   let $version-model := domain:get-model("version")
   let $model10 := domain:get-model("model10")
-  
+
   let $version1 := model:new(
     $version-model,
     map:new((
@@ -473,15 +502,15 @@ declare %test:case function model-document-create-multiple-reference-instances-t
       map:entry("action", "update")
     ))
   )
-  
+
   let $instance10 := eval(
     function() {
       model:create(
-        $model10, 
+        $model10,
         map:new((
           map:entry("id", "10101010"),
           map:entry("version", ($version1, $version2))
-        )), 
+        )),
         $TEST-COLLECTION
       )
     }
@@ -505,14 +534,14 @@ declare %test:case function model-document-binary-with-directory-binary-create()
   let $instance12 := invoke(
     function() {
       model:create(
-        $model12, 
+        $model12,
         map:new((
           map:entry("id", $id),
           map:entry("file", $binary)
-        )), 
+        )),
         $TEST-COLLECTION
       ),
-      xdmp:commit() 
+      xdmp:commit()
     }
   )
   let $value-id := domain:get-field-value(domain:get-model-field($model12, "id"), $instance12)
@@ -532,14 +561,14 @@ declare %test:case function model-document-binary-with-file-uri-create() as item
   let $instance13 := invoke(
     function() {
       model:create(
-        $model13, 
+        $model13,
         map:new((
           map:entry("id", $id),
           map:entry("file", $binary)
-        )), 
+        )),
         $TEST-COLLECTION
       ),
-      xdmp:commit() 
+      xdmp:commit()
     }
   )
   let $value-id := domain:get-field-value(domain:get-model-field($model13, "id"), $instance13)
@@ -562,21 +591,20 @@ declare %test:case function model-document-binary-with-filename-content-type-cre
   let $instance13 := invoke(
     function() {
       model:create(
-        $model13, 
+        $model13,
         map:new((
           map:entry("id", $id),
           map:entry("file", $binary),
           map:entry(fn:concat("file", "_filename"), $filename),
           map:entry(fn:concat("file", "_content-type"), $content-type)
-        )), 
+        )),
         $TEST-COLLECTION
       ),
-      xdmp:commit() 
+      xdmp:commit()
     }
   )
   let $value-id := domain:get-field-value(domain:get-model-field($model13, "id"), $instance13)
   let $value-file := domain:get-field-value(domain:get-model-field($model13, "file"), $instance13)
-  let $_ := xdmp:log(("$value-file", $value-file, xdmp:binary-decode(fn:doc(xs:string($value-file)), "UTF-8")))
   return (
     assert:not-empty($instance13),
     assert:equal($id, xs:string($value-id)),
@@ -586,17 +614,109 @@ declare %test:case function model-document-binary-with-filename-content-type-cre
   )
 };
 
-(:declare %test:case function get-model-references-test() as item()*
+declare %test:case function model-directory-container-multiple-instance-element-with-attributes-new() as item()*
 {
-  let $model1 := domain:get-model("model1")
-  let $model2 := domain:get-model("model2")
-  let $model1-instance := model:find($model1, map:new((map:entry("id", "model1-id"))))
-  let $identity-field := domain:get-model-identity-field($model1)
-  let $identity-value := xs:string(domain:get-field-value($identity-field, $model1-instance))
-  let $reference-field := domain:get-model-field($model2, "model1")
+  let $model14 := domain:get-model("model14")
+  let $group-model := domain:get-model("group")
+  let $id := "id14-" || xdmp:random()
+  let $group1 := model:new(
+    $group-model,
+    map:new((
+      map:entry("seq", "seq1"),
+      map:entry("count", 1),
+      map:entry("text", "This is a text")
+    ))
+  )
+  let $group2 := model:new(
+    $group-model,
+    map:new((
+      map:entry("seq", "seq2"),
+      map:entry("count", 2),
+      map:entry("text", "This is a text")
+    ))
+  )
+  let $instance14 := invoke(
+    function() {
+      model:create(
+        $model14,
+        element { xs:QName("app-test:model14") } {
+          element { xs:QName("app-test:id") } { $id },
+          element { xs:QName("app-test:groups") } {
+            (
+              $group1, $group2
+            )
+          }
+        },
+        $TEST-COLLECTION
+      ),
+      xdmp:commit()
+    }
+  )
+  let $value-id := domain:get-field-value(domain:get-model-field($model14, "id"), $instance14)
+  let $value-group := domain:get-field-value(domain:get-model-field($model14, "group"), $instance14)
   return (
-    assert:not-empty($reference-field),
-    assert:not-empty(model:get-model-references($reference-field, $identity-value))
+    assert:not-empty($instance14),
+    assert:equal($id, xs:string($value-id)),
+    assert:equal( fn:count($value-group), 2)
   )
 };
-:)
+
+declare %test:case function model-directory-container-multiple-element-with-attributes-new() as item()*
+{
+  let $model15 := domain:get-model("model15")
+  let $id := "id15-" || xdmp:random()
+  let $instance15 := invoke(
+    function() {
+      model:create(
+        $model15,
+        element { xs:QName("app-test:model15") } {
+          element { xs:QName("app-test:id") } { $id },
+          element { xs:QName("app-test:groups") } {
+            element { xs:QName("app-test:group") } {
+              attribute seq { "seq1"},
+              attribute count { 1 },
+              "this is group1"
+            },
+            element { xs:QName("app-test:group") } {
+              attribute seq { "seq2"},
+              attribute count { 2 },
+              "this is group2"
+            }
+          }
+        },
+        $TEST-COLLECTION
+      ),
+      xdmp:commit()
+    }
+  )
+  let $value-id := domain:get-field-value(domain:get-model-field($model15, "id"), $instance15)
+  let $value-group := domain:get-field-value(domain:get-model-field($model15, "group"), $instance15)
+  let $value-seq := domain:get-field-value(domain:get-model-field($model15, "seq"), $instance15)
+  let $_ := xdmp:log(("$instance15", $instance15))
+  return (
+    assert:not-empty($instance15),
+    assert:equal($id, xs:string($value-id)),
+    assert:equal( fn:count($value-group), 2),
+    assert:equal( fn:count($value-seq), 2),
+    assert:equal( $value-seq[1], "seq1"),
+    assert:equal( $value-seq[2], "seq2")
+  )
+};
+
+declare %test:case function get-model-generate-uri-test() as item()*
+{
+  let $id := "model16-" || xdmp:random()
+  let $model16 := domain:get-model("model16")
+  let $uri := model:generate-uri(
+    $model16/domain:directory,
+    $model16,
+    map:new((
+      map:entry("id", $id),
+      map:entry("name", "name-16")
+    ))
+    )
+  return (
+    assert:equal($uri, "/test/model16/" || $id)
+  )
+};
+

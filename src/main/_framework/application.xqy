@@ -73,7 +73,7 @@ declare %private function app:custom-bootstrap(
 
 declare %private function app:load-config(
 ) as element(config:config) {
-  let $config := 
+  let $config :=
     if(xdmp:modules-database() = 0)
     then xdmp:unquote(
             xdmp:binary-decode(
@@ -146,7 +146,7 @@ declare %private function app:get-base-safe($path as xs:string) as element(confi
   catch * {
     ()
   }
-}; 
+};
 
 declare function app:reset() as item()* {
   config:clear-cache()

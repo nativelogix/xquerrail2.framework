@@ -12,25 +12,25 @@ declare namespace json = "json:options";
 
 declare option xdmp:mapping "false";
 
-declare variable $NL as xs:string := 
-    if(xdmp:platform() eq "winnt") 
+declare variable $NL as xs:string :=
+    if(xdmp:platform() eq "winnt")
     then fn:codepoints-to-string((13,10))
     else "&#xA;"
-;    
+;
 (:~
- :  Does an update by iterating the element structure and looking for named element 
+ :  Does an update by iterating the element structure and looking for named element
  :  by local-name and updating it with a new value
  :)
 declare function model:update-partial($current as element(), $update as map:map)
-{  
+{
    let $cur-map := $update
    let $name-keys :=  map:keys($update)
-   let $update-nodes  := 
+   let $update-nodes  :=
       for $node in $current/element()
       let $lname     := fn:local-name($node)
       let $nname     := fn:node-name($node)
       let $positions := (fn:index-of($name-keys,$lname), fn:index-of($name-keys,$nname))[1]
-      let $match-key := 
+      let $match-key :=
         if($positions) then
           $name-keys[$positions]
         else
@@ -41,10 +41,10 @@ declare function model:update-partial($current as element(), $update as map:map)
              element {fn:node-name($node)}
              {
               let $value := map:get($update,$match-key)
-              return 
+              return
               if($value instance of node()) then
                  $value/node()
-              else 
+              else
                 $value
              },
              map:delete($cur-map,$match-key)
@@ -63,7 +63,7 @@ declare function model:eval-document-insert(
   $root as node()
 )
 {
-   let $stmt := 
+   let $stmt :=
    '
     declare variable $uri as xs:string external;
     declare variable $root as node() external;
@@ -89,7 +89,7 @@ declare function model:eval-document-insert(
   $permissions as element(sec:permission)+
 )
 {
-  let $stmt := 
+  let $stmt :=
    '
     declare variable $uri as xs:string external;
     declare variable $root as node() external;
@@ -119,7 +119,7 @@ declare function model:eval-document-insert(
   $collections as xs:string+
 )
 {
-  let $stmt := 
+  let $stmt :=
    '
     declare variable $uri as xs:string external;
     declare variable $root as node() external;
@@ -151,7 +151,7 @@ declare function model:eval-document-insert(
   $quality as xs:int?
 )
 {
-  let $stmt := 
+  let $stmt :=
    '
     declare variable $uri as xs:string external;
     declare variable $root as node() external;
@@ -186,7 +186,7 @@ declare function model:eval-document-insert(
   $forest-ids as xs:unsignedLong*
 )
 {
-   let $stmt := 
+   let $stmt :=
    '
     declare variable $uri as xs:string external;
     declare variable $root as node() external;
@@ -213,7 +213,7 @@ declare function model:eval-document-insert(
          <prevent-deadlocks>false</prevent-deadlocks>
       </options>
       )
-}; 
+};
 
 (:
    Eval insert over xdmp:node-insert-child
@@ -223,11 +223,11 @@ declare function model:eval-node-insert-child(
   $new as node()
 )
 {
-  let $stmt := 
+  let $stmt :=
   '  declare variable $parent as node() external;
      declare variable $new as node() external;
      xdmp:node-insert-child($parent,$new)
-  ' 
+  '
   return
     xdmp:eval($stmt,
     (
@@ -241,13 +241,13 @@ declare function model:eval-node-insert-child(
     )
 };
 
-declare function model:build-json( 
+declare function model:build-json(
    $field as element() ,
    $instance as element() )
 {
   model:build-json($field,$instance,fn:true(),<json:options/>)
 };
-declare function model:build-json( 
+declare function model:build-json(
    $field as element() ,
    $instance as element(),
    $include-root as xs:boolean)
@@ -260,9 +260,9 @@ declare function model:build-json(
   $include-root as xs:boolean,
   $options as element(json:options)
 ){
-  
+
    typeswitch($field)
-     case element(domain:model) return 
+     case element(domain:model) return
        js:o((
          for $f in $field/(domain:container|domain:attribute|domain:element)
          return model:build-json($f,$instance,$include-root,$options)
@@ -270,49 +270,49 @@ declare function model:build-json(
      case element(domain:element) return
         let $field-value := domain:get-field-value($field,$instance)
         return  (
-            for $field in $field/(domain:attribute) 
+            for $field in $field/(domain:attribute)
             return model:build-json($field,$instance,$include-root,$options),
-           if($field/@reference and $field/@type eq "reference") then   
+           if($field/@reference and $field/@type eq "reference") then
               if($field/@occurrence = ("+","*")) then
                  let $value := domain:get-field-value($field,$instance)
                  return
-                   if(fn:empty($value)) 
+                   if(fn:empty($value))
                    then js:kv($field/@name,())
-                   else  
+                   else
                      js:kv($field/@name,js:a(
                         for $ref in $field-value
                         return
                              if($options/json:flatten-reference eq "true")
                              then fn:string($ref)
-                             else 
+                             else
                              js:kv($field/@name,js:o((
                                  js:kv("text", fn:string($ref)),
                                  js:kv("id", fn:string($ref/@ref-id)),
                                  js:kv("type",fn:string($ref/@ref))
                              ))))
                         )
-            else 
+            else
               if($options/json:flatten-reference = "true")
               then js:kv($field/@name,fn:string($field-value))
-              else 
+              else
                  js:kv($field/@name,js:o((
                      js:kv("text", fn:string($field-value)),
                      js:kv("id", fn:string($field-value/@ref-id)),
                      js:kv("type",fn:string($field-value/@ref))
                  )))
-            else if($field/@type eq "binary") then 
+            else if($field/@type eq "binary") then
                let $value := domain:get-field-value($field,$instance)
-               return 
-                   if($value) then 
+               return
+                   if($value) then
                        js:kv($field/@name,(
                            js:kv("uri", fn:string($field-value)),
                            js:kv("filename", fn:string($field-value/@filename)),
                            js:kv("contentType",fn:string($field-value/@content-type))
-                       )) 
-                   else js:kv($field/@name,"")       
-               else if($field/@type eq "identity") then 
+                       ))
+                   else js:kv($field/@name,"")
+               else if($field/@type eq "identity") then
                    js:kv($field/@name,fn:string($field-value))
-               else if($field/@type eq "schema-element") 
+               else if($field/@type eq "schema-element")
                     then js:kv($field/@name,$field-value/node() ! xdmp:quote(.))
                else if(domain:model-exists($field/@type)) then
                  if($field/@occurrence = ("*","+")) then
@@ -328,10 +328,10 @@ declare function model:build-json(
                              domain:get-model($field/@type) ! model:build-json(.,$v,$include-root,$options)
                        ))
                     )
-               else 
-                    if($field/@occurrence = ("*","+")) 
+               else
+                    if($field/@occurrence = ("*","+"))
                     then js:kv($field/@name, js:a($field-value ! fn:string(.)[. ne ""]))
-                    else 
+                    else
                         if($field/@type = "string")
                         then js:kv($field/@name,($field-value)[1])
                         else if($field/@type = "boolean") then
@@ -341,14 +341,14 @@ declare function model:build-json(
       )
      case element(domain:attribute) return
          let $field-value := domain:get-field-value($field,$instance)
-         return        
+         return
              js:kv(fn:concat(config:attribute-prefix(),$field/@name),$field-value)
-     case element(domain:container) return 
+     case element(domain:container) return
          if($options/json:strip-container/xs:boolean(.))
-         then 
+         then
             for $field in $field/(domain:element|domain:container|domain:attribute)
             return model:build-json($field,$instance,$include-root,$options)
-         else 
+         else
          js:kv($field/@name, js:o(
             for $field in $field/(domain:element|domain:container|domain:attribute)
             return model:build-json($field,$instance,$include-root,$options)
@@ -374,7 +374,7 @@ declare function model:to-json(
   $include-root as xs:boolean,
   $options as element(json:options)
  ) {
-   if($model/@name eq fn:local-name($instance)) 
+   if($model/@name eq fn:local-name($instance))
    then model:build-json($model,$instance,$include-root,$options)
    else fn:error(xs:QName("MODEL-INSTANCE-MISMATCH"),
       fn:string(

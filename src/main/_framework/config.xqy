@@ -22,6 +22,8 @@ declare namespace routing = "http://xquerrail.com/routing";
 
 declare option xdmp:mapping "false";
 
+declare variable $USE-MODULES-DB := (xdmp:modules-database() ne 0);
+
 (:~
  : Defines the default base path for engines
  :)
@@ -134,6 +136,13 @@ declare function config:set-config-path($config-path as xs:string) as empty-sequ
  :)
 declare function config:framework-path() as xs:string {
   fn:concat(config:get-base-path(), "/_framework")
+};
+
+(:~
+ : Defines the default base path extensions
+ :)
+declare function config:extensions-path() as xs:string {
+  fn:concat(config:get-base-path(), "/_extensions")
 };
 
 (:Removes All Cache Keys:)
@@ -636,7 +645,7 @@ declare function config:error-handler() as xs:string
  :)
 declare function config:get-interceptors()
 {
-  config:get-interceptors(())
+  config:get-interceptors("all")
 };
 
 
@@ -647,18 +656,15 @@ declare function config:get-interceptors()
 declare function config:get-interceptors(
   $value as xs:string?
 ){
-  (: TODO: use except :)
   let $interceptors :=
     for $interceptor in config:get-config()/config:interceptors/config:interceptor
-    return
-      element config:interceptor {
-        attribute name { $interceptor/@name },
-        attribute before-request { $interceptor/@before-request },
-        attribute after-request { $interceptor/@after-request },
-        attribute before-response { $interceptor/@before-response },
-        attribute after-response { $interceptor/@after-response },
+    return element config:interceptor {
+      $interceptor/@*[. except $interceptor/@*[fn:local-name(.) eq "resource"]],
+      if (fn:exists($interceptor/@resource) and $interceptor/@resource ne "") then
         attribute resource { config:resolve-config-path($interceptor/@resource) }
-      }
+      else
+        ()
+    }
   return
     switch($value)
       case "before-request" return $interceptors[@before-request eq "true"]
@@ -814,18 +820,36 @@ declare function config:controller-base-path()  as xs:string
    xs:string(config:get-config()/config:controller-base-path/@value),
     "/controller/")[1]
 };
+
 (:~
  : Returns the default identity scheme for all applications
  :)
- declare function config:identity-scheme() as xs:string {
-    (
-     xs:string(config:get-config()/config:default-identity-scheme/@value),
-    "uuid"
-    )[1]
- };
- declare function config:attribute-prefix() as xs:string {
-     (
-     xs:string(config:get-config()/config:attribute-prefix/@value),
-    "@"
-    )[1]
- };
+declare function config:identity-scheme() as xs:string {
+  (
+   xs:string(config:get-config()/config:default-identity-scheme/@value),
+  "uuid"
+  )[1]
+};
+
+declare function config:attribute-prefix() as xs:string {
+   (
+   xs:string(config:get-config()/config:attribute-prefix/@value),
+  "@"
+  )[1]
+};
+
+declare function config:module-exists(
+  $uri as xs:string
+) as xs:boolean {
+  if(xdmp:modules-database() = 0) then
+    xdmp:uri-is-file($uri)
+  else
+    xdmp:eval(
+      "fn:doc-available('" || $uri || "')",
+      (),
+      <options xmlns="xdmp:eval">
+        <database>{xdmp:modules-database()}</database>
+      </options>
+    )
+};
+

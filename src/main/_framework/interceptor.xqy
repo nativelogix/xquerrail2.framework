@@ -1,15 +1,16 @@
 xquery version "1.0-ml";
 (:~
  : Controls request/response pipeline interception.  In cases where the application requires the ability to intercept
- : the request/response at various points in the execution context of the dispatcher. 
+ : the request/response at various points in the execution context of the dispatcher.
  :
  :)
 module namespace interceptor = "http://xquerrail.com/interceptor";
 
 import module namespace config = "http://xquerrail.com/config" at "config.xqy";
+import module namespace module = "http://xquerrail.com/module" at "module.xqy";
 import module namespace request = "http://xquerrail.com/request" at "request.xqy";
 import module namespace response = "http://xquerrail.com/response" at "response.xqy";
-   
+
 declare option xdmp:mapping "false";
 
 (:~
@@ -39,19 +40,45 @@ declare function interceptor:get-matching-scopes($configuration) {
    let $context-tokens := fn:tokenize($context,":")
    let $scopes := $configuration/config:scope
    return (
-      $scopes[@context eq $context], 
+      $scopes[@context eq $context],
       for $scope in $scopes
       let $scope-tokens := fn:tokenize($scope/@context,":")
-      let $matches := 
+      let $matches :=
          for $scope-token at $pos in $scope-tokens
-         return 
-             if($scope-token eq "*") 
+         return
+             if($scope-token eq "*")
              then fn:true()
-             else $scope-tokens[$pos] eq $context-tokens[$pos]             
+             else $scope-tokens[$pos] eq $context-tokens[$pos]
       where every $m in $matches satisfies $m eq fn:true()
       return
           $scope
-  )          
+  )
+};
+declare function interceptor:location-uri(
+  $configuration as element(config:interceptor)
+  ) as xs:string? {
+  let $location-uri :=
+    if (fn:exists($configuration/@uri)) then
+      if (fn:starts-with($configuration/@uri, "/")) then
+        if (module:resource-exists($configuration/@uri)) then
+          $configuration/@uri
+        else
+          ()
+      else
+        let $location-uri := config:resolve-path(config:extensions-path(), $configuration/@uri)
+        return
+          if (module:resource-exists($location-uri)) then
+            $location-uri
+          else
+            ()
+    else
+      let $location-uri := config:resolve-path(config:framework-path(), fn:concat("interceptors/interceptor.",$configuration/@name,".xqy"))
+      return
+      if (module:resource-exists($location-uri)) then
+        $location-uri
+      else
+        ()
+  return $location-uri
 };
 (:~
  : Executes all before request interceptor(s) using the given configuration for that interceptor
@@ -60,24 +87,29 @@ declare function interceptor:get-matching-scopes($configuration) {
 declare function interceptor:before-request (
 ) {
    for $int in config:get-interceptors("before-request")
-   let $location-uri := fn:concat("interceptors/interceptor.",$int/@name,".xqy")
-   let $function     := xdmp:function(xs:QName("interceptor:before-request"),$location-uri)
-   let $config := 
-      if($int/@resource) 
-      then config:get-resource($int/@resource)
-      else if($int/@dbresource) then
-          fn:doc($int/@dbresource)
-      else <config/>
-   let $invoke := xdmp:apply($function,$config)
-   return (
-     if($invoke instance of map:map) 
-     then request:initialize($invoke)
-     else (),
-     xdmp:log(("interceptor:ml-security::before-request",$config,"debug"))
-  )
+   (:let $location-uri := fn:concat("interceptors/interceptor.",$int/@name,".xqy"):)
+   let $location-uri := interceptor:location-uri($int)
+   return
+    if (fn:empty($location-uri)) then
+      xdmp:log((text{"Could not find location-uri for interceptor"}, $int))
+    else
+     let $function     := xdmp:function(xs:QName("interceptor:before-request"), $location-uri)
+     let $config :=
+        if($int/@resource)
+        then config:get-resource($int/@resource)
+        else if($int/@dbresource) then
+            fn:doc($int/@dbresource)
+        else <config/>
+     let $invoke := xdmp:apply($function,$config)
+     return (
+       if($invoke instance of map:map)
+       then request:initialize($invoke)
+       else (),
+       xdmp:log(("interceptor:ml-security::before-request",$config,"debug"))
+    )
 };
 (:~
- : Executes all after-request interceptors.  The after-request interceptor is called after the response has been initializes 
+ : Executes all after-request interceptors.  The after-request interceptor is called after the response has been initializes
  : and the controller action has been called.
  : @param $request - A request map that correspondes to the current request map.
  :)
@@ -85,13 +117,13 @@ declare function interceptor:after-request(
 $request as map:map
 ){(
       interceptor:invoke-after-request(
-        $request,       
+        $request,
         config:get-interceptors("after-request"),
         fn:false()
    )
 )};
 (:~
- : Recursively calls interceptors until either a redirect occurs 
+ : Recursively calls interceptors until either a redirect occurs
  : or all interceptors have run completely
  :)
 declare function interceptor:invoke-after-request(
@@ -99,12 +131,17 @@ declare function interceptor:invoke-after-request(
   $interceptors as element(config:interceptor)*,
   $is-redirected as xs:boolean
 ) {
-  if(fn:not($is-redirected) and $interceptors) then 
+  if(fn:not($is-redirected) and $interceptors) then
     let $int := $interceptors[1]
-    let $location-uri := fn:concat("interceptors/interceptor.",$int/@name,".xqy")
+    (:let $location-uri := fn:concat("interceptors/interceptor.",$int/@name,".xqy"):)
+    let $location-uri := interceptor:location-uri($int)
+     return
+      if (fn:empty($location-uri)) then
+        xdmp:log((text{"Could not find location-uri for interceptor"}, $int))
+      else
     let $function     := xdmp:function(xs:QName("interceptor:after-request"),$location-uri)
-    let $config := 
-       if($int/@resource) 
+    let $config :=
+       if($int/@resource)
        then config:get-resource($int/@resource)
        else if($int/@dbresource) then
            fn:doc($int/@dbresource)
@@ -118,8 +155,8 @@ declare function interceptor:invoke-after-request(
 };
 
 (:~
- : Executes all interceptors after the controller action has been called 
- : and before the response is processed by the designated engine. 
+ : Executes all interceptors after the controller action has been called
+ : and before the response is processed by the designated engine.
  : @param $request the request map
  :)
 declare function interceptor:before-response(
@@ -128,21 +165,27 @@ declare function interceptor:before-response(
 ) as item()*
 {(
    let $_response := $response
-   let $_ := 
+   let $_ :=
         for $int in config:get-interceptors("before-response")
-        let $location-uri := fn:concat("interceptors/interceptor.",$int/@name,".xqy")
+        (:let $location-uri := fn:concat("interceptors/interceptor.",$int/@name,".xqy"):)
+    let $location-uri := interceptor:location-uri($int)
+     return
+      if (fn:empty($location-uri)) then
+        xdmp:log((text{"Could not find location-uri for interceptor"}, $int))
+      else
         let $function     := xdmp:function(xs:QName("interceptor:before-response"),$location-uri)
-        let $config := 
-           if($int/@resource) 
+        let $config :=
+           if($int/@resource)
            then config:get-resource($int/@resource)
            else if($int/@dbresource) then
                fn:doc($int/@dbresource)
            else <config/>
         let $invoke := xdmp:apply($function,$request,$response,$config)
         return
-         xdmp:set($_response,  
-          if($invoke instance of map:map) 
-          then response:set-response($invoke)
+         xdmp:set($_response,
+          if($invoke instance of map:map)
+          (:then response:set-response($invoke):)
+          then $invoke
           else $_response)
    return $_response
 )};
@@ -150,7 +193,7 @@ declare function interceptor:before-response(
 (:~
  : Executes all interceptors after the response has been rendered by the engine
  : and is flushed out to the calling context.
- : it is important that each interceptor is ordered correctly to ensure each interceptor 
+ : it is important that each interceptor is ordered correctly to ensure each interceptor
  : can handle the response properly
  : @param $request - the request map:map
  : @param $response - the response output after invoke-response is called.
@@ -161,12 +204,17 @@ declare function interceptor:after-response(
   $response as item()*
 ) as item()*{(
    let $_response := $response
-   let $_ := 
+   let $_ :=
         for $int in config:get-interceptors("after-response")
-        let $location-uri := fn:concat("interceptors/interceptor.",$int/@name,".xqy")
+        (:let $location-uri := fn:concat("interceptors/interceptor.",$int/@name,".xqy"):)
+    let $location-uri := interceptor:location-uri($int)
+     return
+      if (fn:empty($location-uri)) then
+        xdmp:log((text{"Could not find location-uri for interceptor"}, $int))
+      else
         let $function     := xdmp:function(xs:QName("interceptor:after-response"),$location-uri)
-        let $config := 
-           if($int/@resource) 
+        let $config :=
+           if($int/@resource)
            then config:get-resource($int/@resource)
            else if($int/@dbresource) then
                 fn:doc($int/@dbresource)

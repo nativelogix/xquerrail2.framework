@@ -11,6 +11,7 @@ xquery version "1.0-ml";
 import module namespace request     = "http://xquerrail.com/request"     at "../request.xqy";
 import module namespace response    = "http://xquerrail.com/response"    at "../response.xqy";
 import module namespace config      = "http://xquerrail.com/config"      at "../config.xqy";
+import module namespace module      = "http://xquerrail.com/module" at "../module.xqy";
 import module namespace domain      = "http://xquerrail.com/domain" at "../domain.xqy";
 import module namespace interceptor = "http://xquerrail.com/interceptor" at "../interceptor.xqy";
 import module namespace base        = "http://xquerrail.com/controller/base" at "../base/base-controller.xqy";
@@ -31,20 +32,11 @@ declare option xdmp:output "method=xml";
 declare option xdmp:output "indent-untyped=yes";
 declare option xdmp:ouput "omit-xml-declaration=yes";
 
-declare variable $controller:REPORT-HTML-ERRORS as xs:boolean := fn:true();
-declare variable $CONTROLLER-PATH := config:controller-base-path();
 (:~
  : Returns whether the controller exists or not.
  :)
 declare function dispatcher:controller-exists($controller-uri as xs:string) as xs:boolean {
-	if (xdmp:modules-database() ne 0) then
-		xdmp:eval(fn:concat('fn:doc-available("', $controller-uri, '")'), (),
-			<options xmlns="xdmp:eval">
-				<database>{xdmp:modules-database()}</database>
-			</options>
-		)
-	else
-		xdmp:uri-is-file($controller-uri)
+	module:resource-exists($controller-uri)
 };
 
 declare function dispatcher:extension-exists(
@@ -103,14 +95,7 @@ $controller-action
  :)
 declare function dispatcher:view-exists($view-uri as xs:string) as xs:boolean
 {
-	if (xdmp:modules-database()) then
-		xdmp:eval(fn:concat('fn:doc-available("', $view-uri, '")'), (),
-			<options xmlns="xdmp:eval">
-				<database>{xdmp:modules-database()}</database>
-			</options>
-		)
-	else
-		xdmp:uri-is-file($view-uri)
+	module:resource-exists($view-uri)
 };
 
 (:~
@@ -202,81 +187,46 @@ declare function dispatcher:invoke-controller()
 (:~
  :   Creates the appropriate engine and generates the output response
  :)
-declare function dispatcher:invoke-response($response,$request)
-{
-    let $application := request:application()[1]
-    let $controller := request:controller()[1]
-    let $action := request:action()[1]
-    let $format := request:format()[1]
-    let $debug  := request:debug()[1]
-    let $view-uri := fn:concat("/",$application,"/views/",$controller,"/",$controller,".",$action,".",$format,".xqy")
-    return
-      if($response instance of map:map) then
-        if(response:set-response($response,$request)) then
-          if(response:is-download()) then
-          (
-            xdmp:set-response-content-type(response:content-type()),
-            for $key in map:keys(response:response-headers())
-            return xdmp:add-response-header($key,response:response-header($key)),
-            response:body()
-          )
-          else
-            let $engine := engine:supported-engine($request, $response)
-            let $_ :=
-            if(fn:not(dispatcher:view-exists($view-uri)))
-              then response:set-base(fn:true())
-              else ()
-            return engine:initialize($engine, $request, $response)
-        else $response
+declare function dispatcher:invoke-response(
+  $request as map:map,
+  $response as map:map
+) {
+  let $application := request:application()[1]
+  let $controller := request:controller()[1]
+  let $action := request:action()[1]
+  let $format := request:format()[1]
+  let $debug  := request:debug()[1]
+  let $view-uri := fn:concat("/",$application,"/views/",$controller,"/",$controller,".",$action,".",$format,".xqy")
+  return (
+    if(response:set-response($response,$request)) then (
+      (: Provides the view if exists :)
+      if(dispatcher:view-exists($view-uri)) then
+        if(response:view()) then
+          ()
+        else (response:set-view($action))
       else
-        if($format eq "json") then
-          (:Initialize the JSON Response:)
-          let $_ := response:set-response(map:map(),$request)
-          let $_ := (response:set-format("json"))
-          let $_ :=  (response:set-body($response))
-          let $_ :=
-            if (fn:empty($response)) then response:set-response-code(404, "Resource not found")
-            else ()
-          let $response := response:response()
-          let $engine := engine:supported-engine($request, $response)
-          return engine:initialize($engine, $request, $response)
-        else if($format eq "html") then
-          (:Initialize the HTML Response:)
-          let $_ := response:set-response(map:map(),$request)
-          let $_ := (
-            response:set-format("html"),
-            response:set-template("main"),
-            response:set-view($action)
-          )
-          let $_ :=
-            if($action eq "get")         then response:set-view("show")
-            else if($action eq "list")   then response:set-view("index")
-            else if($action eq "search") then response:set-view("search")
-            else response:set-action(request:action())
-          let $_ :=  (response:set-body($response))
-          let $response := response:response()
-          let $engine := engine:supported-engine($request, $response)
-          return engine:initialize($engine, $request, $response)
-             (:Check to see if the XML has a view and if so use it:)
-        else if (fn:empty($response)) then
-          (
-          let $_ := response:set-response-code(404, "Resource not found")
-          let $response := response:response()
-          let $engine := engine:supported-engine($request, $response)
-          return engine:initialize($engine, $request, $response)
-          )
-        else if(dispatcher:view-exists($view-uri)) then
-            let $_ := response:set-response(response:response(),$request)
-            let $_ :=  (response:set-body($response))
-            let $_ :=  
-              if(response:view()) then ()
-              else (response:set-view($action))
-            let $response := response:response()
-            let $engine := engine:supported-engine($request, $response)
-            return engine:initialize($engine, $request, $response)
-        else if(fn:exists($response)) then (xdmp:log(("NO VIEW",$view-uri),"debug"), $response)
-        else
-          fn:error(xs:QName("INVALID-RESPONSE"),"Invalid Response",($response))
+        ()
+      ,
+      (: Set HTTP headers :)
+      for $key in map:keys(response:response-headers())
+        return xdmp:add-response-header($key,response:response-header($key))
+      ,
+      if(response:is-download()) then
+      (
+        xdmp:set-response-content-type(response:content-type()),
+        response:body()
+      )
+      else
+        let $engine := engine:supported-engine($request, $response)
+        let $_ :=
+        if(fn:not(dispatcher:view-exists($view-uri)))
+          then response:set-base(fn:true())
+          else ()
+        return engine:initialize($engine, $request, $response)
+    )
+    else
+      fn:error(xs:QName("INVALID-RESPONSE"),"Invalid Response",($response))
+  )
 };
 
 try {
@@ -303,24 +253,25 @@ try {
               xdmp:redirect-response(request:redirect())
             else
               let $response := dispatcher:invoke-controller()
-              let $response := interceptor:before-response($request,$response)
               let $response :=
-                if(request:debug()) then (
-                  response:set-content-type("text/xml"),
-                  <debug>
-                    <request>{request:request()}</request>
-                    <response>{response:flush()}</response>
-                  </debug>
-                )
-                else if($response instance of element(html:html)) then
+                if($response instance of map:map) then
                   $response
-                else dispatcher:invoke-response($response,$request)
-              let $response :=  interceptor:after-response(request:request(),$response)
+                else (
+                  response:initialize(map:new()),
+                  response:set-body($response),
+                  response:response()
+                )
+              let $response := interceptor:before-response($request, $response)
+              let $response := dispatcher:invoke-response($request, $response)
+              let $response := interceptor:after-response(request:request(),$response)
               return
                 if(response:redirect()) then
                   xdmp:redirect-response(response:redirect())
-                else $response
-              return  $response
+                else if(response:response-code() and response:response-code()[1] >= 400) then
+                  xdmp:set-response-code(response:response-code()[1], response:response-code()[2])
+                else
+                  $response
+          return  $response
 } catch($ex) {
   dispatcher:error($ex)
 }

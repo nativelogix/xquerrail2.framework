@@ -224,8 +224,11 @@ declare function json-engine:custom-transform($node as item())
  :)
 declare function json-engine:render()
 {
-   if(response:redirect())
-   then xdmp:redirect-response(response:redirect())
+  xdmp:log(text{"json-engine:render - response:body is empty", fn:empty(response:body())}),
+   if (fn:empty(response:body())) then
+    response:set-response-code(404, "Resounce not found")
+   else if(response:redirect()) then
+    xdmp:redirect-response(response:redirect())
    else
    (
      (:Set the response content type:)
@@ -234,8 +237,8 @@ declare function json-engine:render()
      else xdmp:set-response-content-type("application/json"),
      if(response:response-code()) then xdmp:set-response-code(response:response-code()[1], response:response-code()[2])
      else (),
-     for $key in map:keys(response:response-headers())
-     return xdmp:add-response-header($key,response:response-header($key)),
+     (:for $key in map:keys(response:response-headers()):)
+     (:return xdmp:add-response-header($key,response:response-header($key)),:)
      let $view-uri := engine:view-uri(response:controller(),(response:action(),response:view())[1],"json",fn:false())
      let $view-uri :=
         if(engine:view-exists($view-uri))

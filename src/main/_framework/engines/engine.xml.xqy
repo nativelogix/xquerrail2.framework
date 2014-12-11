@@ -1,13 +1,13 @@
 xquery version "1.0-ml";
 
 module namespace xml-engine = "http://xquerrail.com/engine/xml";
-    
+
 import module namespace engine  = "http://xquerrail.com/engine" at "engine.base.xqy";
 import module namespace config = "http://xquerrail.com/config" at "../config.xqy";
 import module namespace request = "http://xquerrail.com/request" at "../request.xqy";
 import module namespace response = "http://xquerrail.com/response" at "../response.xqy";
 
-declare namespace tag = "http://xquerrail.com/tag";  
+declare namespace tag = "http://xquerrail.com/tag";
 
 declare default function namespace "http://www.w3.org/2005/xpath-functions";
 
@@ -21,10 +21,10 @@ declare variable $RESPONSE := map:map();
 declare variable $context := map:map();
 
 (:~
-   Initialize  Any custom tags your engine handles so the system can call 
+   Initialize  Any custom tags your engine handles so the system can call
    your custom transform functions
  :)
-declare variable $custom-engine-tags as xs:QName*:= 
+declare variable $custom-engine-tags as xs:QName*:=
 (
   fn:QName("xml-engine","to-xml")
 );
@@ -44,9 +44,9 @@ declare function xml-engine:is-supported(
  : The Main Controller will call your initialize method
  : and register your engine with the engine.base.xqy
  :)
-declare function xml-engine:initialize($request, $response){ 
+declare function xml-engine:initialize($request, $response){
 (
-  let $init := 
+  let $init :=
   (
        response:initialize($response),
        request:initialize($request),
@@ -61,41 +61,50 @@ declare function xml-engine:initialize($request, $response){
 
 
 declare function xml-engine:render-xml()
-{   
+{
   response:body()
 };
 (:~
-  Handle your custom tags in this method or the method you have assigned  
+  Handle your custom tags in this method or the method you have assigned
   initialized with the base.engine
   It is important that you only handle your custom tags and
   any content that is required to be consumed by your tags
  :)
 declare function xml-engine:custom-transform($node as item())
-{  
-   $node
+{
+  $node
 };
 (:~
  : The Kernel controller will call your render method.
- : From this point it is up to your engine to handle 
+ : From this point it is up to your engine to handle
  : to initialize any specific response settings and
- : and start the rendering process 
+ : and start the rendering process
  :)
 declare function xml-engine:render()
 {
-   if(response:redirect()) 
-   then xdmp:redirect-response(response:redirect())
-   else 
-   (
-     (:Set the response content type:)
-     if(response:content-type())
-     then xdmp:set-response-content-type(response:content-type())
-     else xdmp:set-response-content-type("text/xml"),
-     if(response:response-code()) then xdmp:set-response-code(response:response-code()[1], response:response-code()[2])
-     else (),
-     let $view := response:view()
-     let $exists := engine:view-exists($view)
-     return
-     if($exists) then engine:render-view() else  xml-engine:render-xml()
-   )
+  if (fn:empty(response:body())) then
+    response:set-response-code(404, "Resounce not found")
+  else if(response:redirect()) then
+    xdmp:redirect-response(response:redirect())
+  else (
+    (:Set the response content type:)
+    if(response:content-type()) then
+      xdmp:set-response-content-type(response:content-type())
+    else
+      xdmp:set-response-content-type("text/xml")
+    ,
+    if(response:response-code()) then
+      xdmp:set-response-code(response:response-code()[1], response:response-code()[2])
+    else
+      ()
+    ,
+    let $view := response:view()
+    let $exists := engine:view-exists($view)
+    return
+      if ($exists) then
+        engine:render-view()
+      else
+        xml-engine:render-xml()
+  )
 };
 

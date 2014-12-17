@@ -13,6 +13,8 @@ import module namespace response = "http://xquerrail.com/response" at "response.
 
 declare option xdmp:mapping "false";
 
+declare variable $URI-LOCATION-CACHE := map:map() ;
+
 (:~
  : Returns the interceptor configuration for the application. This is a wrapper call for config:interceptor-config()
  :)
@@ -54,31 +56,38 @@ declare function interceptor:get-matching-scopes($configuration) {
           $scope
   )
 };
+
 declare function interceptor:location-uri(
   $configuration as element(config:interceptor)
   ) as xs:string? {
-  let $location-uri :=
-    if (fn:exists($configuration/@uri)) then
-      if (fn:starts-with($configuration/@uri, "/")) then
-        if (module:resource-exists($configuration/@uri)) then
-          $configuration/@uri
-        else
-          ()
-      else
-        let $location-uri := config:resolve-path(config:extensions-path(), $configuration/@uri)
-        return
-          if (module:resource-exists($location-uri)) then
-            $location-uri
+  if (map:contains($URI-LOCATION-CACHE, $configuration/@name)) then
+    map:get($URI-LOCATION-CACHE, $configuration/@name)
+  else
+    let $location-uri :=
+      if (fn:exists($configuration/@uri)) then
+        if (fn:starts-with($configuration/@uri, "/")) then
+          if (module:resource-exists($configuration/@uri)) then
+            $configuration/@uri
           else
             ()
-    else
-      let $location-uri := config:resolve-path(config:framework-path(), fn:concat("interceptors/interceptor.",$configuration/@name,".xqy"))
-      return
-      if (module:resource-exists($location-uri)) then
-        $location-uri
+        else
+          let $location-uri := config:resolve-path(config:extensions-path(), $configuration/@uri)
+          return
+            if (module:resource-exists($location-uri)) then
+              $location-uri
+            else
+              ()
       else
-        ()
-  return $location-uri
+        let $location-uri := config:resolve-path(config:framework-path(), fn:concat("interceptors/interceptor.",$configuration/@name,".xqy"))
+        return
+        if (module:resource-exists($location-uri)) then
+          $location-uri
+        else
+          ()
+    return (
+      map:put($URI-LOCATION-CACHE, $configuration/@name, $location-uri),
+      $location-uri
+    )
 };
 (:~
  : Executes all before request interceptor(s) using the given configuration for that interceptor

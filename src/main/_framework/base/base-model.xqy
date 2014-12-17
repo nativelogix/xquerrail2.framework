@@ -1715,153 +1715,189 @@ declare function model:build-search-options(
  : @return search options for the given model
  :)
 declare function model:build-search-options(
-    $model as element(domain:model),
-    $params as map:map
-) as element(search:options)
-{
-    let $properties := $model//(domain:element|domain:attribute)[fn:not(domain:navigation/@searchable = ('false'))]
-    let $modelNamespace :=  domain:get-field-namespace($model)
-    let $baseOptions :=
-        if($model/search:options)
-        then $model/search:options
-        else if(map:contains($params,"search:options")) then map:get($params,"search:options")
-        else ()
-    let $nav := domain:navigation($model)
-    let $constraints :=
-            for $prop in $properties[fn:not(domain:navigation/@searchable = "false")]
-            let $prop-nav := domain:navigation($prop)
-            let $type := (
-                domain:navigation($prop)/@searchType,
-                if($prop-nav/(@suggestable|@facetable) = "true") then "range" else  "value")[1]
-            let $facet-options := $prop-nav/search:facet-option
-            let $term-options := $prop/domain:navigation/(search:term-option|search:weight)
-            let $term-options := if($term-options) then $term-options else map:get($params,"search:term-options")
-            let $ns := domain:get-field-namespace($prop)
-(:            let $prop-nav := $prop/domain:navigation:)
-            let $name :=
-                typeswitch($prop)
-                  case element(domain:attribute) return fn:concat($prop/../@name,"_",$prop/@name)
-                  default return fn:data($prop/@name)
-            return
-                <search:constraint name="{$name }" label="{$prop/@label}">{
-                  element { fn:QName("http://marklogic.com/appservices/search",$type) } {
-                        attribute collation {domain:get-field-collation($prop)},
-                        if ($type eq 'range')
-                        then attribute type { domain:resolve-ctstype($prop) }
-                        else attribute type {"xs:string"},
-                        if ($prop-nav/@facetable eq 'true')
-                        then attribute facet { fn:true() }
-                        else  attribute facet { fn:false() },
-                        typeswitch($prop)
-                          case element(domain:attribute) return (
-                                  <search:element name="{$prop/../@name}" ns="{domain:get-field-namespace($prop/..)}"/>,
-                                  <search:attribute name="{$prop/@name}" ns=""/>
-                          )
-                          default return <search:element name="{$prop/@name}" ns="{$ns}" ></search:element>,
-                         $term-options,
-                         $facet-options
-                  }
-                }</search:constraint>
-      let $suggestOptions :=
-        for $prop in $properties[domain:navigation/@suggestable = "true"]
-        let $type := (domain:navigation($prop)/@searchType,"value")[1]
-        let $collation := domain:get-field-collation($prop)
-        let $prop-nav := domain:navigation($prop)
-        let $facet-options := $prop-nav/search:facet-option
-(:        $prop/domain:navigation/search:facet-option:)
-        let $ns := domain:get-field-namespace($prop)
-        return
-            <search:suggestion-source ref="{$prop/@name}">{
-              element { fn:QName("http://marklogic.com/appservices/search","range") } {
-                    attribute collation {$collation},
-                    if ($type eq 'range')
-                    then attribute type { "xs:string" }
-                    else (),
-                    typeswitch($prop)
-                    case element(domain:attribute) return (
-                          <search:element name="{$prop/../@name}" ns="{domain:get-field-namespace($prop/..)}"/>,
-                          <search:attribute name="{$prop/@name}" ns=""/>
-                    )
-                    default return <search:element name="{$prop/@name}" ns="{$ns}" ></search:element>,
-                    $facet-options
-              }
-            }</search:suggestion-source>
-      let $sortOptions :=
-         for $prop in $properties[domain:navigation/@sortable = "true"]
-         let $collation := domain:get-field-collation($prop)
-         let $ns := domain:get-field-namespace($prop)
-         return
-            ( <search:state name="{$prop/@name}">
-                 <search:sort-order direction="ascending" type="{$prop/@type}" collation="{$collation}">
-                  <search:element ns="{$ns}" name="{$prop/@name}"/>
-                 </search:sort-order>
-                 <search:sort-order>
-                  <search:score/>
-                 </search:sort-order>
+  $model as element(domain:model),
+  $params as item()
+) as element(search:options) {
+  let $properties := $model//(domain:element|domain:attribute)[domain:navigation/@searchable = ('true')]
+  let $modelNamespace :=  domain:get-field-namespace($model)
+  let $baseOptions :=
+      if($model/search:options)
+      then $model/search:options
+      else if(fn:exists(domain:get-param-value($params, "search:options"))) then domain:get-param-value($params, "search:options")
+      else ()
+  let $nav := domain:navigation($model)
+  let $constraints := model:build-search-constraints($model, $params)
+  let $suggestOptions :=
+    for $prop in $properties[domain:navigation/@suggestable = "true"]
+    let $prop-nav := domain:navigation($prop)
+    let $type := ($prop-nav/@searchType,"value")[1]
+    let $collation := domain:get-field-collation($prop)
+    let $facet-options := $prop-nav/search:facet-option
+    let $ns := domain:get-field-namespace($prop)
+    return
+      <search:suggestion-source ref="{$prop/@name}">{
+        element { fn:QName("http://marklogic.com/appservices/search","range") } {
+          attribute collation {$collation},
+          if ($type eq 'range')
+          then attribute type { "xs:string" }
+          else (),
+          <search:element name="{$prop/@name}" ns="{$ns}" >{
+          (
+            if ($prop instance of attribute()) then
+              <search:attribute name="{$prop/@name}" ns="{$ns}"/>
+            else ()
+          )
+          }</search:element>,
+          $facet-options
+        }
+      }</search:suggestion-source>
+  let $sortOptions :=
+    for $prop in $properties[domain:navigation/@sortable = "true"]
+      let $collation := domain:get-field-collation($prop)
+      let $ns := domain:get-field-namespace($prop)
+      return
+        typeswitch($prop)
+          case element(domain:attribute) return (
+            <search:state name="{model:search-sort-state($prop, "ascending")}">
+              <search:sort-order direction="ascending" type="{$prop/@type}" collation="{$collation}">
+                <search:element ns="{$ns}" name="{fn:data($prop/../@name)}"/>
+                <search:attribute name="{$prop/@name}"/>
+              </search:sort-order>
+              <search:sort-order>
+                <search:score/>
+              </search:sort-order>
             </search:state>,
-            <search:state name="{$prop/@name}-descending">
-                 <search:sort-order direction="descending" type="{$prop/@type}" collation="{$collation}">
-                  <search:element ns="{$ns}" name="{$prop/@name}"/>
-                 </search:sort-order>
-                 <search:sort-order>
-                  <search:score/>
-            </search:sort-order>
-          </search:state>)
+            <search:state name="{model:search-sort-state($prop, "descending")}">
+              <search:sort-order direction="descending" type="{$prop/@type}" collation="{$collation}">
+                <search:element ns="{$ns}" name="{fn:data($prop/../@name)}"/>
+                <search:attribute name="{$prop/@name}"/>
+              </search:sort-order>
+              <search:sort-order>
+                <search:score/>
+              </search:sort-order>
+            </search:state>
+          )
+          case element(domain:element) return (
+            <search:state name="{model:search-sort-state($prop, "ascending")}">
+              <search:sort-order direction="ascending" type="{$prop/@type}" collation="{$collation}">
+                <search:element ns="{$ns}" name="{$prop/@name}"/>
+              </search:sort-order>
+              <search:sort-order>
+                <search:score/>
+              </search:sort-order>
+            </search:state>,
+            <search:state name="{model:search-sort-state($prop, "descending")}">
+              <search:sort-order direction="descending" type="{$prop/@type}" collation="{$collation}">
+                <search:element ns="{$ns}" name="{$prop/@name}"/>
+              </search:sort-order>
+              <search:sort-order>
+                <search:score/>
+              </search:sort-order>
+            </search:state>
+          )
+          default return()
 
-      let $extractMetadataOptions :=
-         for $prop in $properties[domain:navigation/@metadata = "true"]
-         let $ns := domain:get-field-namespace($prop)
-         return
-            (<search:qname>{
-              $prop/@label,
-              typeswitch($prop)
-                case element(domain:element) return
-                  (attribute elem-ns{$ns}, attribute elem-name {$prop/@name})
-                case element(domain:container) return
-                   (attribute elem-ns{$ns}, attribute elem-name {$prop/@name})
-                case element(domain:attribute) return
-                    (
-                        attribute elem-ns{domain:get-field-namespace($prop/..)},
-                        attribute elem-name {$prop/../@name},
-                        attribute attr-ns {""},
-                        attribute attr-name {$prop/@name}
-                    )
-                default return ()
-            }</search:qname>)
+  let $extractMetadataOptions :=
+     for $prop in $properties[domain:navigation/@metadata = "true"]
+     let $ns := domain:get-field-namespace($prop)
+     return
+        (<search:qname elem-ns="{$ns}" elem-name="{$prop/@name}"></search:qname>)
 
-       (:Implement a base query:)
-       let $persistence := fn:data($model/@persistence)
-       let $baseQuery :=
-            if ($persistence = ("document","singleton","directory"))
-            then domain:get-base-query($model)
-            else cts:or-query(domain:get-descendant-model-query($model))
-       let $addQuery := cts:and-query((
-            $baseQuery,
-            domain:get-param-value($params,"_query")
-            (:Need to allow to pass additional query through params:)
-          ))
-       let $options :=
-            <search:options>
-                <search:return-query>{fn:true()}</search:return-query>
-                <search:return-facets>{fn:true()}</search:return-facets>
-                <search:additional-query>{$addQuery}</search:additional-query>
-                <search:suggestion-source>{
-                    $model/search:options/search:suggestion-source/(@*|node())
-                }</search:suggestion-source>
+  (:Implement a base query:)
+  let $persistence := fn:data($model/@persistence)
+  let $baseQuery :=
+    if ($persistence = ("document","singleton")) then
+      cts:document-query($model/domain:document/text())
+    else if($persistence = "directory") then
+      cts:directory-query($model/domain:directory/text())
+    else ()
 
-                {$constraints,
-                 $suggestOptions,
-                 $model/search:options/search:constraint
-                }
-                <search:operator name="sort">{
-                   $sortOptions,
-                   $model/search:options/search:operator[@name = "sort"]/*
-                }</search:operator>
-                {$baseOptions/search:operator[@name ne "sort"]}
-                {$baseOptions/*[. except $baseOptions/(search:constraint|search:operator|search:suggestion-source)]}
-                <search:extract-metadata>{$extractMetadataOptions}</search:extract-metadata>
-             </search:options>
-        return $options
+  let $addQuery := cts:and-query((
+    $baseQuery,
+    domain:get-param-value($params,"_query")
+    (:Need to allow to pass additional query through params:)
+  ))
+
+  let $options :=
+    <search:options>
+      <search:return-query>{fn:true()}</search:return-query>
+      <search:return-facets>{fn:true()}</search:return-facets>
+      <search:additional-query>{$addQuery}</search:additional-query>
+      <search:suggestion-source>{
+          $model/search:options/search:suggestion-source/(@*|node())
+      }</search:suggestion-source>
+
+      {$constraints,
+       $suggestOptions,
+       $model/search:options/search:constraint
+      }
+      <search:operator name="sort">{
+         $sortOptions,
+         $model/search:options/search:operator[@name = "sort"]/*
+      }</search:operator>
+      {$baseOptions/search:operator[@name ne "sort"]}
+      {$baseOptions/*[. except $baseOptions/(search:constraint|search:operator|search:suggestion-source)]}
+      <search:extract-metadata>{$extractMetadataOptions}</search:extract-metadata>
+    </search:options>
+  return $options
+};
+
+declare function model:build-search-constraints(
+  $model as element(domain:model),
+  $params as item()
+) {
+  let $properties := $model//(domain:element|domain:attribute)[fn:not(domain:navigation/@searchable = ('false'))]
+  return
+    for $prop in $properties (:[domain:navigation/@searchable = "true"]:)
+      for $prop-nav in $prop/domain:navigation
+      let $name := if($prop-nav/@constraintName) then $prop-nav/@constraintName else $prop/@name
+      let $element-name := if(fn:local-name($prop) eq "attribute") then fn:data($prop/../@name) else $prop/@name
+      let $type := (
+        $prop-nav/@searchType,
+        if($prop-nav/(@suggestable|@facetable) = "true") then
+          "range"
+        else
+          "value"
+      )[1]
+      let $facet-options := $prop-nav/search:facet-option
+      let $term-options := $prop-nav/(search:term-option|search:weight)
+      let $term-options := if($term-options) then $term-options else domain:get-param-value($params, "search:term-options")
+      let $ns := domain:get-field-namespace($prop)
+      return
+        <search:constraint name="{$name}" label="{$prop/@label}">{
+          element { fn:QName("http://marklogic.com/appservices/search",$type) } {
+                attribute collation {domain:get-field-collation($prop)},
+                if ($type eq 'range')
+                then attribute type { domain:resolve-ctstype($prop) }
+                else attribute type {"xs:string"},
+                if ($prop-nav/@facetable eq 'true')
+                then attribute facet { fn:true() }
+                else  attribute facet { fn:false() },
+                <search:element name="{$element-name}" ns="{$ns}" />,
+                if ($prop instance of element(domain:attribute)) then
+                  <search:attribute name="{$prop/@name}"/>
+                else (),
+                $term-options,
+                $facet-options
+          }
+        }</search:constraint>
+};
+
+declare function model:search-sort-state(
+  $field as element(),
+  $order as xs:string?
+) as xs:string {
+  let $order :=
+    if ($order eq "ascending" or $order eq "descending") then
+      $order
+    else
+      "ascending"
+  let $name :=
+      typeswitch($field)
+        case element(domain:attribute) return fn:concat($field/../@name,"_",$field/@name)
+        case element(domain:element) return fn:data($field/@name)
+        default return fn:error(xs:QName("FIELD-NOT-SUPPORTED"), text{"Field type not supported."}, $field)
+  return fn:concat($name, "-", $order)
 };
 
 (:~

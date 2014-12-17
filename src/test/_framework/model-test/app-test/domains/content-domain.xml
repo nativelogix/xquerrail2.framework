@@ -2,7 +2,7 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns:search = "http://marklogic.com/appservices/search"
   xsi:schemaLocation="http://xquerrail.com/domain https://raw.githubusercontent.com/nativelogix/xquerrail2.framework/master/src/main/_framework/schemas/domain.xsd">
-  
+
   <model name="model1" persistence="directory" label="Model #1" extends="base" namespace-uri="http://marklogic.com/model/model1" key="uuid" keyLabel="id">
     <directory>/test/model1/</directory>
     <element name="id" type="string" label="Id"/>
@@ -10,19 +10,30 @@
     <element name="description" type="string" label="Description"/>
     <element name="tags" type="string" label="Tags" occurrence="*"/>
   </model>
-  
+
   <model name="model2" persistence="document" label="Model #2" extends="base" namespace-uri="http://marklogic.com/model/model2" key="uuid" keyLabel="id">
     <document root="templates">/test/model2.xml</document>
     <element name="id" type="string" label="Id"/>
     <element name="name" type="string" label="Name"/>
     <element name="model1" type="reference" reference="model:model1:in-extension-reference-test" label="Model #1"/>
   </model>
-  
+
   <model name="model3" persistence="document" label="Model #2" extends="base" namespace-uri="http://marklogic.com/model/model3" key="uuid" keyLabel="id">
     <document root="templates">/test/model3.xml</document>
     <element name="id" type="string" label="Id"/>
     <element name="name" type="string" label="Name"/>
     <element name="model1" type="reference" reference="model:model1:in-model-reference-test" label="Model #1"/>
+  </model>
+
+  <model name="model4" persistence="document" label="Model #4 - test search options" extends="base" key="uuid" keyLabel="id">
+    <document root="models4">/test/model4.xml</document>
+    <element name="id" type="string" label="Id"/>
+    <element name="name" type="string" label="Name"/>
+    <element name="tag" type="string" label="Tag">
+      <attribute name="title" type="string" label="Title">
+        <navigation searchable="true" sortable="true"/>
+      </attribute>
+    </element>
   </model>
 
 </domain>

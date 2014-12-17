@@ -16,6 +16,7 @@ function random(prefix) {
 function httpGet(model, action, data, format, callback) {
   var format = format || 'xml';
   var options = {
+    json: true,
     method: 'GET',
     url: xquerrailCommon.urlBase + '/' + model + '/' + action + '.' + format,
     qs: data,
@@ -40,14 +41,36 @@ function httpPost(model, action, data, format, callback) {
 };
 
 function parseResponse(model, error, response, format, callback) {
-  if (response.body !== undefined) {
+  if (format === 'json') {
+    if (response.statusCode === 500) {
+      error = parseError(response);
+    }
     var entity = response.body;
-    parser.parseString(entity, function (err, result) {
-      entity = (result !== null && result !== undefined)?result[model]: undefined;
-      callback(error, response, entity);
-    });
+    callback(error, response, entity);
   } else {
-    callback(error, response, undefined);
+    if (response.body !== undefined) {
+      var entity = response.body;
+      parser.parseString(entity, function (err, result) {
+        if (err !== null) {
+          callback(err, response, undefined);
+        } else {
+          entity = (result !== null && result !== undefined)?result[model]: undefined;
+          callback(error, response, entity);
+        }
+      });
+    } else {
+      callback(error, response, undefined);
+    }
+  }
+};
+
+function parseError(response) {
+  return {
+    code: response.body.error.code,
+    message: response.body.error.message,
+    description: response.body.error['format_string'],
+    data: response.body.error.data,
+    stack: response.body.error.stack
   }
 };
 
@@ -81,7 +104,7 @@ describe('Custom Interceptor features', function() {
     });
   });
 
-  describe('interceptor-2.xqy', function() {
+  describe('custom-interceptor-2.xqy', function() {
     it('should return custom http header', function(done) {
       xquerrailCommon.login(function() {
         // Response header is set by customer-interceptor-2
@@ -93,7 +116,21 @@ describe('Custom Interceptor features', function() {
         });
       });
     });
+  });
 
+  describe('engine.extension.xqy', function() {
+    it('should return {"message": "Hello World"}', function(done) {
+      xquerrailCommon.login(function() {
+        // Response header is set by customer-interceptor-2
+        var headerValue = random('dummy-header');
+        httpGet('model1', 'info', {}, 'json', function(error, response) {
+          expect(response.statusCode).to.equal(200);
+          // expect(response.headers['before-response-test'], headerValue);
+          expect(response.body.response).to.not.be.undefined();
+          done();
+        });
+      });
+    });
   });
 
 });

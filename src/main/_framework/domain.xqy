@@ -81,7 +81,12 @@ declare function domain:cast-value($field as element(),$value as item()*)
         case "identity"         return $value[fn:string(.) ne ""] cast as xs:string?
         case "id"               return $value[fn:string(.) ne ""] cast as xs:ID?
         case "anyURI"           return $value cast as xs:anyURI*
-        case "string"           return $value[fn:string(.) ne ""] cast as xs:string*
+        case "string"           return
+          typeswitch ($field)
+            case element(domain:attribute)
+              return $value cast as xs:string*
+            default
+              return $value[fn:string(.) ne ""] cast as xs:string*
         case "integer"          return $value[fn:string(.) ne ""] cast as xs:integer*
         case "unsignedInt"      return $value[fn:string(.) ne ""] cast as xs:unsignedInt*
         case "long"             return $value[fn:string(.) ne ""] cast as xs:long*

@@ -720,3 +720,73 @@ declare %test:case function get-model-generate-uri-test() as item()*
   )
 };
 
+declare %test:case function model-new-xml-attribute-empty-string-test() as item()*
+{
+  let $model6 := domain:get-model("model6")
+  let $instance6 := model:new(
+    $model6,
+    <model6 id="model6-id" score="" xmlns="http://xquerrail.com/app-test">
+      <name>model6-name</name>
+    </model6>
+  )
+  let $value-score := domain:get-field-value(domain:get-model-field($model6, "score"), $instance6)
+  return (
+    assert:not-empty($instance6),
+    assert:not-empty($value-score),
+    assert:equal("", xs:string($value-score))
+  )
+};
+
+declare %test:case function model-new-map-attribute-empty-string-test() as item()*
+{
+  let $model6 := domain:get-model("model6")
+  let $instance6 := model:new(
+    $model6,
+    map:new((
+      map:entry("id", "model6-id"),
+      map:entry("score", ""),
+      map:entry("name", "model6-name")
+    ))
+  )
+  let $value-score := domain:get-field-value(domain:get-model-field($model6, "score"), $instance6)
+  return (
+    assert:not-empty($instance6),
+    assert:not-empty($value-score),
+    assert:equal("", xs:string($value-score))
+  )
+};
+
+declare %test:case function model-new-xml-attribute-no-value-test() as item()*
+{
+  let $model6 := domain:get-model("model6")
+  let $instance6 := model:new(
+    $model6,
+    <model6 id="model6-id" xmlns="http://xquerrail.com/app-test">
+      <name>model6-name</name>
+    </model6>
+  )
+  let $value-score := domain:get-field-value(domain:get-model-field($model6, "score"), $instance6)
+  return (
+    assert:not-empty($instance6),
+    assert:empty($value-score)
+  )
+};
+
+declare %test:case function model-new-map-attribute-no-value-test() as item()*
+{
+  let $model6 := domain:get-model("model6")
+  let $instance6 := model:new(
+    $model6,
+    map:new((
+      map:entry("id", "model6-id"),
+      map:entry("score", ()),
+      map:entry("name", "model6-name")
+    ))
+  )
+  let $value-score := domain:get-field-value(domain:get-model-field($model6, "score"), $instance6)
+  return (
+    assert:not-empty($instance6),
+    assert:empty($value-score)
+  )
+};
+

@@ -2354,8 +2354,8 @@ declare function model:build-value(
     switch($type)
     case "id" return
         if(fn:exists($current))
-        then $current
-        else if(fn:exists($value)) then $value
+        then fn:data($current)
+        else if(fn:exists($value)) then fn:data($value)
         else model:generate-fnid(($value,<x>{xdmp:random()}</x>)[1])
     case "identity" return
         if(fn:exists($current))

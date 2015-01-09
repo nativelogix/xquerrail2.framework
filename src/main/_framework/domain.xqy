@@ -81,6 +81,7 @@ declare function domain:cast-value($field as element(),$value as item()*)
         case "identity"         return $value[fn:string(.) ne ""] cast as xs:string?
         case "id"               return $value[fn:string(.) ne ""] cast as xs:ID?
         case "anyURI"           return $value cast as xs:anyURI*
+        (:case "string"           return $value cast as xs:string*:)
         case "string"           return
           typeswitch ($field)
             case element(domain:attribute)
@@ -1673,7 +1674,7 @@ declare function domain:get-model-reference-query(
         let $field-name := fn:data($reference-field/@name)
         return
           cts:or-query((
-            cts:element-attribute-value-query(fn:QName($field-ns,$field-name),xs:QName("ref-uuid"),$reference-value)
+            cts:element-attribute-value-query(fn:QName($field-ns,$field-name),xs:QName("ref-id"),$reference-value)
           ))
       ))
  };

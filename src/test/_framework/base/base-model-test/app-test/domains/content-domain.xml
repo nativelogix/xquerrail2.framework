@@ -18,8 +18,7 @@
     <navigation listable="true" showable="true"></navigation>
     <element name="id" type="string" label="Id"></element>
     <element name="name" type="string" label="Name"/>
-
-    <element name="model1" type="reference" reference="model:model1:reference" label="Model #1"/>
+    <element name="model1" type="reference" reference="model:model1:reference" label="Model #1" occurrence="*"/>
   </model>
   <model name="model3" persistence="document" label="Model #3" extends="base" namespace-uri="http://marklogic.com/model/model3" key="uuid" keyLabel="id">
     <document root="models">/test/model3.xml</document>
@@ -40,9 +39,9 @@
   </model>
   <model name="model6" persistence="directory" label="Model #6" extends="base" key="uuid" keyLabel="id">
     <directory>/test/model6/</directory>
-    <attribute name="id" type="string" label="Id"></attribute>
-    <attribute name="score" type="string" label="Score"></attribute>
-    <element name="name" type="string" label="Name"/>
+    <attribute name="id" type="string" label="Id" />
+    <attribute name="score" type="string" label="Score" />
+    <element name="name" type="string" label="Name" />
   </model>
   <model name="model7" persistence="directory" label="Model #7" extends="base" key="uuid" keyLabel="id">
     <directory>/test/model7/</directory>
@@ -148,6 +147,30 @@
     <directory>/test/model16/$(id)</directory>
     <element name="id" type="string" label="Id"></element>
     <element name="name" type="string" label="Name"/>
+  </model>
+
+  <model name="model17" persistence="directory" label="Model #17 - cardinality" extends="base" key="uuid" keyLabel="id">
+    <directory>/test/model17/</directory>
+    <attribute name="id" type="string" label="Id" />
+    <attribute name="attribute-question-mark" type="string" occurrence="?"/>
+    <attribute name="attribute-plus" type="string" occurrence="+"/>
+    <attribute name="attribute-star" type="string" occurrence="*"/>
+    <element name="element-question-mark" type="string" label="Name" occurrence="?"/>
+    <element name="element-plus" type="string" label="Description" occurrence="+"/>
+    <element name="element-star" type="string" label="Summary" occurrence="*"/>
+  </model>
+
+  <model name="image" key="id" keyLabel="id" persistence="directory">
+      <directory>/test/images/</directory>
+      <attribute name="id" type="identity" identity="true" />
+      <element name="contentType" type="string" />
+      <element name="content" type="binary" fileURI="/test/binary/contents/$(id)"/>
+  </model>
+  <model name="model18" persistence="directory" label="Model #18" extends="base" key="uuid" keyLabel="id">
+    <directory>/test/model18/$(id)/</directory>
+    <element name="id" type="string" label="Id"></element>
+    <element name="name" type="string" label="Name"/>
+    <element name="image1" type="image" label="Image"/>
   </model>
 
 </domain>

@@ -133,7 +133,6 @@ declare %test:case function model-directory-element-attribute-new-test() as item
   let $value-child-id := domain:get-field-value(domain:get-model-field($model11, "childId"), $instance11)
   let $abstract-value := domain:get-field-value(domain:get-model-field($model11, "abstract"), $instance11)
   let $abstract-name-value := domain:get-field-value(domain:get-model-field(domain:get-model("abstract2"), "name"), $abstract-value)
-  let $_ := xdmp:log(($model11, $instance11, $INSTANCE11))
   return (
     assert:not-empty($instance11),
     assert:equal("model11-id", xs:string($value-id)),
@@ -692,7 +691,6 @@ declare %test:case function model-directory-container-multiple-element-with-attr
   let $value-id := domain:get-field-value(domain:get-model-field($model15, "id"), $instance15)
   let $value-group := domain:get-field-value(domain:get-model-field($model15, "group"), $instance15)
   let $value-seq := domain:get-field-value(domain:get-model-field($model15, "seq"), $instance15)
-  let $_ := xdmp:log(("$instance15", $instance15))
   return (
     assert:not-empty($instance15),
     assert:equal($id, xs:string($value-id)),
@@ -786,7 +784,94 @@ declare %test:case function model-new-map-attribute-no-value-test() as item()*
   let $value-score := domain:get-field-value(domain:get-model-field($model6, "score"), $instance6)
   return (
     assert:not-empty($instance6),
-    assert:empty($value-score)
+    assert:empty($value-score, "score field is be empty"),
+    assert:empty($instance6/@score, "score attribute is be empty")
+  )
+};
+
+declare %test:case function model-new-xml-element-occurrence-question-mark-test() as item()*
+{
+  let $model17 := domain:get-model("model17")
+  let $instance17 := model:new(
+    $model17,
+    <model17 id="model17-id" xmlns="http://xquerrail.com/app-test">
+    </model17>
+  )
+  let $element-question-mark-value := domain:get-field-value(domain:get-model-field($model17, "element-question-mark"), $instance17)
+  let $element-plus-value := domain:get-field-value(domain:get-model-field($model17, "element-plus"), $instance17)
+  return (
+    assert:not-empty($instance17),
+    assert:empty($element-question-mark-value),
+    assert:empty($instance17/*:element-question-mark, "element-question-mark should not exist"),
+    assert:empty($element-plus-value),
+    assert:not-empty($instance17/*:element-plus, "element-plus should exist")
+  )
+};
+
+declare %test:case function model-new-xml-element-occurrence-star-test() as item()*
+{
+  let $model17 := domain:get-model("model17")
+  let $instance17 := model:new(
+    $model17,
+    <model17 id="model17-id" xmlns="http://xquerrail.com/app-test">
+    </model17>
+  )
+  let $element-plus-value := domain:get-field-value(domain:get-model-field($model17, "element-plus"), $instance17)
+  let $element-star-value := domain:get-field-value(domain:get-model-field($model17, "element-star"), $instance17)
+  return (
+    assert:not-empty($instance17),
+    assert:empty($element-plus-value),
+    assert:empty($instance17/*:element-star, "element-star should not exist"),
+    assert:empty($element-star-value),
+    assert:not-empty($instance17/*:element-plus, "element-plus should exist")
+  )
+};
+
+declare %test:case function model-new-xml-attribute-occurrence-question-mark-test() as item()*
+{
+  let $model17 := domain:get-model("model17")
+  let $instance17 := model:new(
+    $model17,
+    <model17 id="model17-id" xmlns="http://xquerrail.com/app-test">
+    </model17>
+  )
+  let $attribute-question-mark-value := domain:get-field-value(domain:get-model-field($model17, "attribute-question-mark"), $instance17)
+  return (
+    assert:not-empty($instance17),
+    assert:empty($attribute-question-mark-value, "domain:get-field-value - attribute-question-mark should not exist"),
+    assert:empty($instance17/@attribute-question-mark, "attribute-question-mark should not exist")
+  )
+};
+
+declare %test:case function model-new-xml-attribute-occurrence-star-test() as item()*
+{
+  let $model17 := domain:get-model("model17")
+  let $instance17 := model:new(
+    $model17,
+    <model17 id="model17-id" xmlns="http://xquerrail.com/app-test">
+    </model17>
+  )
+  let $attribute-star-value := domain:get-field-value(domain:get-model-field($model17, "attribute-star"), $instance17)
+  return (
+    assert:not-empty($instance17),
+    assert:empty($attribute-star-value, "domain:get-field-value - attribute-star should not exist"),
+    assert:empty($instance17/@attribute-star, "attribute-star should not exist")
+  )
+};
+
+declare %test:case function model-new-xml-attribute-occurrence-plus-test() as item()*
+{
+  let $model17 := domain:get-model("model17")
+  let $instance17 := model:new(
+    $model17,
+    <model17 id="model17-id" xmlns="http://xquerrail.com/app-test">
+    </model17>
+  )
+  let $attribute-plus-value := domain:get-field-value(domain:get-model-field($model17, "attribute-plus"), $instance17)
+  return (
+    assert:not-empty($instance17),
+    assert:not-empty($attribute-plus-value, "domain:get-field-value - attribute-plus should exist"),
+    assert:not-empty($instance17/@attribute-plus, "attribute-plus should exist")
   )
 };
 

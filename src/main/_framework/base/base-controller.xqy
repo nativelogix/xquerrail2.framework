@@ -226,10 +226,13 @@ declare function controller:update()
 };
 
 declare function controller:patch() {
-  model:patch(
+  model:update(
     controller:model(),
-    controller:get(),
-    json:array-values(request:body())
+    model:patch(
+      controller:model(),
+      controller:get(),
+      json:array-values(request:body())
+    )
   )
 };
 

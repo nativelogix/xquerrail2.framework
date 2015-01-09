@@ -254,20 +254,30 @@ declare function model:build-json(
 {
   model:build-json($field,$instance,$include-root,<json:options/>)
 };
+
 declare function model:build-json(
   $field as element(),
   $instance as element(),
   $include-root as xs:boolean,
   $options as element(json:options)
-){
+) {
 
-   typeswitch($field)
-     case element(domain:model) return
-       js:o((
-         for $f in $field/(domain:container|domain:attribute|domain:element)
-         return model:build-json($f,$instance,$include-root,$options)
-       ))
-     case element(domain:element) return
+  typeswitch($field)
+    case element(domain:model) return
+      let $to-json-function := domain:get-model-function((), $field/@name, "to-json", 2, fn:false())
+      return
+        if (fn:exists($to-json-function)) then
+          xdmp:apply(
+            $to-json-function,
+            $field,
+            $instance
+          )
+        else
+          js:o((
+            for $f in $field/(domain:container|domain:attribute|domain:element)
+            return model:build-json($f,$instance,$include-root,$options)
+          ))
+    case element(domain:element) return
         let $field-value := domain:get-field-value($field,$instance)
         return  (
             for $field in $field/(domain:attribute)

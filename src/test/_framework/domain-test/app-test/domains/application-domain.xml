@@ -10,6 +10,21 @@
   <default-collation>http://marklogic.com/collation/codepoint</default-collation>
   <import id="content" resource="content-domain.xml"/>
   <!--Implement a base class to inherit metadata-->
+  <profiles>
+    <profile id="nav1" type="navigation">
+      <navigation searchable="true" searchType="value">
+        <term-option xmlns="http://marklogic.com/appservices/search">wildcarded</term-option>
+        <term-option xmlns="http://marklogic.com/appservices/search">stemmed</term-option>
+        <term-option xmlns="http://marklogic.com/appservices/search">case-insensitive</term-option>
+        <term-option xmlns="http://marklogic.com/appservices/search">diacritic-insensitive</term-option>
+        <term-option xmlns="http://marklogic.com/appservices/search">whitespace-sensitive</term-option>
+        <term-option xmlns="http://marklogic.com/appservices/search">punctuation-sensitive</term-option>
+      </navigation>
+    </profile>
+    <profile id="perm1" type="permission">
+      <permission role="anonymous" read="true" update="true" insert="false" execute="true"/>
+    </profile>
+  </profiles>
   <model name="base" description="Base Extension Class" persistence="abstract">
     <element name="uuid" type="identity" identity="true" label="Globally Unique Identifier">
       <navigation  searchable="true" sortable="true" facetable="true" />
@@ -26,7 +41,8 @@
 
   <!-- Generic imbedded element has an ID, what else? -->
   <model name="abstract1" persistence="abstract" key="id">
-    <attribute name="id" type="id" label="Object ID"/>           
+    <attribute name="id" type="id" label="Object ID"/>
+    <permission profile="perm1"/>
   </model>
 
 </domain>

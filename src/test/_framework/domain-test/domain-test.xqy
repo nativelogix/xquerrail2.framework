@@ -19,14 +19,13 @@ declare variable $TEST-APPLICATION :=
 
 declare variable $CONFIG := ();
 
-declare %test:teardown function teardown() as empty-sequence()
-{
-(:  setup:teardown():)
-  ()
+declare %test:setup function setup() {
+  (app:reset(), app:bootstrap($TEST-APPLICATION))[0]
 };
 
-declare %test:before-each function before-test() {
-  (app:reset(), app:bootstrap($TEST-APPLICATION))
+declare %test:teardown function teardown() as empty-sequence()
+{
+  ()
 };
 
 declare %test:case function get-model-model1-test() as item()*
@@ -99,7 +98,6 @@ declare %test:case function model-element-order-test() as item()* {
 declare %test:case function model-inheritance-one-level-test() as item()* {
   let $model4 := domain:get-model("model4")
   let $field := domain:get-model-field($model4, "id")
-  let $_ := xdmp:log(("$model4", $model4, "$field", $field))
   return (
     assert:not-empty($model4),
     assert:not-empty($field),
@@ -134,3 +132,50 @@ declare %test:case function model-inheritance-default-value-test() as item()* {
   )
 };
 
+declare %test:case function model-profiles-navigation-test() as item()* {
+  let $model5 := domain:get-model("model5")
+  let $navigation := $model5/domain:navigation
+  return (
+    assert:not-empty($model5, "$model5 should not be empty"),
+    assert:not-empty($navigation, "$navigation should not be empty"),
+    assert:equal($navigation/@searchable/fn:string(), "true", "navigation/@searchable is true"),
+    assert:equal($navigation/@searchType/fn:string(), "value", "navigation/@searchType equal searchType"),
+    assert:equal(fn:count($navigation/node()), 6, "navigation should have 6 child nodes")
+  )
+};
+
+declare %test:case function model-profiles-permission-test() as item()* {
+  let $model6 := domain:get-model("model6")
+  let $permission := $model6/domain:permission
+  return (
+    assert:not-empty($model6, "$model6 should not be empty"),
+    assert:not-empty($permission, "$permission should not be empty"),
+    assert:equal($permission/@role/fn:string(), "anonymous", "$permission/@role equal anonymous"),
+    assert:equal($permission/@update/fn:string(), "true", "$permission/@update is true"),
+    assert:equal($permission/@insert/fn:string(), "false", "$permission/@insert is false")
+  )
+};
+
+declare %test:case function abstract-model-profiles-permission-test() as item()* {
+  let $abstract1-model := domain:get-model("abstract1")
+  let $permission := $abstract1-model/domain:permission
+  return (
+    assert:not-empty($abstract1-model, "$abstract1-model should not be empty"),
+    assert:not-empty($permission, "$permission should not be empty"),
+    assert:equal($permission/@role/fn:string(), "anonymous", "$permission/@role equal anonymous"),
+    assert:equal($permission/@update/fn:string(), "true", "$permission/@update is true"),
+    assert:equal($permission/@insert/fn:string(), "false", "$permission/@insert is false")
+  )
+};
+
+declare %test:case function model-inheritance-profiles-permission-test() as item()* {
+  let $model5 := domain:get-model("model5")
+  let $permission := $model5/domain:permission
+  return (
+    assert:not-empty($model5, "$model5 should not be empty"),
+    assert:not-empty($permission, "$permission should not be empty"),
+    assert:equal($permission/@role/fn:string(), "anonymous", "$permission/@role equal anonymous"),
+    assert:equal($permission/@update/fn:string(), "true", "$permission/@update is true"),
+    assert:equal($permission/@insert/fn:string(), "false", "$permission/@insert is false")
+  )
+};

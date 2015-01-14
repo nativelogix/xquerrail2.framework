@@ -43,12 +43,16 @@ declare variable $SIMPLE-TYPES := (
   (:Durations        :) "date","time","dateTime", "duration","yearMonth","monthDay"
 );
 
+declare variable $MODEL-PERMISSION-ATTRIBUTES := (
+  "role", "read", "update", "insert", "execute"
+);
+
 declare variable $MODEL-NAVIGATION-ATTRIBUTES := (
   "editable", "exportable", "findable", "importable", "listable", "newable", "removable", "searchable", "securable", "showable", "sortable"
 );
 
 declare variable $FIELD-NAVIGATION-ATTRIBUTES := (
-  $MODEL-NAVIGATION-ATTRIBUTES, (:"facetable",:) "metadata", "suggestable"
+  $MODEL-NAVIGATION-ATTRIBUTES, "metadata", "suggestable"
 );
 
 (:~
@@ -217,8 +221,12 @@ declare %private function domain:get-identity-cache($key) {
  : @param $key - key string to identify the cache identity
  : @param $value - $value of the cache item
  :)
-declare function domain:set-identity-cache($key as xs:string,$value as item()*) {
-    map:put($DOMAIN-IDENTITY-CACHE,$key,$value)
+declare function domain:set-identity-cache(
+  $key as xs:string,
+  $value as item()*
+) as item()* {
+  map:put($DOMAIN-IDENTITY-CACHE, $key, $value),
+  $value
 };
 
 (:~
@@ -311,11 +319,7 @@ declare function domain:get-model-identity-field($model as element(domain:model)
     if($cache) then $cache[1]
     else
     let $id-field := $model//(domain:element|domain:attribute)[fn:node-name(.) = $DOMAIN-NODE-FIELDS][@identity eq "true" or @type =( "identity","id")]
-    return
-     (
-     domain:set-identity-cache($key,$id-field),
-     $id-field[1]
-    )
+    return domain:set-identity-cache($key,$id-field)[1]
 };
 (:~
  : Returns the field that is the identity key for a given model.
@@ -328,11 +332,7 @@ declare function domain:get-model-keylabel-field($model as element(domain:model)
     if($cache) then fn:exactly-one($cache)
     else
     let $key-field := $model//(domain:element|domain:attribute)[@name = $model/@keyLabel][1]
-    return
-     (
-     domain:set-identity-cache($key,$key-field),
-     $key-field
-    )
+    return domain:set-identity-cache($key,$key-field)
 };
 (:~
  : Returns the identity query for a domain-model
@@ -385,10 +385,7 @@ declare function domain:get-model-key-field($model as element(domain:model)) {
         if($cache) then $cache
         else
             let $field := $model//(domain:element|domain:attribute)[@name eq $model/@key]
-            return (
-               domain:set-identity-cache($key,$field),
-               $field
-            )
+            return domain:set-identity-cache($key,$field)
 };
 
 (:~
@@ -402,10 +399,7 @@ declare function domain:get-model-keyLabel-field($model as element(domain:model)
         if($cache) then $cache
         else
             let $field := $model//(domain:element|domain:attribute)[fn:node-name(.) = $DOMAIN-NODE-FIELDS][@name eq $model/@keyLabel]
-            return (
-               domain:set-identity-cache($key,$field),
-               $field
-            )
+            return domain:set-identity-cache($key,$field)
 };
 declare function domain:get-field-prefix($field as element()) {
     if($field/@prefix) then $field/@prefix else
@@ -428,10 +422,7 @@ declare function domain:get-field-prefix($field as element()) {
                 else fn:error(xs:QName("UNPREFIXED-NAMESPACE"),"Cannot resolve prefix for namespace " || $ns,
                 fn:string($field/ancestor::domain:domain/fn:local-name(.)))
             let $prefix := fn:subsequence($nses,$index-ns -1 ,1)
-            return (
-               domain:set-identity-cache($key,$prefix),
-               $prefix
-            )
+            return domain:set-identity-cache($key,$prefix)
 };
 (:~
  : Returns the field that matches the given field name or key
@@ -445,10 +436,7 @@ declare function domain:get-model-field($model as element(domain:model),$name as
     if(fn:exists($cache)) then $cache
     else
       let $value := $model//(domain:element|domain:attribute)[$name eq @name or $name eq @keyId or $name eq @keyName]
-      return (
-        domain:set-identity-cache($key,$value),
-        $value
-      )
+      return domain:set-identity-cache($key,$value)
 };
 
 (:~
@@ -569,10 +557,7 @@ declare function domain:get-content-namespace-uri(
       $cache
     else
       let $value := fn:data(config:get-domain($application-name)/domain:content-namespace/@namespace-uri)
-      return (
-        domain:set-identity-cache($key,$value),
-        $value
-      )
+      return domain:set-identity-cache($key,$value)
 };
 
 (:~
@@ -751,10 +736,28 @@ declare function domain:get-domain-model(
         else fn:error(xs:QName("NO-DOMAIN-MODEL"), "Model does not exist",$model-names)
 };
 
+declare %private function domain:find-base-model(
+  $field as element()
+) as element(domain:model)? {
+  let $model :=
+    if ($field instance of element(domain:model)) then
+      $field
+    else
+      $field/ancestor::domain:model
+  return
+    domain:find-model-by-name(
+      $model/ancestor::domain:domain,
+      if ($model/@compiled and fn:exists($model/@domain:extension)) then
+        $model/@domain:extension
+      else
+        $model/@extends
+    )
+};
+
 declare %private function domain:find-model-by-name(
   $domain as element(domain:domain),
   $name as xs:string?
-) {
+) as element(domain:model)? {
   if (fn:empty($name)) then ()
   else $domain/domain:model[
     cts:contains(
@@ -773,22 +776,24 @@ declare %private function domain:find-model-by-name(
  : @param $model - Model to return, after optionally merging in extension fields
  :)
 declare %private function domain:extend-model(
+  $application-name as xs:string,
   $domain as element(domain:domain),
   $model as element(domain:model)
 ) as element(domain:model) {
   if($model/@extends) then
-    let $baseName := fn:string($model/@extends)
-    let $baseModel := domain:find-model-by-name($domain, $baseName)
+    let $base-model-name := fn:string($model/@extends)
+    let $base-model := domain:find-base-model($model)
     return
-      if(fn:not($baseModel)) then
-        fn:error(xs:QName("NO-EXTENDS-MODEL"),"Missing Extension Base Model", $baseName)
+      if(fn:not($base-model)) then
+        fn:error(xs:QName("NO-EXTENDS-MODEL"),"Missing Extension Base Model", $base-model-name)
       else
         element { fn:node-name($model) } {
           $model/namespace::*,
           $model/@*[. except ($model/@namespace, $model/@namespace-uri)],
+          attribute compiled {fn:true()},
           attribute namespace { domain:get-field-namespace($model) },
-          attribute domain:extension { fn:string-join( ($baseName, $baseModel/@extension), ' ' ) },
-          for $field in  $baseModel/(domain:element|domain:container|domain:attribute|domain:triple)
+          attribute domain:extension { fn:string-join( ($base-model-name, $base-model/@extension), ' ' ) },
+          for $field in  $base-model/(domain:element|domain:container|domain:attribute|domain:triple)
             let $fieldName := domain:get-field-qname( $field )
             let $fieldNS := (domain:get-field-namespace($model), fn:namespace-uri-from-QName( $fieldName )) [1]
             let $overlap := $model/(domain:element|domain:container|domain:attribute|domain:triple)
@@ -799,7 +804,7 @@ declare %private function domain:extend-model(
                  if( fn:data($overlap/@override) or fn:data($model/@override) ) then
                   comment { (if(fn:data($overlap/@override)) then "Field" else "Model")||" @override "||$fieldName }
                  else
-                  fn:error(xs:QName("EXTENDS-MODEL-OVERLAP"),"Extension Model Overlap requires @override", (text{"model", $model/@name, "base", $baseName, "field", $fieldName}))
+                  fn:error(xs:QName("EXTENDS-MODEL-OVERLAP"),"Extension Model Overlap requires @override", (text{"model", $model/@name, "base", $base-model-name, "field", $fieldName}))
               else
                 element { fn:node-name($field) } {
                   (: Copy all attributes except namespace or namespace-uri :)
@@ -808,13 +813,15 @@ declare %private function domain:extend-model(
                   if( $fieldNS ) then attribute namespace { $fieldNS  } else (),
                   (: If the base field doesn't have a model definition, add one :)
                   if( fn:not( $field/@domain:model ) )
-                    then attribute domain:model { $baseName }
+                    then attribute domain:model { $base-model-name }
                     else (),
                   (: Now copy field children :)
                   $field/node()
                 },
-          domain:build-model-navigation($model),
-          $model/node()[. except $model/(domain:navigation)]
+          (:$base-model/* [. except $base-model/(domain:element|domain:container|domain:attribute|domain:triple)],:)
+          (:domain:build-model-navigation($model),:)
+          (:$model/node()[. except $model/(domain:navigation)]:)
+          $model/node()
         }
   else $model
 };
@@ -822,9 +829,9 @@ declare %private function domain:extend-model(
 declare function domain:compile-model(
   $application-name as xs:string,
   $model as element(domain:model)
-) {
+) as element(domain:model) {
   let $domain := $model/ancestor::domain:domain
-  let $model := domain:sort-model(domain:extend-model($domain, $model))
+  let $model := domain:sort-model(domain:extend-model($application-name, $domain, $model))
   let $model :=
     element domain:domain {
       $domain/*[. except $domain/domain:model[@name = $model/@name]],
@@ -861,15 +868,37 @@ declare function domain:navigation(
   $field/domain:navigation
 };
 
+declare %private function domain:find-profile(
+  $field as element(),
+  $id as xs:string?,
+  $type as xs:string
+) as element(domain:profile)? {
+  if (fn:empty($id)) then
+    ()
+  else
+    let $domain := $field/ancestor::domain:domain
+    return
+      if (fn:empty($domain)) then
+        xs:QName("DOMAIN-NOT-FOUND")
+      else
+      (
+        $domain/domain:profiles/domain:profile[@id eq $id and @type eq $type]
+      )
+};
+
 declare %private function domain:build-navigation-attribute(
   $field as element(),
   $attribute-name as xs:string
 ) {
-  let $base-model := domain:find-model-by-name($field/ancestor::domain:domain, $field/@extends)
+  let $base-model := domain:find-base-model($field)
+  (:domain:find-model-by-name($field/ancestor::domain:domain, $field/@extends):)
+  let $profile := domain:find-profile($field, $field/domain:navigation/@profile, "navigation")
   return attribute {$attribute-name} {
     if ($field/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
       ($field/domain:navigation/@*[./fn:local-name() eq $attribute-name])
-    else if (fn:exists($field/@extends) and $base-model/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
+    else if (fn:exists($profile) and $profile/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
+      $profile/domain:navigation/@*[./fn:local-name() eq $attribute-name]
+    else if (fn:exists($base-model) and $base-model/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
       $base-model/domain:navigation/@*[./fn:local-name() eq $attribute-name]
     else if ($field/ancestor::domain:element/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
       $field/ancestor::domain:element/domain:navigation/@*[./fn:local-name() eq $attribute-name]
@@ -881,6 +910,52 @@ declare %private function domain:build-navigation-attribute(
       $field/ancestor::domain:domain/domain:navigation/@*[./fn:local-name() eq $attribute-name]
     else
       fn:false()
+  }
+};
+
+declare %private function domain:build-permission-attribute(
+  $model as element(domain:model),
+  $attribute-name as xs:string
+) {
+  let $base-model := domain:find-base-model($model)
+  (:domain:find-model-by-name($model/ancestor::domain:domain, ($model/@extends | $model/@domain:extension)[1]):)
+  let $profile := domain:find-profile($model, $model/domain:permission/@profile, "permission")
+  return attribute {$attribute-name} {
+    if ($model/domain:permission/@*[./fn:local-name() eq $attribute-name]) then
+      $model/domain:permission/@*[./fn:local-name() eq $attribute-name]
+    else if (fn:exists($profile) and $profile/domain:permission/@*[./fn:local-name() eq $attribute-name]) then
+      $profile/domain:permission/@*[./fn:local-name() eq $attribute-name]
+    else if (fn:exists($base-model)) then
+      domain:build-permission-attribute($base-model, $attribute-name)
+    else if ($model/ancestor::domain:domain/domain:permission/@*[./fn:local-name() eq $attribute-name]) then
+      $model/ancestor::domain:domain/domain:permission/@*[./fn:local-name() eq $attribute-name]
+    else
+      ()
+  }
+};
+
+(:~
+  navigation from model, abstract or domain are merged in this order
+:)
+declare function domain:build-model-permission(
+  $model as element(domain:model)
+) as element(domain:permission)? {
+  element domain:permission {
+    $MODEL-PERMISSION-ATTRIBUTES ! (
+      let $attribute-name := .
+      return domain:build-permission-attribute($model, $attribute-name)
+    (:),
+    $model/domain:permission/@* [. except $model/domain:permission/@*[fn:index-of($MODEL-PERMISSION-ATTRIBUTES, ./fn:local-name()) > 0]],
+    (
+      let $profile := domain:find-profile($model, $model/domain:permission/@profile, "permission")
+      return
+      if (fn:exists($profile)) then (
+        $profile/node()/@* [. except $profile/node()/@*[fn:index-of(($MODEL-PERMISSION-ATTRIBUTES, $model/domain:permission/@*/fn:local-name()), ./fn:local-name()) > 0]],
+        $profile/node()/*
+      )
+      else
+        ():)
+    )
   }
 };
 
@@ -898,6 +973,16 @@ declare function domain:build-model-navigation(
           return domain:build-navigation-attribute($field, $attribute-name)
         ),
         $field/domain:navigation/@* [. except $field/domain:navigation/@*[fn:index-of($MODEL-NAVIGATION-ATTRIBUTES, ./fn:local-name()) > 0]],
+        (
+          let $profile := domain:find-profile($field, $field/domain:navigation/@profile, "navigation")
+          return
+          if (fn:exists($profile)) then (
+            $profile/node()/@* [. except $profile/node()/@*[fn:index-of(($MODEL-NAVIGATION-ATTRIBUTES, $field/domain:navigation/@*/fn:local-name()), ./fn:local-name()) > 0]],
+            $profile/node()/*
+          )
+          else
+            ()
+        ),
         $field/domain:navigation/*
       }
     case element(domain:container) return
@@ -929,6 +1014,7 @@ declare function domain:build-model-navigation(
       }
     default return ()
 };
+
 (:~
   Set navigation attributes for all model elements (if not defined will inherit from parent else default is false)
 :)
@@ -940,8 +1026,9 @@ declare function domain:set-model-field-defaults(
       element { fn:node-name($field) } {
         $field/namespace::*,
         $field/@*,
-        $field/*[. except $field/(domain:element | domain:container | domain:attribute | domain:navigation)],
+        $field/*[. except $field/(domain:element | domain:container | domain:attribute | domain:navigation | domain:permission)],
         domain:build-model-navigation($field),
+        domain:build-model-permission($field),
         for $f in  $field/(domain:element | domain:container | domain:attribute)
           return domain:set-model-field-defaults($f)
       }
@@ -1144,10 +1231,7 @@ declare function domain:get-field-name-key($field as node()) {
        if($cache) then $cache
        else
         let $value := $field/@keyName/fn:string()
-        return (
-          domain:set-identity-cache($key,$value),
-          $value
-       )
+        return domain:set-identity-cache($key,$value)
 };
 
 declare %private function domain:build-field-name-key($field as node()) {
@@ -1180,10 +1264,7 @@ declare function domain:get-field-id($field as node()) {
        if($cache) then $cache
        else
         let $value := $field/@keyId/fn:string()
-        return (
-          domain:set-identity-cache($key,$value),
-          $value
-       )
+        return domain:set-identity-cache($key,$value)
 };
 
 declare %private function domain:build-field-id($field as node()) {
@@ -1232,10 +1313,7 @@ declare function domain:get-field-namespace(
         )
 
   )[1]
-  return (
-    domain:set-identity-cache($key,$field-namespace),
-    $field-namespace
-  )
+  return domain:set-identity-cache($key,$field-namespace)
 };
 
 (:~
@@ -2058,10 +2136,7 @@ declare function domain:declared-namespaces(
       $model/ancestor::domain:domain/domain:declare-namespace ! (./@prefix, ./(@namespace|@namespace-uri)[1]),
       fn:in-scope-prefixes($model)[. ne ""] ! (., fn:namespace-uri-for-prefix(., $model))
     )
-    return (
-      domain:set-identity-cache($key,$value),
-      $value
-    )
+    return domain:set-identity-cache($key,$value)
 };
 
 declare function domain:declared-namespaces-map($model) {

@@ -36,16 +36,35 @@ declare variable $FUNCTION-CACHE  := map:map();
 
 declare variable $EXPANDO-PATTERN := "\$\((\i\c*(/@?\i\c*)*)\)";
 
+declare function model:uuid-string(
+) as xs:string {
+  model:uuid-string(xdmp:random())
+};
+
+declare function model:uuid-string(
+  $seed as xs:integer?
+) as xs:string {
+  let $hash := (:Assume FIPS is installed by default:)
+    if(fn:tokenize(xdmp:version(),"\.")[1] > "6") then
+      xdmp:apply(xdmp:function(xs:QName("xdmp:hmac-sha1")),"uuid",fn:string($seed))
+    else
+      xdmp:apply(xdmp:function(xs:QName("xdmp:sha1")),fn:string($seed))
+  return fn:replace($hash,"(\c{8})(\c{4})(\c{4})(\c{4})(\c{12})","$1-$2-$3-$4-$5")
+};
+
 (:~
  : Returns the current-identity field for use when instance does not have an existing identity
  :)
-declare function  model:get-identity(){
+declare function  model:get-identity(
+) {
   if(fn:exists($current-identity))
   then $current-identity
   else
     let $id := model:generate-uuid()
-    return
-       (xdmp:set($current-identity,$id),$id)
+    return (
+      xdmp:set($current-identity,$id),
+      $id
+    )
 };
 
 
@@ -54,15 +73,14 @@ declare function  model:get-identity(){
  : Wallclock will be used to make the UUIDs sortable.
  : Note when calling function the call will reset the current-identity.
  :)
-declare function model:generate-uuid($seed as xs:integer?)
-as xs:string
-{
-  let $hash := (:Assume FIPS is installed by default:)
-    if(fn:tokenize(xdmp:version(),"\.")[1] > "6")
-    then xdmp:apply(xdmp:function(xs:QName("xdmp:hmac-sha1")),"uuid",fn:string($seed))
-    else xdmp:apply(xdmp:function(xs:QName("xdmp:sha1")),fn:string($seed))
-  let $guid := fn:replace($hash,"(\c{8})(\c{4})(\c{4})(\c{4})(\c{12})","$1-$2-$3-$4-$5")
-  return (xdmp:set($current-identity,$guid),$guid)
+declare function model:generate-uuid(
+  $seed as xs:integer?
+) as xs:string {
+  let $guid := model:uuid-string($seed)
+  return (
+    xdmp:set($current-identity,$guid),
+    $guid
+  )
 };
 (:~
  :  Generates a UUID based on randomization function
@@ -1052,7 +1070,6 @@ declare function model:build-attribute(
   let $qname := domain:get-field-qname($context)
   let $occurrence := (fn:data($context/@occurrence),"?")[1]
   let $value := model:build-value($context, $field-values, $current-value)
-  let $_ := xdmp:log((text{"model:build-attribute", $qname}, "$context", $context, $value))
 
 (:      else if(fn:empty(fn:index-of(("?", "*"), $occurrence))) then
         attribute {$qname} {
@@ -1224,7 +1241,6 @@ declare function model:build-instance(
    $updates as item()?,
    $partial as xs:boolean
 ) {
-  let $_ := xdmp:log(("model:build-instance", "$context", $context, "$updates", $updates, "$partial", $partial))
   let $value-type := domain:get-value-type($updates)
   let $model := domain:get-model($context/@type)
   let $current-values := domain:get-field-value($context,$current)
@@ -1235,7 +1251,6 @@ declare function model:build-instance(
         for $value at $pos in $update-values
         let $id-field    := domain:get-model-identity-field($model)
         let $id-value := domain:get-field-value($id-field,$value)
-        let $_ := xdmp:log((text{"$id-value", $id-value}))
         let $current-by-id  := $current-values[cts:contains(.,domain:get-model-identity-query($model,$id-value))]
         let $current-by-pos := $current-values[$pos]
         let $matched :=
@@ -1244,7 +1259,6 @@ declare function model:build-instance(
           element { domain:get-field-qname($context) } {
             model:recursive-build($model,$matched,$value,$partial)/(@*|element())
           }
-   let $_ := xdmp:log(("$values", $values))
    return
      if($values) then
         if($occurrence = ("?","*"))

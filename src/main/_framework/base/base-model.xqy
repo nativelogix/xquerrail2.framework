@@ -9,6 +9,8 @@ module namespace model = "http://xquerrail.com/model/base";
 
 import module namespace search = "http://marklogic.com/appservices/search" at "/MarkLogic/appservices/search/search.xqy";
 
+import module namespace context = "http://xquerrail.com/context" at "../context.xqy";
+
 import module namespace domain = "http://xquerrail.com/domain" at "../domain.xqy";
 
 import module namespace config = "http://xquerrail.com/config" at "../config.xqy";
@@ -2508,7 +2510,7 @@ declare function model:build-value(
     case "update-timestamp" return
         fn:current-dateTime()
     case "update-user" return
-        xdmp:get-current-user()
+        context:user()
     case "create-timestamp" return
         if(fn:exists($current))
         then $current
@@ -2516,7 +2518,7 @@ declare function model:build-value(
     case "create-user" return
         if(fn:exists($current))
         then $current
-        else xdmp:get-current-user()
+        else context:user()
     case "query" return
         cts:query($value)
     default return

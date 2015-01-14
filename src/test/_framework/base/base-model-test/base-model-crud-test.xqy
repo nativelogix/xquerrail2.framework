@@ -4,6 +4,7 @@ import module namespace assert = "http://github.com/robwhitby/xray/assertions" a
 
 import module namespace app = "http://xquerrail.com/application" at "../../../../main/_framework/application.xqy";
 import module namespace config = "http://xquerrail.com/config" at "../../../../main/_framework/config.xqy";
+import module namespace context = "http://xquerrail.com/context" at "../../../../main/_framework/context.xqy";
 import module namespace domain = "http://xquerrail.com/domain" at "../../../../main/_framework/domain.xqy";
 import module namespace model = "http://xquerrail.com/model/base" at "../../../../main/_framework/base/base-model.xqy";
 import module namespace setup = "http://xquerrail.com/test/setup";
@@ -839,6 +840,25 @@ declare %test:case function model-new-xml-attribute-occurrence-plus-test() as it
     assert:not-empty($instance17),
     assert:not-empty($attribute-plus-value, "domain:get-field-value - attribute-plus should exist"),
     assert:not-empty($instance17/@attribute-plus, "attribute-plus should exist")
+  )
+};
+
+declare %test:case function model-document-new-custom-user-context-test() as item()*
+{
+  let $model1 := domain:get-model("model1")
+  let $user-test := "user-test"
+  let $_ := context:user($user-test)
+  let $instance1 := model:new(
+    $model1,
+    map:new((
+      map:entry("id", "1234"),
+      map:entry("name", "name-1")
+    ))
+  )
+  let $create-user-value := domain:get-field-value(domain:get-model-field($model1, "create-user"), $instance1)
+  return (
+    assert:not-empty($instance1),
+    assert:equal($user-test, xs:string($create-user-value))
   )
 };
 

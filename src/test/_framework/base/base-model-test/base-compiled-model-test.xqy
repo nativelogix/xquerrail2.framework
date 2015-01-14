@@ -23,25 +23,19 @@ declare variable $TEST-APPLICATION :=
 ;
 
 declare %test:setup function setup() {
-  let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION))
-  return
-    ()
+  (app:reset(), app:bootstrap($TEST-APPLICATION))[0]
 };
 
 declare %test:teardown function teardown() {
   xdmp:invoke-function(
     function() {
       xdmp:collection-delete($TEST-COLLECTION)
-      , xdmp:commit() 
+      , xdmp:commit()
     },
     <options xmlns="xdmp:eval">
       <transaction-mode>update</transaction-mode>
     </options>
   )
-};
-
-declare %test:before-each function before-test() {
-  app:bootstrap($TEST-APPLICATION)
 };
 
 declare %test:case function model1-navigation-test() as item()*

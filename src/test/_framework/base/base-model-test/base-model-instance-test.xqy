@@ -50,7 +50,7 @@ declare %test:case function model-xml-instance-test() as item()*
     }
   }
 
-let $instance8 := setup:eval(
+let $instance8 := setup:invoke(
     function() {
       model:new($model8, $instance8)
     }
@@ -80,7 +80,7 @@ declare %test:case function model-map-instance-test() as item()*
       ))
     )
   ))
-  let $instance8 := setup:eval(
+  let $instance8 := setup:invoke(
     function() {
       model:new($model8, $instance8)
     }
@@ -110,7 +110,7 @@ declare %test:case function model-map-instance-with-binary-test() as item()*
       ))
     )
   ))
-  let $instance18 := setup:eval(
+  let $instance18 := setup:invoke(
     function() {
       model:create($model18, $instance18)
     }

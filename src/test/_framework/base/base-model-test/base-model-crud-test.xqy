@@ -154,7 +154,6 @@ declare %test:case function model-document-new-keep-identity-test() as item()*
     ))
   )
   let $identity-value := xs:string(domain:get-field-value(domain:get-model-identity-field($model1), $instance1))
-
   return (
     assert:not-empty($instance1),
     assert:equal($identity-value, $random, "uuid must be equal to " || $random)
@@ -174,7 +173,7 @@ declare %test:case function model-document-new-create-keep-identity-test() as it
   )
   let $identity-value := xs:string(domain:get-field-value(domain:get-model-identity-field($model1), $new-instance1))
 
-  let $instance1 := eval(
+  let $instance1 := setup:eval(
     function() {
       model:create(
         $model1,
@@ -191,10 +190,10 @@ declare %test:case function model-document-new-create-keep-identity-test() as it
 };
 
 (: Require element range index for keyLabel :)
-declare %test:ignore function model-directory-create-test() as item()*
+declare %test:case function model-directory-create-test() as item()*
 {
   let $model4 := domain:get-model("model4")
-  let $instance4 := eval(
+  let $instance4 := setup:eval(
     function() {
       model:create(
         $model4,
@@ -212,38 +211,6 @@ declare %test:ignore function model-directory-create-test() as item()*
   )
 };
 
-declare %private function invoke($fn as function(*)) {
-  xdmp:invoke-function(
-    function() {
-      xdmp:apply(
-        $fn
-      ),
-      xdmp:commit()
-    },
-    <options xmlns="xdmp:eval">
-      <isolation>different-transaction</isolation>
-      <transaction-mode>update</transaction-mode>
-    </options>
-  )
-};
-
-declare %private function eval($fn as function(*)) {
-  xdmp:apply($fn)
-
-(:  xdmp:invoke-function(
-    function() {
-      xdmp:apply($fn)
-      ,
-      xdmp:commit()
-    },
-    <options xmlns="xdmp:eval">
-      <transaction-mode>update</transaction-mode>
-      <prevent-deadlocks>true</prevent-deadlocks>
-    </options>
-  )
-:)
-};
-
 declare %test:case function model-document-update-test() as item()*
 {
   let $model1 := domain:get-model("model1")
@@ -256,7 +223,7 @@ declare %test:case function model-document-update-test() as item()*
     ))
   )
   let $identity-value := xs:string(domain:get-field-value($identity-field, $find))
-  let $update1 := eval(
+  let $update1 := setup:eval(
     function() {
       model:update(
         $model1,
@@ -284,7 +251,7 @@ declare %test:case function model-document-update-test() as item()*
 declare %test:case function model-document-new-different-namespace-test() as item()*
 {
   let $model1 := domain:get-model("model1")
-  let $instance1 := eval(
+  let $instance1 := setup:eval(
     function() {
       model:new(
         $model1,
@@ -307,7 +274,7 @@ declare %test:case function model-document-new-different-namespace-test() as ite
 declare %test:case function model-document-create-test() as item()*
 {
   let $model1 := domain:get-model("model1")
-  let $instance1 := eval(
+  let $instance1 := setup:eval(
     function() {
       model:create(
         $model1,
@@ -339,7 +306,7 @@ declare %test:case function model-document-create-test() as item()*
 declare %test:case function model-document-create-from-xml-with-attribute-test() as item()*
 {
   let $model6 := domain:get-model("model6")
-  let $instance6 := eval(
+  let $instance6 := setup:eval(
     function() {
       model:create(
         $model6,
@@ -365,7 +332,7 @@ declare %test:case function model-document-create-from-xml-with-attribute-test()
 declare %test:case function model-document-create-from-map-with-attribute-test() as item()*
 {
   let $model6 := domain:get-model("model6")
-  let $instance6 := eval(
+  let $instance6 := setup:eval(
     function() {
       model:create(
         $model6,
@@ -394,7 +361,7 @@ declare %test:case function model-find-by-attribute-test() as item()*
 {
   let $id := setup:random()
   let $model6 := domain:get-model("model6")
-  let $instance6 := invoke(
+  let $instance6 := setup:invoke(
     function() {
       model:create(
         $model6,
@@ -429,7 +396,7 @@ declare %test:case function model-find-by-attribute-test() as item()*
 declare %test:case function model-document-create-from-xml-with-integer-attribute-test() as item()*
 {
   let $model7 := domain:get-model("model7")
-  let $instance7 := eval(
+  let $instance7 := setup:eval(
     function() {
       model:create(
         $model7,
@@ -456,7 +423,7 @@ declare %test:case function model-document-create-from-xml-with-integer-attribut
 declare %test:case function model-document-create-from-map-with-integer-attribute-test() as item()*
 {
   let $model7 := domain:get-model("model7")
-  let $instance7 := eval(
+  let $instance7 := setup:eval(
     function() {
       model:create(
         $model7,
@@ -502,7 +469,7 @@ declare %test:case function model-document-create-multiple-reference-instances-t
     ))
   )
 
-  let $instance10 := eval(
+  let $instance10 := setup:eval(
     function() {
       model:create(
         $model10,
@@ -530,7 +497,7 @@ declare %test:case function model-document-binary-with-directory-binary-create()
   let $model12 := domain:get-model("model12")
   let $id := "id12-" || xdmp:random()
   let $binary := binary{ xs:hexBinary("DEADBEEF") }
-  let $instance12 := invoke(
+  let $instance12 := setup:invoke(
     function() {
       model:create(
         $model12,
@@ -557,7 +524,7 @@ declare %test:case function model-document-binary-with-file-uri-create() as item
   let $model13 := domain:get-model("model13")
   let $id := "id13-" || xdmp:random()
   let $binary := binary{ xs:hexBinary("DEADBEEF") }
-  let $instance13 := invoke(
+  let $instance13 := setup:invoke(
     function() {
       model:create(
         $model13,
@@ -587,7 +554,7 @@ declare %test:case function model-document-binary-with-filename-content-type-cre
   let $filename := "dummy.txt"
   let $content-type := "text/plain"
   let $binary := binary { string-join(string-to-codepoints($text) ! (xdmp:integer-to-hex(.)), "") }
-  let $instance13 := invoke(
+  let $instance13 := setup:invoke(
     function() {
       model:create(
         $model13,
@@ -634,7 +601,7 @@ declare %test:case function model-directory-container-multiple-instance-element-
       map:entry("text", "This is a text")
     ))
   )
-  let $instance14 := invoke(
+  let $instance14 := setup:invoke(
     function() {
       model:create(
         $model14,
@@ -664,7 +631,7 @@ declare %test:case function model-directory-container-multiple-element-with-attr
 {
   let $model15 := domain:get-model("model15")
   let $id := "id15-" || xdmp:random()
-  let $instance15 := invoke(
+  let $instance15 := setup:invoke(
     function() {
       model:create(
         $model15,

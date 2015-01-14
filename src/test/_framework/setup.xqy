@@ -22,7 +22,7 @@ declare function teardown($collection as xs:string?) as empty-sequence()
     xdmp:invoke-function(
       function() {
         xdmp:collection-delete($collection)
-        , xdmp:commit() 
+        , xdmp:commit()
       },
       <options xmlns="xdmp:eval">
         <transaction-mode>update</transaction-mode>
@@ -56,16 +56,6 @@ declare function invoke($fn as function(*)) {
 };
 
 declare function eval($fn as function(*)) {
-  xdmp:invoke-function(
-    function() {
-      xdmp:apply($fn)
-      ,
-      xdmp:commit()
-    },
-    <options xmlns="xdmp:eval">
-      <transaction-mode>update</transaction-mode>
-      <isolation>different-transaction</isolation>
-    </options>
-  )
+  xdmp:apply($fn)
 };
 

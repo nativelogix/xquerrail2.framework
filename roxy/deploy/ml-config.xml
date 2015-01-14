@@ -226,6 +226,13 @@
         </range-element-index>
         <range-element-index>
           <scalar-type>string</scalar-type>
+          <namespace-uri>http://marklogic.com/model/model4</namespace-uri>
+          <localname>id</localname>
+          <collation>http://marklogic.com/collation/codepoint</collation>
+          <range-value-positions>false</range-value-positions>
+        </range-element-index>
+        <range-element-index>
+          <scalar-type>string</scalar-type>
           <namespace-uri>http://marklogic.com/model/model1</namespace-uri>
           <localname>uuid id name</localname>
           <collation>http://marklogic.com/collation/codepoint</collation>
@@ -248,25 +255,7 @@
         <range-element-attribute-index>
           <scalar-type>string</scalar-type>
           <parent-namespace-uri>http://xquerrail.com/app-test</parent-namespace-uri>
-          <parent-localname>model6</parent-localname>
-          <namespace-uri/>
-          <localname>id</localname>
-          <collation>http://marklogic.com/collation/codepoint</collation>
-          <range-value-positions>false</range-value-positions>
-        </range-element-attribute-index>
-        <range-element-attribute-index>
-          <scalar-type>string</scalar-type>
-          <parent-namespace-uri>http://xquerrail.com/app-test</parent-namespace-uri>
-          <parent-localname>model7</parent-localname>
-          <namespace-uri/>
-          <localname>id</localname>
-          <collation>http://marklogic.com/collation/codepoint</collation>
-          <range-value-positions>false</range-value-positions>
-        </range-element-attribute-index>
-        <range-element-attribute-index>
-          <scalar-type>string</scalar-type>
-          <parent-namespace-uri>http://xquerrail.com/app-test</parent-namespace-uri>
-          <parent-localname>model10</parent-localname>
+          <parent-localname>model6 model7 model10</parent-localname>
           <namespace-uri/>
           <localname>id</localname>
           <collation>http://marklogic.com/collation/codepoint</collation>

@@ -52,12 +52,36 @@ declare variable $INSTANCE11 :=
 </model11>
 ;
 
+declare variable $INSTANCES19 := (
+<model19 xmlns="http://xquerrail.com/app-test">
+  <name>model19-name-append</name>
+  <abstractList>
+    <abstract name="model19-abstract-name-append" />
+  </abstractList>
+</model19>
+,
+<model19 xmlns="http://xquerrail.com/app-test">
+  <name>model19-name-prepend</name>
+  <abstractList>
+    <abstract name="model19-abstract-name-prepend" />
+  </abstractList>
+</model19>
+);
+
 declare variable $CONFIG := ();
 
 declare %test:setup function setup() {
   let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION))
   let $model1 := domain:get-model("model1")
   let $_ := model:create($model1, $INSTANCE1, $TEST-COLLECTION)
+  let $model19 := domain:get-model("model19")
+  let $_ := for $instance in $INSTANCES19 return (
+    setup:invoke(
+      function() {
+        model:create($model19, $instance, $TEST-COLLECTION)
+      }
+    )
+  )
   return
     ()
 };
@@ -862,3 +886,70 @@ declare %test:case function model-document-new-custom-user-context-test() as ite
   )
 };
 
+declare %test:case function model-append-new-item-container-element-with-id-test() as item()*
+{
+  let $model19 := domain:get-model("model19")
+  let $model-abstract2 := domain:get-model("abstract2")
+  let $instance19 := model:get($model19, "model19-name-append")
+  let $instance19 := model:convert-to-map($model19, $instance19)
+  let $new-abstract-name := "abstract-" || setup:random()
+  let $abstract-value := domain:get-field-value(domain:get-model-field($model19, "abstractList.abstract"), $instance19)
+  let $abstract-value-id := domain:get-field-value(domain:get-model-field($model-abstract2, "id"), $abstract-value)
+  let $abstract-value-name := domain:get-field-value(domain:get-model-field($model-abstract2, "name"), $abstract-value)
+  let $abstract-value := (
+    $abstract-value,
+    model:new(
+      $model-abstract2,
+      map:new((
+        map:entry("name", $new-abstract-name)
+      ))
+    )
+  )
+  let $_ := map:put(
+    $instance19,
+    "abstractList.abstract",
+    $abstract-value
+  )
+  let $instance19 := model:update($model19, $instance19)
+  let $new-abstract-value := domain:get-field-value(domain:get-model-field($model19, "abstractList.abstract"), $instance19)
+  return (
+    assert:not-empty($instance19),
+    assert:equal($abstract-value-id, domain:get-field-value(domain:get-model-field($model-abstract2, "id"), $new-abstract-value[1])),
+    assert:equal($abstract-value-name, domain:get-field-value(domain:get-model-field($model-abstract2, "name"), $new-abstract-value[1])),
+    assert:equal($new-abstract-name, domain:get-field-value(domain:get-model-field($model-abstract2, "name"), $new-abstract-value[2]))
+  )
+};
+
+declare %test:case function model-prepend-new-item-container-element-with-id-test() as item()*
+{
+  let $model19 := domain:get-model("model19")
+  let $model-abstract2 := domain:get-model("abstract2")
+  let $instance19 := model:get($model19, "model19-name-prepend")
+  let $instance19 := model:convert-to-map($model19, $instance19)
+  let $new-abstract-name := "abstract-" || setup:random()
+  let $abstract-value := domain:get-field-value(domain:get-model-field($model19, "abstractList.abstract"), $instance19)
+  let $abstract-value-id := domain:get-field-value(domain:get-model-field($model-abstract2, "id"), $abstract-value)
+  let $abstract-value-name := domain:get-field-value(domain:get-model-field($model-abstract2, "name"), $abstract-value)
+  let $abstract-value := (
+    model:new(
+      $model-abstract2,
+      map:new((
+        map:entry("name", $new-abstract-name)
+      ))
+    ),
+    $abstract-value
+  )
+  let $_ := map:put(
+    $instance19,
+    "abstractList.abstract",
+    $abstract-value
+  )
+  let $instance19 := model:update($model19, $instance19)
+  let $new-abstract-value := domain:get-field-value(domain:get-model-field($model19, "abstractList.abstract"), $instance19)
+  return (
+    assert:not-empty($instance19),
+    assert:equal($abstract-value-id, domain:get-field-value(domain:get-model-field($model-abstract2, "id"), $new-abstract-value[2])),
+    assert:equal($abstract-value-name, domain:get-field-value(domain:get-model-field($model-abstract2, "name"), $new-abstract-value[2])),
+    assert:equal($new-abstract-name, domain:get-field-value(domain:get-model-field($model-abstract2, "name"), $new-abstract-value[1]))
+  )
+};

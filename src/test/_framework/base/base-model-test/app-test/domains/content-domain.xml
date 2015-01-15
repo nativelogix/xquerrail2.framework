@@ -173,4 +173,11 @@
     <element name="image1" type="image" label="Image"/>
   </model>
 
+  <model name="model19" persistence="directory" label="Model #19" extends="base" key="uuid" keyLabel="name">
+    <directory>/test/model19/</directory>
+    <element name="name" type="string" label="Name"/>
+    <container name="abstractList">
+      <element name="abstract" type="abstract2" label="Abstract" occurrence="*"/>
+    </container>
+  </model>
 </domain>

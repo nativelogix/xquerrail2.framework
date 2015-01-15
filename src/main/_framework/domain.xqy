@@ -357,7 +357,7 @@ declare function domain:get-model-identity-query(
           ("collation="  || domain:get-field-collation($id-field))
         )
       case element(domain:attribute) return
-        let $parent-elem := $id-field/parent::*[domain:element|domain:model]
+        let $parent-elem := $id-field/parent::element()
         let $parent-ns   := domain:get-field-namespace($parent-elem)
         return
           cts:element-attribute-range-query(

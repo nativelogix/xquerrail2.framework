@@ -40,7 +40,13 @@
   <model name="model6" persistence="directory" extends="base">
     <directory>/test/model6/</directory>
     <permission profile="perm1"/>
-    <element override="true" name="type" type="string" default="table"/>
+    <element override="true" name="type" type="string" default="table">
+      <navigation profile="nav1 facet1"/>
+    </element>
+    <element name="description" type="string">
+      <navigation constraintName="description-word" sortable="true" searchType="word" profile="nav1"/>
+      <navigation constraintName="description-value" sortable="false" searchType="value" profile="facet1"/>
+    </element>
   </model>
 
 </domain>

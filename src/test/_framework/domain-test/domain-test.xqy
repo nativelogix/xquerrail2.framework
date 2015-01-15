@@ -159,6 +159,7 @@ declare %test:case function model-profiles-permission-test() as item()* {
 declare %test:case function abstract-model-profiles-permission-test() as item()* {
   let $abstract1-model := domain:get-model("abstract1")
   let $permission := $abstract1-model/domain:permission
+  let $_ := xdmp:log(("$permission", $permission))
   return (
     assert:not-empty($abstract1-model, "$abstract1-model should not be empty"),
     assert:not-empty($permission, "$permission should not be empty"),
@@ -177,5 +178,33 @@ declare %test:case function model-inheritance-profiles-permission-test() as item
     assert:equal($permission/@role/fn:string(), "anonymous", "$permission/@role equal anonymous"),
     assert:equal($permission/@update/fn:string(), "true", "$permission/@update is true"),
     assert:equal($permission/@insert/fn:string(), "false", "$permission/@insert is false")
+  )
+};
+
+declare %test:case function model-profiles-multi-navigation-test() as item()* {
+  let $model6 := domain:get-model("model6")
+  let $navigation := $model6/domain:element[@name = "type"]/domain:navigation
+  return (
+    assert:not-empty($model6, "$model6 should not be empty"),
+    assert:not-empty($navigation, "$navigation should not be empty"),
+    assert:equal(fn:count($navigation/*), 9, "fn:count($navigation/*) should be 9"),
+    assert:equal($navigation/@facetable/fn:string(), "true", "$navigation/@facetable is true")
+  )
+};
+
+declare %test:case function model-multi-navigations-with-profile-test() as item()* {
+  let $model6 := domain:get-model("model6")
+  let $navigation := $model6/domain:element[@name = "description"]/domain:navigation
+  return (
+    assert:not-empty($model6, "$model6 should not be empty"),
+    assert:equal(fn:count($navigation), 2, "description element should have 2 navigation elements"),
+    assert:not-empty($navigation[@constraintName = "description-word"], "description element should have a navigation element with @constraintName = description-word"),
+    assert:not-empty($navigation[@constraintName = "description-value"], "description element should have a navigation element with @constraintName = description-value"),
+    assert:equal($navigation[@constraintName = "description-word"]/@sortable/fn:data(), "true", "navigation element with @constraintName = description-word should have @sortable = true"),
+    assert:equal($navigation[@constraintName = "description-value"]/@sortable/fn:data(), "false", "navigation element with @constraintName = description-value should have @sortable = false"),
+    assert:equal($navigation[@constraintName = "description-word"]/@searchType/fn:data(), "word", "navigation element with @constraintName = description-word should have @searchType = word"),
+    assert:equal($navigation[@constraintName = "description-value"]/@searchType/fn:data(), "value", "navigation element with @constraintName = description-value should have @searchType = value"),
+    assert:equal(fn:count($navigation[@constraintName = "description-word"]/*), 6, "navigation element with @constraintName = description-word should have 6 child nodes"),
+    assert:equal(fn:count($navigation[@constraintName = "description-value"]/*), 3, "navigation element with @constraintName = description-value should have 6 child nodes")
   )
 };

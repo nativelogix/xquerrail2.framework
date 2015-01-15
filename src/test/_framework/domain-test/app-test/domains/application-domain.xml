@@ -21,6 +21,13 @@
         <term-option xmlns="http://marklogic.com/appservices/search">punctuation-sensitive</term-option>
       </navigation>
     </profile>
+    <profile id="facet1" type="navigation">
+        <navigation searchable="true" facetable="true">
+            <facet-option xmlns="http://marklogic.com/appservices/search">limit=10</facet-option>
+            <facet-option xmlns="http://marklogic.com/appservices/search">frequency-order</facet-option>
+            <facet-option xmlns="http://marklogic.com/appservices/search">descending</facet-option>
+        </navigation>
+    </profile>
     <profile id="perm1" type="permission">
       <permission role="anonymous" read="true" update="true" insert="false" execute="true"/>
     </profile>

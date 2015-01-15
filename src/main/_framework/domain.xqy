@@ -43,6 +43,8 @@ declare variable $SIMPLE-TYPES := (
   (:Durations        :) "date","time","dateTime", "duration","yearMonth","monthDay"
 );
 
+declare variable $MODEL-INHERIT-ATTRIBUTES := ('class', 'key', 'keyLabel', 'persistence');
+
 declare variable $MODEL-PERMISSION-ATTRIBUTES := (
   "role", "read", "update", "insert", "execute"
 );
@@ -787,40 +789,46 @@ declare %private function domain:extend-model(
       if(fn:not($base-model)) then
         fn:error(xs:QName("NO-EXTENDS-MODEL"),"Missing Extension Base Model", $base-model-name)
       else
-        element { fn:node-name($model) } {
+        let $model-ns := fn:head( ($model/@namespace, $model/@namespace-uri, $base-model/@namespace, $base-model/@namespace-uri) )/fn:string()
+        let $model-ns := if( $model-ns ) then $model-ns else domain:get-field-namespace($model)
+        let $model-attr := (
+            (: take all specified model attributes :)
+            $model/@*[. except ($model/@namespace, $model/@namespace-uri)],
+            (: inherit certain attributes if not specified :)
+            $base-model/@*[fn:name(.) = $MODEL-INHERIT-ATTRIBUTES][fn:not(fn:name(.) = $model/@*/fn:name(.))]
+        )
+        return element { fn:node-name($model) } {
           $model/namespace::*,
-          $model/@*[. except ($model/@namespace, $model/@namespace-uri)],
           attribute compiled {fn:true()},
-          attribute namespace { domain:get-field-namespace($model) },
+          $model-attr,
+          (:$model/@*[. except ($model/@namespace, $model/@namespace-uri)],:)
+          attribute namespace { $model-ns },
           attribute domain:extension { fn:string-join( ($base-model-name, $base-model/@extension), ' ' ) },
-          for $field in  $base-model/(domain:element|domain:container|domain:attribute|domain:triple)
-            let $fieldName := domain:get-field-qname( $field )
-            let $fieldNS := (domain:get-field-namespace($model), fn:namespace-uri-from-QName( $fieldName )) [1]
-            let $overlap := $model/(domain:element|domain:container|domain:attribute|domain:triple)
+          for $field in  $base-model/(domain:element|domain:container|domain:attribute|domain:triple|domain:optionlist)
+            let $field-name := domain:get-field-qname( $field )
+            let $field-ns := (domain:get-field-namespace($model), fn:namespace-uri-from-QName( $field-name )) [1]
+            let $overlap := $model/(domain:element|domain:container|domain:attribute|domain:triple|domain:optionlist)
                             [fn:node-name(.) eq fn:node-name($field)]
-                            [domain:get-field-qname(.) eq $fieldName]
+                            [domain:get-field-qname(.) eq $field-name]
             return
               if( $overlap ) then
                  if( fn:data($overlap/@override) or fn:data($model/@override) ) then
-                  comment { (if(fn:data($overlap/@override)) then "Field" else "Model")||" @override "||$fieldName }
+                  comment { (if(fn:data($overlap/@override)) then "Field" else "Model")||" @override "||$field-name }
                  else
-                  fn:error(xs:QName("EXTENDS-MODEL-OVERLAP"),"Extension Model Overlap requires @override", (text{"model", $model/@name, "base", $base-model-name, "field", $fieldName}))
+                  fn:error(xs:QName("EXTENDS-MODEL-OVERLAP"),"Extension Model Overlap requires @override", (text{"model", $model/@name, "base", $base-model-name, "field", $field-name}))
               else
                 element { fn:node-name($field) } {
                   (: Copy all attributes except namespace or namespace-uri :)
                   $field/@*[. except ($field/@namespace, $field/@namespace-uri)],
                   (: Create a resolved namespace attribute :)
-                  if( $fieldNS ) then attribute namespace { $fieldNS  } else (),
+                  if( $field-ns ) then attribute namespace { $field-ns  } else (),
                   (: If the base field doesn't have a model definition, add one :)
-                  if( fn:not( $field/@domain:model ) )
-                    then attribute domain:model { $base-model-name }
-                    else (),
+                  if( fn:not( $field/@domain:model ) ) then
+                    attribute domain:model { $base-model-name }
+                  else (),
                   (: Now copy field children :)
                   $field/node()
                 },
-          (:$base-model/* [. except $base-model/(domain:element|domain:container|domain:attribute|domain:triple)],:)
-          (:domain:build-model-navigation($model),:)
-          (:$model/node()[. except $model/(domain:navigation)]:)
           $model/node()
         }
   else $model
@@ -864,7 +872,7 @@ declare %private function domain:sort-model(
 
 declare function domain:navigation(
   $field as element()
-) as element(domain:navigation) {
+) as element(domain:navigation)? {
   $field/domain:navigation
 };
 
@@ -872,7 +880,7 @@ declare %private function domain:find-profile(
   $field as element(),
   $id as xs:string?,
   $type as xs:string
-) as element(domain:profile)? {
+) as element(domain:profile)* {
   if (fn:empty($id)) then
     ()
   else
@@ -882,22 +890,37 @@ declare %private function domain:find-profile(
         xs:QName("DOMAIN-NOT-FOUND")
       else
       (
-        $domain/domain:profiles/domain:profile[@id eq $id and @type eq $type]
+        $domain/domain:profiles/domain:profile[@id = fn:tokenize($id, " ") and @type eq $type]
       )
 };
 
+(:~
+  build navigation attribute from model, profile, abstract or domain are merged in this order
+  $field can be field model or field navigation
+:)
 declare %private function domain:build-navigation-attribute(
   $field as element(),
   $attribute-name as xs:string
-) {
+) as attribute() {
+  let $navigation-field :=
+    typeswitch ($field)
+      case element(domain:navigation)
+        return $field
+      default
+        return $field/domain:navigation
+  let $field :=
+    typeswitch ($field)
+      case element(domain:navigation)
+        return $field/parent::node()
+      default
+        return $field
   let $base-model := domain:find-base-model($field)
-  (:domain:find-model-by-name($field/ancestor::domain:domain, $field/@extends):)
-  let $profile := domain:find-profile($field, $field/domain:navigation/@profile, "navigation")
-  return attribute {$attribute-name} {
-    if ($field/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
-      ($field/domain:navigation/@*[./fn:local-name() eq $attribute-name])
+  let $profile := domain:find-profile($field, $navigation-field/@profile, "navigation")
+  return
+    if ($navigation-field/@*[./fn:local-name() eq $attribute-name]) then
+      ($navigation-field/@*[./fn:local-name() eq $attribute-name])
     else if (fn:exists($profile) and $profile/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
-      $profile/domain:navigation/@*[./fn:local-name() eq $attribute-name]
+      ($profile/domain:navigation/@*[./fn:local-name() eq $attribute-name])[1]
     else if (fn:exists($base-model) and $base-model/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
       $base-model/domain:navigation/@*[./fn:local-name() eq $attribute-name]
     else if ($field/ancestor::domain:element/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
@@ -909,33 +932,33 @@ declare %private function domain:build-navigation-attribute(
     else if ($field/ancestor::domain:domain/domain:navigation/@*[./fn:local-name() eq $attribute-name]) then
       $field/ancestor::domain:domain/domain:navigation/@*[./fn:local-name() eq $attribute-name]
     else
-      fn:false()
-  }
+      attribute {$attribute-name} { fn:false() }
 };
 
+(:~
+  permission from model, profile, abstract or domain are merged in this order
+:)
 declare %private function domain:build-permission-attribute(
   $model as element(domain:model),
   $attribute-name as xs:string
-) {
+) as attribute()? {
   let $base-model := domain:find-base-model($model)
-  (:domain:find-model-by-name($model/ancestor::domain:domain, ($model/@extends | $model/@domain:extension)[1]):)
   let $profile := domain:find-profile($model, $model/domain:permission/@profile, "permission")
-  return attribute {$attribute-name} {
+  return
     if ($model/domain:permission/@*[./fn:local-name() eq $attribute-name]) then
       $model/domain:permission/@*[./fn:local-name() eq $attribute-name]
     else if (fn:exists($profile) and $profile/domain:permission/@*[./fn:local-name() eq $attribute-name]) then
-      $profile/domain:permission/@*[./fn:local-name() eq $attribute-name]
+      ($profile/domain:permission/@*[./fn:local-name() eq $attribute-name])[1]
     else if (fn:exists($base-model)) then
       domain:build-permission-attribute($base-model, $attribute-name)
     else if ($model/ancestor::domain:domain/domain:permission/@*[./fn:local-name() eq $attribute-name]) then
       $model/ancestor::domain:domain/domain:permission/@*[./fn:local-name() eq $attribute-name]
     else
       ()
-  }
 };
 
 (:~
-  navigation from model, abstract or domain are merged in this order
+  Build model permission
 :)
 declare function domain:build-model-permission(
   $model as element(domain:model)
@@ -944,17 +967,6 @@ declare function domain:build-model-permission(
     $MODEL-PERMISSION-ATTRIBUTES ! (
       let $attribute-name := .
       return domain:build-permission-attribute($model, $attribute-name)
-    (:),
-    $model/domain:permission/@* [. except $model/domain:permission/@*[fn:index-of($MODEL-PERMISSION-ATTRIBUTES, ./fn:local-name()) > 0]],
-    (
-      let $profile := domain:find-profile($model, $model/domain:permission/@profile, "permission")
-      return
-      if (fn:exists($profile)) then (
-        $profile/node()/@* [. except $profile/node()/@*[fn:index-of(($MODEL-PERMISSION-ATTRIBUTES, $model/domain:permission/@*/fn:local-name()), ./fn:local-name()) > 0]],
-        $profile/node()/*
-      )
-      else
-        ():)
     )
   }
 };
@@ -964,59 +976,51 @@ declare function domain:build-model-permission(
 :)
 declare function domain:build-model-navigation(
   $field as element()
-) as element(domain:navigation) {
-  typeswitch($field)
-    case element(domain:model) return
-      element domain:navigation {
-        $MODEL-NAVIGATION-ATTRIBUTES ! (
-          let $attribute-name := .
-          return domain:build-navigation-attribute($field, $attribute-name)
-        ),
-        $field/domain:navigation/@* [. except $field/domain:navigation/@*[fn:index-of($MODEL-NAVIGATION-ATTRIBUTES, ./fn:local-name()) > 0]],
+) as element(domain:navigation)* {
+  if (fn:exists($field/domain:navigation)) then
+    $field/domain:navigation ! (
+      let $navigation-field := .
+      return
+        element domain:navigation {
+          $MODEL-NAVIGATION-ATTRIBUTES ! (
+            let $attribute-name := .
+            return domain:build-navigation-attribute($navigation-field, $attribute-name)
+          ),
+          $navigation-field/@* [. except $navigation-field/@*[fn:index-of($MODEL-NAVIGATION-ATTRIBUTES, ./fn:local-name()) > 0]],
+          (
+            let $profile := domain:find-profile($field, $navigation-field/@profile, "navigation")
+            return (
+              $profile/*/@* [. except $profile/node()/@*[fn:index-of(($MODEL-NAVIGATION-ATTRIBUTES, $navigation-field/@*/fn:local-name()), ./fn:local-name()) > 0]][1],
+              $profile/*/*
+            )
+          ),
+          $navigation-field/*
+        }
+    )
+  else
+    element domain:navigation {
+      $MODEL-NAVIGATION-ATTRIBUTES ! (
+        let $attribute-name := .
+        return domain:build-navigation-attribute($field, $attribute-name)
+      ),
+      $field/domain:navigation/@* [. except $field/domain:navigation/@*[fn:index-of($MODEL-NAVIGATION-ATTRIBUTES, ./fn:local-name()) > 0]],
+      typeswitch($field)
+        case element(domain:model) return
         (
           let $profile := domain:find-profile($field, $field/domain:navigation/@profile, "navigation")
-          return
-          if (fn:exists($profile)) then (
-            $profile/node()/@* [. except $profile/node()/@*[fn:index-of(($MODEL-NAVIGATION-ATTRIBUTES, $field/domain:navigation/@*/fn:local-name()), ./fn:local-name()) > 0]],
-            $profile/node()/*
+          return (
+            ($profile/*/@* [. except $profile/*/@*[fn:index-of(($MODEL-NAVIGATION-ATTRIBUTES, $field/domain:navigation/@*/fn:local-name()), ./fn:local-name()) > 0]])[1],
+            $profile/*/*
           )
-          else
-            ()
-        ),
-        $field/domain:navigation/*
-      }
-    case element(domain:container) return
-      element domain:navigation {
-        $FIELD-NAVIGATION-ATTRIBUTES ! (
-          let $attribute-name := .
-          return domain:build-navigation-attribute($field, $attribute-name)
-        ),
-        $field/domain:navigation/@* [. except $field/domain:navigation/@*[fn:index-of($FIELD-NAVIGATION-ATTRIBUTES, ./fn:local-name()) > 0]],
-        $field/domain:navigation/*
-      }
-    case element(domain:element) return
-      element domain:navigation {
-        $FIELD-NAVIGATION-ATTRIBUTES ! (
-          let $attribute-name := .
-          return domain:build-navigation-attribute($field, $attribute-name)
-        ),
-        $field/domain:navigation/@* [. except $field/domain:navigation/@*[fn:index-of($FIELD-NAVIGATION-ATTRIBUTES, ./fn:local-name()) > 0]],
-        $field/domain:navigation/*
-      }
-    case element(domain:attribute) return
-      element domain:navigation {
-        $FIELD-NAVIGATION-ATTRIBUTES ! (
-          let $attribute-name := .
-          return domain:build-navigation-attribute($field, $attribute-name)
-        ),
-        $field/domain:navigation/@* [. except $field/domain:navigation/@*[fn:index-of($FIELD-NAVIGATION-ATTRIBUTES, ./fn:local-name()) > 0]],
-        $field/domain:navigation/*
-      }
-    default return ()
+        )
+        default return
+        (),
+      $field/domain:navigation/*
+    }
 };
 
 (:~
-  Set navigation attributes for all model elements (if not defined will inherit from parent else default is false)
+  Set navigation, permission for all model elements (if not defined will inherit from parent else default is false)
 :)
 declare function domain:set-model-field-defaults(
   $field as item()
@@ -1036,9 +1040,9 @@ declare function domain:set-model-field-defaults(
       element { fn:node-name($field) } {
         $field/namespace::*,
         $field/@*,
-        $field/*[. except $field/(domain:element | domain:attribute | domain:navigation)],
+        $field/*[. except $field/(domain:container | domain:element | domain:attribute | domain:navigation)],
         domain:build-model-navigation($field),
-        for $f in  $field/(domain:element | domain:attribute)
+        for $f in  $field/(domain:container | domain:element | domain:attribute)
           return domain:set-model-field-defaults($f)
       }
     case element(domain:element) return

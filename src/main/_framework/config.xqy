@@ -484,10 +484,10 @@ declare function config:application-controllers-path(
   else
     xdmp:eval(
       "if (fn:exists(xdmp:directory('" || $path || "'))) then
-        $path
+        '" || $path || "'
        else (
-        xdmp:log(text{'controllers-path', $path, 'does not exist. Please rename controller to controllers'}),
-        $old-path
+        xdmp:log(text{'controllers-path', '" || $path || "', 'does not exist. Please rename controller to controllers'}),
+        '" || $old-path || "'
        )",
       (),
       <options xmlns="xdmp:eval">

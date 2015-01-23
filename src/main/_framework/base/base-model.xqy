@@ -1342,32 +1342,73 @@ declare function model:build-triple(
  : @return xs:boolean denoted whether delete occurred
 ~:)
 declare function model:delete(
-    $model as element(domain:model),
-    $params as item()
-)
-{
+  $model as element(domain:model),
+  $params as item()
+) (:as xs:boolean?:) {
+  let $cascade-delete := domain:get-param-value($params, "_cascade")
   let $params := domain:fire-before-event($model,"delete",$params)
   let $current := model:get($model,$params)
+  let $current-identity-value := domain:get-field-value(domain:get-model-identity-field($model), $current)
   let $is-current := if($current) then () else fn:error(xs:QName("DELETE-ERROR"),"Could not find a matching document")
   let $is-referenced := domain:is-model-referenced($model,$current)
   return
     try {
-      if($is-referenced) then
-        fn:error(
+      let $_ := if($is-referenced) then
+        if (fn:exists($cascade-delete)) then
+          for $item in cts:search(fn:collection(), domain:get-models-reference-query($model, $current))
+          return (
+            let $parent-instance := $item/node()
+            (:let $parent-model := domain:get-domain-model($parent-instance/fn:local-name()):)
+            let $parent-model := domain:get-domain-model(fn:string($parent-instance/@xsi:type))
+            let $_ := xdmp:log(("$parent-instance", $parent-instance))
+            return
+            if ($cascade-delete eq "remove") then
+            (
+              let $identity-field := domain:get-model-identity-field($parent-model)
+              let $_ := xdmp:log(text{"About to delete", xdmp:node-uri($item)}, "debug")
+              return model:delete(
+                $parent-model,
+                map:new((
+                  map:entry($identity-field/@name, domain:get-field-value($identity-field, $parent-instance)),
+                  map:entry("_cascade", "remove")
+                ))
+              )
+            )
+            else if ($cascade-delete eq "detach") then
+            (
+              let $_ := xdmp:log(text{"About to detach", xdmp:node-uri($item)}, "debug")
+              let $parent-instance := model:convert-to-map($parent-model, $parent-instance)
+              let $_ := $parent-model//domain:element[@reference = domain:get-model-reference-key($model)] ! (
+                let $reference-field := .
+                let $reference-value := domain:get-field-value($reference-field, $parent-instance)
+                return map:put(
+                  $parent-instance,
+                  $reference-field/@name,
+                  fn:remove($reference-value, fn:index-of($reference-value, $reference-value[@ref-id eq $current-identity-value]))
+                )
+              )
+              return model:update($parent-model, $parent-instance)
+            )
+            else
+            (xdmp:log(text{"Delete cascade option", $cascade-delete, "not supported"}, "info"))
+          )
+        else
+          fn:error(
             xs:QName("REFERENCE-CONSTRAINT-ERROR"),
            "You are attempting to delete document which is referenced by other documents",
            domain:get-model-reference-uris($model,$current)
-        )
+          )
       else
-       ( xdmp:node-delete($current)
-        ,model:delete-binary-dependencies($model,$current)
-        ,let $event :=
-            domain:fire-after-event($model,"delete",$current)
-        return
+        ()
+      return (
+        xdmp:node-delete($current),
+        model:delete-binary-dependencies($model,$current),
+        let $event := domain:fire-after-event($model,"delete",$current)
+        return (:fn:true():)
           if($event) then $event else fn:true()
-        )
+      )
     } catch($ex) {
-       xdmp:rethrow()
+      xdmp:rethrow()
     }
 };
 
@@ -1377,7 +1418,7 @@ declare function model:delete(
 declare function model:delete-binary-dependencies(
     $model as element(domain:model),
     $current as element()
-) {
+) as empty-sequence() {
    let $binary-fields := $model//domain:element[@type = ("binary","file")]
    for $field in $binary-fields
    let $value := domain:get-field-value($field,$current)

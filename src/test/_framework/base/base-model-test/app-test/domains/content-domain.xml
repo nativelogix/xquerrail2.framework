@@ -180,4 +180,15 @@
       <element name="abstract" type="abstract2" label="Abstract" occurrence="*"/>
     </container>
   </model>
+
+  <model name="child-model" persistence="directory" label="Child Model" extends="base" key="uuid" keyLabel="name">
+    <directory>/test/child-model/</directory>
+    <element name="name" type="string" label="Name"/>
+    <element name="parent" type="reference" reference="model:parent-model:reference" label="Parent" occurrence="*"/>
+  </model>
+
+  <model name="parent-model" persistence="directory" label="Parent Model" extends="base" key="uuid" keyLabel="name">
+    <directory>/test/parent-model/</directory>
+    <element name="name" type="string" label="Name"/>
+  </model>
 </domain>

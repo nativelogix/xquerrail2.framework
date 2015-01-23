@@ -68,6 +68,39 @@ declare variable $INSTANCES19 := (
 </model19>
 );
 
+declare variable $CHILD-INSTANCES := (
+<child-model xmlns="http://xquerrail.com/app-test">
+  <name>child-model-1</name>
+  <parent>parent-model-1</parent>
+</child-model>
+,
+<child-model xmlns="http://xquerrail.com/app-test">
+  <name>child-model-2</name>
+  <parent>parent-model-1</parent>
+  <parent>parent-model-2</parent>
+</child-model>
+,
+<child-model xmlns="http://xquerrail.com/app-test">
+  <name>child-model-3</name>
+  <parent>parent-model-2</parent>
+  <parent>parent-model-3</parent>
+</child-model>
+);
+
+declare variable $PARENT-INSTANCES := (
+<parent-model xmlns="http://xquerrail.com/app-test">
+  <name>parent-model-1</name>
+</parent-model>
+,
+<parent-model xmlns="http://xquerrail.com/app-test">
+  <name>parent-model-2</name>
+</parent-model>
+,
+<parent-model xmlns="http://xquerrail.com/app-test">
+  <name>parent-model-3</name>
+</parent-model>
+);
+
 declare variable $CONFIG := ();
 
 declare %test:setup function setup() {
@@ -79,6 +112,22 @@ declare %test:setup function setup() {
     setup:invoke(
       function() {
         model:create($model19, $instance, $TEST-COLLECTION)
+      }
+    )
+  )
+  let $parent-model := domain:get-model("parent-model")
+  let $_ := for $instance in $PARENT-INSTANCES return (
+    setup:invoke(
+      function() {
+        model:create($parent-model, $instance, $TEST-COLLECTION)
+      }
+    )
+  )
+  let $child-model := domain:get-model("child-model")
+  let $_ := for $instance in $CHILD-INSTANCES return (
+    setup:invoke(
+      function() {
+        model:create($child-model, $instance, $TEST-COLLECTION)
       }
     )
   )
@@ -98,10 +147,6 @@ declare %test:teardown function teardown() {
   )
 };
 
-(:declare %test:before-each function before-test() {
-  app:bootstrap($TEST-APPLICATION)
-};
-:)
 declare %test:case function model1-model2-exist-test() as item()*
 {
   let $model1 := domain:get-model("model1")
@@ -951,5 +996,69 @@ declare %test:case function model-prepend-new-item-container-element-with-id-tes
     assert:equal($abstract-value-id, domain:get-field-value(domain:get-model-field($model-abstract2, "id"), $new-abstract-value[2])),
     assert:equal($abstract-value-name, domain:get-field-value(domain:get-model-field($model-abstract2, "name"), $new-abstract-value[2])),
     assert:equal($new-abstract-name, domain:get-field-value(domain:get-model-field($model-abstract2, "name"), $new-abstract-value[1]))
+  )
+};
+
+declare %test:case function model-delete-cascade-remove-test() as item()*
+{
+  let $key := "parent-model-1"
+  let $child-model := domain:get-model("child-model")
+  let $parent-model := domain:get-model("parent-model")
+  let $instance := model:get($parent-model, $key)
+  let $instance := model:convert-to-map($parent-model, $instance)
+  let $_ := map:put($instance, "_cascade", "remove")
+  let $before-child-instance := model:find($child-model, map:entry("parent", $key))
+  let $result :=
+    model:delete($parent-model, $instance)
+(:  let $parent-instance :=
+    setup:invoke-query(
+      function() {
+        model:find($parent-model, map:entry("child", "child-model-1"))
+      }
+    ):)
+  return (
+    assert:not-empty($instance),
+    assert:not-empty($before-child-instance, "Should find child referencing parent parent-model-1"),
+    (:assert:empty($parent-instance, "All parents referencing child-model-1 should be deleted."),:)
+    (:assert:equal($result, fn:true(), "model:delete should have returned true"):)
+    assert:not-empty($result, "model:delete should have returned true")
+  )
+};
+
+declare %test:case function model-delete-cascade-detach-test() as item()*
+{
+  let $key := "parent-model-3"
+  let $child-model := domain:get-model("child-model")
+  let $parent-model := domain:get-model("parent-model")
+  let $instance := model:get($parent-model, $key)
+  let $instance := model:convert-to-map($parent-model, $instance)
+  let $_ := map:put($instance, "_cascade", "detach")
+  let $before-child-instance := model:find($child-model, map:entry("parent", $key))
+  let $result := model:delete($parent-model, $instance)
+  (:let $child-instance := model:find($child-model, map:entry("parent", $key)):)
+  return (
+    assert:not-empty($instance),
+    assert:not-empty($before-child-instance, "Should find child referencing parent parent-model-1"),
+    (:assert:empty($child-instance, "All parents referencing child-model-1 should be deleted."),:)
+    (:assert:equal($result, fn:true(), "model:delete should have returned true"):)
+    assert:not-empty($result, "model:delete should have returned true")
+  )
+};
+
+declare %test:case function model-no-delete-cascade-test() as item()*
+{
+  let $key := "parent-model-2"
+  let $child-model := domain:get-model("child-model")
+  let $parent-model := domain:get-model("parent-model")
+  let $instance := model:get($parent-model, $key)
+  let $instance := model:convert-to-map($parent-model, $instance)
+  let $before-child-instance := model:find($child-model, map:entry("parent", $key))
+  let $result := try {
+    model:delete($parent-model, $instance)
+  } catch ($ex) { $ex }
+  return (
+    assert:not-empty($instance),
+    assert:not-empty($before-child-instance, "Should find parent referencing child-model-1"),
+    assert:error($result, "You are attempting to delete document which is referenced by other documents")
   )
 };

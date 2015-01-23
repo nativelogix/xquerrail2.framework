@@ -1716,6 +1716,25 @@ declare function domain:get-model-references(
       $reference-models
 };
 
+declare function domain:get-models-reference-query(
+  $domain-model as element(domain:model),
+  $instance as item()
+) as cts:or-query {
+  let $reference-key    := domain:get-model-reference-key($domain-model)
+  let $reference-models := domain:get-model-references($domain-model)
+  let $reference-values := (
+    domain:get-field-value(domain:get-model-key-field($domain-model),$instance),
+    domain:get-field-value(domain:get-model-keyLabel-field($domain-model),$instance)
+  )
+  return
+    cts:or-query((
+      for $reference-model in $reference-models
+      let $reference-fields := $reference-model//domain:element[@reference = $reference-key]
+      return
+        domain:get-model-reference-query($reference-model,$reference-key,$reference-values)
+    ))
+};
+
 (:~
  : Returns true if a model is referenced by its identity
  : @param $domain-model - The model to determine the reference
@@ -1725,7 +1744,7 @@ declare function domain:is-model-referenced(
  $domain-model as element(domain:model),
  $instance as element()
  ) as xs:boolean {
-     let $reference-key    := domain:get-model-reference-key($domain-model)
+     (:let $reference-key    := domain:get-model-reference-key($domain-model)
      let $reference-models := domain:get-model-references($domain-model)
      let $reference-values := (
         domain:get-field-value(domain:get-model-key-field($domain-model),$instance),
@@ -1737,7 +1756,8 @@ declare function domain:is-model-referenced(
         let $reference-fields := $reference-model//domain:element[@reference = $reference-key]
         return
           domain:get-model-reference-query($reference-model,$reference-key,$reference-values)
-       ))
+       )):)
+    let $reference-query := domain:get-models-reference-query($domain-model, $instance)
      return
         xdmp:exists(cts:search(fn:collection(),$reference-query))
   };
@@ -1751,7 +1771,7 @@ declare function domain:get-model-reference-uris(
  $domain-model as element(domain:model),
  $instance as element()
  ) {
-     let $reference-key    := domain:get-model-reference-key($domain-model)
+     (:let $reference-key    := domain:get-model-reference-key($domain-model)
      let $reference-models := domain:get-model-references($domain-model)
      let $reference-values := (
         domain:get-field-value(domain:get-model-key-field($domain-model),$instance),
@@ -1763,7 +1783,8 @@ declare function domain:get-model-reference-uris(
         let $reference-fields := $reference-model//domain:element[@reference = $reference-key]
         return
           domain:get-model-reference-query($reference-model,$reference-key,$reference-values)
-       ))
+       )):)
+       let $reference-query := domain:get-models-reference-query($domain-model, $instance)
      return cts:uris((),(),$reference-query)
 };
 
@@ -2529,15 +2550,26 @@ declare function domain:get-param-value(
     $params as item(),
     $key as xs:string*
 ) {
-  switch(domain:get-value-type($params))
-    case "json" return
-      if($params instance of json:object) then <x>{$params}</x>//json:entry[@key = $key]//json:value/node()
-      else $params//json:entry[@key = $key]//json:value/node()
-    case "param"
-      return map:get($params,$key)
-    case "xml"
-      return $params//*[fn:local-name(.) = $key]/node()
-    default return ()
+  domain:get-param-value($params, $key, ())
+};
+
+declare function domain:get-param-value(
+    $params as item(),
+    $key as xs:string*,
+    $default
+) {
+  fn:head((
+    switch(domain:get-value-type($params))
+      case "json" return
+        if($params instance of json:object) then <x>{$params}</x>//json:entry[@key = $key]//json:value/node()
+        else $params//json:entry[@key = $key]//json:value/node()
+      case "param"
+        return map:get($params,$key)
+      case "xml"
+        return $params//*[fn:local-name(.) = $key]/node()
+      default return (),
+    $default
+  ))
 };
 (:~
  :

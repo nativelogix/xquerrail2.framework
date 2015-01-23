@@ -1,6 +1,6 @@
 xquery version "1.0-ml";
 (:~
- : Performs core engine for transformation and base implementation for 
+ : Performs core engine for transformation and base implementation for
  : different format engines
  :)
 module namespace engine = "http://xquerrail.com/engine";
@@ -10,7 +10,7 @@ import module namespace response = "http://xquerrail.com/response" at "../respon
 import module namespace config = "http://xquerrail.com/config" at "../config.xqy";
 import module namespace json="http://marklogic.com/xdmp/json" at "/MarkLogic/json/json.xqy";
 
-declare namespace tag = "http://xquerrail.com/tag";    
+declare namespace tag = "http://xquerrail.com/tag";
 
 declare default function namespace "http://www.w3.org/2005/xpath-functions";
 
@@ -57,7 +57,7 @@ declare function engine:load-function(
     || $import ||
     'declare variable $functions as xs:string* external;
     for $f in xdmp:functions()
-      where 
+      where
         fn:namespace-uri-from-QName(xdmp:function-name($f)) eq "' || $engine/@namespace || '" and
         fn:exists(fn:index-of($functions, fn:local-name-from-QName(xdmp:function-name($f))))
       return
@@ -75,13 +75,13 @@ declare function engine:supported-engine(
   $request,
   $response
 ) {
-  let $engine := 
+  let $engine :=
     for $engine in config:get-engines()
     let $is-supported-fn := engine:load-function($engine, $IS-SUPPORTED-ENGINE-FUNCTION)
     return
-      if (fn:exists($is-supported-fn) and $is-supported-fn($request, $response) eq fn:true()) then $engine 
+      if (fn:exists($is-supported-fn) and $is-supported-fn($request, $response) eq fn:true()) then $engine
       else ()
-  return 
+  return
     if (fn:empty($engine)) then fn:error(xs:QName("NO-ENGINE-FOUND"))
     else $engine
 };
@@ -95,12 +95,12 @@ declare function engine:initialize(
       for $engine-extension in config:get-engine-extensions()
       let $initialize-fn := engine:load-function($engine-extension, $INITIALIZE-ENGINE-FUNCTION)
       return
-        if (fn:exists($initialize-fn)) then $initialize-fn($request, $response) 
+        if (fn:exists($initialize-fn)) then $initialize-fn($request, $response)
         else ()
-        
+
     let $initialize-fn := engine:load-function($engine, $INITIALIZE-ENGINE-FUNCTION)
     return
-      if (fn:exists($initialize-fn)) then $initialize-fn($request, $response) 
+      if (fn:exists($initialize-fn)) then $initialize-fn($request, $response)
       else ()
 };
 
@@ -159,16 +159,16 @@ declare function engine:registered-tag(
   $tag as xs:string
 ) {
   map:get($_child-engine-tags, $tag)
-(:  if(fn:exists(map:get($_child-engine-tags, fn:local-name-from-QName($tag)))) 
+(:  if(fn:exists(map:get($_child-engine-tags, fn:local-name-from-QName($tag))))
   then fn:true()
   else fn:false()
 :)};
 
 (:~
  : Marks that a node has been visited during transformation
- : When building custom tag that requires a closing tag 
+ : When building custom tag that requires a closing tag
  : ensure that you consume the results you process or you
- : will find duplicate or spurious output results 
+ : will find duplicate or spurious output results
  :)
 declare function engine:consume($node)
 {
@@ -189,7 +189,7 @@ declare function engine:visit($node)
  :  Returns boolean value of whether a node has been visited.
  :)
 declare function engine:visited($node)
-{   if($node instance of json:object) 
+{   if($node instance of json:object)
     then fn:exists(map:get($visitor,fn:generate-id(<x>{$node}</x>/*)))
     else fn:exists(map:get($visitor,fn:generate-id($node)))
 };
@@ -202,11 +202,11 @@ declare function engine:transform-if($node as node())
   let $endif := $node/following-sibling::processing-instruction("endif")[1]
   let $else  := $node/following-sibling::processing-instruction("else")[1]
   let $overlap := $node/following-sibling::processing-instruction("if")[. << $endif]
-  let $_ := 
-     if($overlap) 
+  let $_ :=
+     if($overlap)
      then fn:error(xs:QName("TAG-ERROR"),"Overlapping if tags")
-     else ()  
-  let $ifvalue := 
+     else ()
+  let $ifvalue :=
         if($else) then (
             $node/following-sibling::node()[. << $else]
         )
@@ -214,7 +214,7 @@ declare function engine:transform-if($node as node())
             xdmp:log(("IF Condition:",$node/following-sibling::node()[. << $endif]),"debug"),
             $node/following-sibling::node()[. << $endif]
         )
-  let $elsevalue := 
+  let $elsevalue :=
         if($else) then $else/following-sibling::node()[. << $endif]
         else ()
   let $condition := xdmp:value(fn:concat("if(", fn:data($node), ") then fn:true() else fn:false()"))
@@ -222,13 +222,13 @@ declare function engine:transform-if($node as node())
     (
     engine:consume($endif),
     engine:consume($else),
-    if($condition eq fn:true()) 
+    if($condition eq fn:true())
     then (
           for $n in $ifvalue return engine:transform($n),
           for $n in $elsevalue return engine:consume($n),
           for $n in $ifvalue return engine:consume($n)
          )
-    else ( 
+    else (
            for $n in $elsevalue return engine:transform($n),
            for $n in $ifvalue return engine:consume($n),
            for $n in $elsevalue return engine:consume($n)
@@ -237,7 +237,7 @@ declare function engine:transform-if($node as node())
 };
 
 (:~
- : The for tag must handle its one process 
+ : The for tag must handle its one process
    and return the context to the user
  :)
 declare function engine:process-for-this(
@@ -247,18 +247,18 @@ declare function engine:process-for-this(
   let $this-value := fn:string($this-tag)
   return
      (engine:consume($this-tag),
-      for $v in xdmp:value($this-value) 
-      return 
+      for $v in xdmp:value($this-value)
+      return
         typeswitch($v)
           case element() return engine:transform($v)
           case processing-instruction() return engine:transform($v)
           case attribute() return fn:data($v)
           default return $v
-     ) 
+     )
 };
 
 (:~
- : The for tag must handle its one process 
+ : The for tag must handle its one process
    and return the context to the user
  :)
 declare function engine:process-for-context($nodes,$context,$key)
@@ -274,8 +274,8 @@ declare function engine:process-for-context($nodes,$context,$key)
               engine:process-for-context($node/node(),$context,$key)
             }
             else engine:transform($node)
-      case processing-instruction("this") return engine:process-for-this($node,$context)   
-      default return $node  
+      case processing-instruction("this") return engine:process-for-this($node,$context)
+      default return $node
 };
 (:~
    Syntax :
@@ -285,7 +285,7 @@ declare function engine:process-for-context($nodes,$context,$key)
           <h2 class="title"><?this $this/title?></h2>
           <div><?this fn:string($this/@uri)?> </div>
           <div class="snippet">
-            <?this $this/snippet/*?> 
+            <?this $this/snippet/*?>
           </div>
        </div>
     <?else?>
@@ -300,27 +300,27 @@ declare function engine:transform-for(
     let $elsefor-tag := $for-tag/following-sibling::processing-instruction("elsefor")
     let $overlap := $for-tag/following-sibling::processing-instruction("for")[. << $for-tag]
     (:Validate Conditions here:)
-    let $_ := 
-       (  
-         if($overlap) 
+    let $_ :=
+       (
+         if($overlap)
          then fn:error(xs:QName("TAG-ERROR"),"Overlapping <?for?> tags")
          else (),
-         if($endfor-tag) 
-         then () 
+         if($endfor-tag)
+         then ()
          else fn:error(xs:QName("TAG-ERROR"),"Missing <?endfor?> tag")
-       )   
-     
-    (:Now Worry about the values:)   
+       )
+
+    (:Now Worry about the values:)
     let $for-process := xdmp:unquote(fn:concat("<for ", fn:data($for-tag),"/>"))/*:for
     let $for-values := xdmp:value(fn:string($for-process/@in))
     let $var-name := fn:string($for-process/@var)
-    let $for-data := 
-        if($elsefor-tag) 
-        then $for-tag/following-sibling::node()[. << $elsefor-tag] 
+    let $for-data :=
+        if($elsefor-tag)
+        then $for-tag/following-sibling::node()[. << $elsefor-tag]
         else $for-tag/following-sibling::node()[. << $endfor-tag]
-    let $elsefor-data := 
-        if($elsefor-tag) 
-        then $elsefor-tag/following-sibling::node()[. << $endfor-tag] 
+    let $elsefor-data :=
+        if($elsefor-tag)
+        then $elsefor-tag/following-sibling::node()[. << $endfor-tag]
         else ()
     return
      (
@@ -332,13 +332,13 @@ declare function engine:transform-for(
            for $d in $elsefor-data return engine:consume($d),
            for $v in $for-values return engine:process-for-context($for-data,$v,$var-name),
            for $d in $for-data return engine:consume($d)
-        )  
+        )
         else
         (
            for $d in $elsefor-data return engine:transform($d),
            for $d in $for-data return engine:consume($d),
            for $d in $elsefor-data return engine:consume($d)
-        )            
+        )
      )
 };
 
@@ -347,19 +347,19 @@ declare function engine:transform-has_slot($node as node())
   let $end_tag := $node/following-sibling::processing-instruction("end_has_slot")
   let $content := $node/following-sibling::node()[. << $end_tag]
   let $tag_data := xdmp:unquote(fn:concat("<has_slot ",fn:data($node)," />"))/*
-  let $slot := fn:string($tag_data/@slot) 
-  return 
+  let $slot := fn:string($tag_data/@slot)
+  return
   (
     engine:consume($end_tag),
-    if(response:has-slot($slot)) 
+    if(response:has-slot($slot))
     then (
           for $n in $content return engine:transform($n),
           for $n in $content return engine:consume($n)
          )
-    else ( 
+    else (
           for $n in $content return engine:consume($n)
-         )  
-  ) 
+         )
+  )
 };
 
 declare function engine:transform-slot($node as node())
@@ -373,13 +373,13 @@ declare function engine:transform-slot($node as node())
   let $log := xdmp:log(("slot:",$setslot), "debug")
   return
   (  engine:consume($endslot),
-     if(fn:exists($setslot)) 
+     if(fn:exists($setslot))
      then ( (:Consume the slots data and then render the passed slot value:)
            for $n in $slotcontent return (engine:consume($n)),
            for $n in $setslot return (engine:transform($n), engine:consume($n))
          )
      else for $n in $slotcontent return (engine:transform($n), engine:consume($n))
-  )  
+  )
 };
 
 declare function engine:template-uri($name)
@@ -391,17 +391,17 @@ declare function engine:module-file-exists($path as xs:string) as xs:boolean
 {
    let $fs-path := if(xdmp:platform() eq "winnt") then "\\" else "/"
    let $exists :=
-   if(xdmp:modules-database() eq 0) 
+   if(xdmp:modules-database() eq 0)
    then xdmp:filesystem-file-exists(
            fn:concat(xdmp:modules-root(),$fs-path,fn:replace($path,"\\|/",$fs-path))
         )
-   else 
+   else
       xdmp:eval('declare variable $uri as xs:string external ;
       fn:doc-available($uri)',
       (fn:QName("","uri"),$path),
          <options xmlns="xdmp:eval">
             <database>{xdmp:modules-database()}</database>
-         </options>   
+         </options>
       )
    let $_ :=
    if (fn:not($exists)) then
@@ -420,7 +420,7 @@ declare function engine:view-exists($view-uri as xs:string) as xs:boolean
       (fn:QName("","uri"),$context-uri),
          <options xmlns="xdmp:eval">
             <database>{xdmp:modules-database()}</database>
-         </options>   
+         </options>
       )
 	else
 		xdmp:uri-is-file($view-uri)
@@ -432,7 +432,7 @@ declare function engine:view-uri($controller,$action) {
  : Returns a view URI based on a controller/action
  :)
 declare function engine:view-uri($controller,$action,$format)
-{ 
+{
    engine:view-uri($controller,$action,$format,fn:true())
 };
 (:~
@@ -442,21 +442,21 @@ declare function engine:view-uri($controller,$action,$format,$checked as xs:bool
 {
 
   let $view-uri := engine:normalize-uri(fn:concat(config:application-directory(response:application()),"/views/",$controller,"/",$controller,".",$action,".",$format,".xqy"))
-  let $final-view-uri :=  
-  if(engine:view-exists($view-uri)) 
+  let $final-view-uri :=
+  if(engine:view-exists($view-uri))
   then $view-uri
-  else 
+  else
     let $base-view-uri := engine:normalize-uri(fn:concat(config:base-view-directory(), "/base.", $action, ".",$format, ".xqy"))
     return
-      if(engine:view-exists($base-view-uri)) then 
+      if(engine:view-exists($base-view-uri)) then
          $base-view-uri
-      else 
+      else
         let $framework-view-uri := engine:normalize-uri(fn:concat(config:default-view-directory(), "/base.", $action, ".",$format, ".xqy"))
-        return 
-            if(engine:view-exists($framework-view-uri)) then $framework-view-uri 
-            else if($checked) then 
+        return
+            if(engine:view-exists($framework-view-uri)) then $framework-view-uri
+            else if($checked) then
                 fn:error(xs:QName("ERROR"),"View Does not exist",$base-view-uri)
-           else ()  
+           else ()
     return (
         xdmp:log(("final-view-uri::",$final-view-uri),"fine"),
         $final-view-uri
@@ -464,17 +464,17 @@ declare function engine:view-uri($controller,$action,$format,$checked as xs:bool
 };
 declare function engine:render-template($response)
 {
-    let $template-uri := 
+    let $template-uri :=
         fn:concat(
             config:application-directory(response:application()),
             "/templates/",
             response:template(),
             ".html.xqy")
-            
+
     let $template-nodes :=  xdmp:invoke($template-uri,(xs:QName("response"),$response))
-    
+
 		(: SJC: Want to see the specific errors, like if there was a problem in the template.
-        try{ xdmp:invoke($template-uri,(xs:QName("response"),$response)) } 
+        try{ xdmp:invoke($template-uri,(xs:QName("response"),$response)) }
         catch *  {
             fn:error(xs:QName("TEMPLATE-NOT-EXISTS"),fn:concat("A template named '",
             	response:template(),"' does not exist at '",
@@ -483,7 +483,7 @@ declare function engine:render-template($response)
         }
 		:)
     for $n in $template-nodes
-    return 
+    return
       engine:transform($n)
 };
 (:~
@@ -498,12 +498,12 @@ declare function engine:render-partial($response)
 (:Documentation:)
 declare function engine:render-view()
 {
-    let $view-uri := engine:view-uri(fn:data(response:controller()),fn:data((response:action(),response:view())[1]),fn:data(response:format()))
-    return 
+    let $view-uri := engine:view-uri(fn:data(response:controller()),fn:data((response:view(),response:action())[1]),fn:data(response:format()))
+    return
     if($view-uri and engine:view-exists($view-uri))
     then
          for $n in xdmp:invoke($view-uri,(xs:QName("response"),response:response() ))
-         return 
+         return
            engine:transform($n)
     else fn:error(xs:QName("VIEW-NOT-EXISTS"),"View does not exist ",($view-uri))
 };
@@ -513,8 +513,8 @@ declare function engine:transform-template($node)
    let $dummy := xdmp:unquote(fn:concat("<template ",fn:data($node),"/>"))/*
    let $template-uri := engine:template-uri(fn:data($dummy/@name))
    return
-     if(engine:module-file-exists($template-uri)) then 
-        for $n in xdmp:invoke($template-uri,(fn:QName("","response"),response:response()))    
+     if(engine:module-file-exists($template-uri)) then
+        for $n in xdmp:invoke($template-uri,(fn:QName("","response"),response:response()))
           return engine:transform($n)
      else fn:error(xs:QName("TEMPLATE-NOT-EXISTS"),"Template at uri:'" || $template-uri ||"' does not exist")
 };
@@ -524,12 +524,12 @@ declare function engine:transform-view($node)
    let $dummy := xdmp:unquote(fn:concat("<view ",fn:data($node),"/>"))/*
    let $view  := response:view()
    let $controller := response:controller()
-   return   
-     for $n in 
+   return
+     for $n in
      xdmp:invoke(
         engine:view-uri($controller,$view),(
         fn:QName("","response"),response:response()
-     ))  
+     ))
      return engine:transform($n)
 };
 
@@ -538,23 +538,23 @@ declare function engine:transform-dynamic($node as node())
   let $engine-tag-qname := fn:concat("engine:",fn:local-name($node))
   let $engine-tag-qname := fn:local-name($node)
   let $registered-tag := engine:registered-tag($engine-tag-qname)
-  return 
-        if(fn:exists($registered-tag)) 
+  return
+        if(fn:exists($registered-tag))
         then engine:load-function(engine:find-by-namespace(fn:namespace-uri-from-QName($registered-tag)), $TRANSFORM-ENGINE-FUNCTION)($node)
-        else 
+        else
           let $name := fn:local-name($node)
           let $func-name := xs:QName(fn:concat("tag:apply"))
           let $func-uri  := fn:concat(config:application-directory(response:application()),"/tags/",$name,"-tag.xqy")
           let $func := xdmp:function($func-name,$func-uri)
           return
              xdmp:apply($func,$node,response:response())
-        
+
 };
 declare function engine:transform-echo($node as processing-instruction("echo")){
    let $value := fn:data($node)
    return
      xdmp:value($value)
-};  
+};
 declare function engine:transform-xsl($node) {
    let $_node  := xdmp:unquote(fn:concat("<xsl ",fn:data($node),"/>"))/node()
    let $source := xdmp:value($_node/@source)
@@ -569,13 +569,13 @@ declare function engine:transform-to-json($node) {
    let $source   := xdmp:value($_node/@source)
    let $strategy := ($_node/@strategy,"full")[1]
    let $config   := json:config($strategy)
-   return 
+   return
      xdmp:from-json(json:transform-to-json($source,$config))
 };
 
 declare function engine:get-role-names() {
    xdmp:eval('
-     import module namespace sec="http://marklogic.com/xdmp/security" at 
+     import module namespace sec="http://marklogic.com/xdmp/security" at
          "/MarkLogic/security.xqy";
      sec:get-role-names(xdmp:get-current-roles()) ! xs:string(.)
    ',
@@ -596,25 +596,25 @@ declare function engine:transform-role($node) {
   let $_ := xdmp:log(($sys-roles,"rolenames:",$role-names), "debug")
   return
   (  engine:consume($endrole),
-     if($sys-roles = $role-names) 
-     then (     
+     if($sys-roles = $role-names)
+     then (
         for $n in $rolecontent return (engine:transform($n),engine:consume($n))
      )
      else for $content in $rolecontent return engine:consume($content)
-  )  
+  )
 };
 
 (:
   Core processing-instructions and any other data should be handled here
 :)
 declare function engine:transform($node as item())
-{  
+{
    if(engine:visited($node))
-   then  ()    
+   then  ()
    else(
        typeswitch($node)
          case processing-instruction("template") return engine:transform-template($node)
-         case processing-instruction("view")     return engine:transform-view($node) 
+         case processing-instruction("view")     return engine:transform-view($node)
          case processing-instruction("if")       return engine:transform-if($node)
          case processing-instruction("for")      return engine:transform-for($node)
          case processing-instruction("has_slot") return engine:transform-has_slot($node)
@@ -630,17 +630,17 @@ declare function engine:transform($node as item())
              for $n in $node/(@*|node())
              return engine:transform($n)
            }
-         case attribute() return 
-            if(fn:matches(fn:string($node),"<\?\i\c*\s(.*)\?>")) 
-            then attribute {fn:name($node)} {for $n in xdmp:unquote(fn:concat("<node>",fn:data($node),"</node>"))/* return engine:transform($n)}                 
+         case attribute() return
+            if(fn:matches(fn:string($node),"<\?\i\c*\s(.*)\?>"))
+            then attribute {fn:name($node)} {for $n in xdmp:unquote(fn:concat("<node>",fn:data($node),"</node>"))/* return engine:transform($n)}
             else $node
          case text() return $node
          default return $node
-     )    
+     )
 };
 
 (:~
- : Takes a sequence of parts and builds a uri normalizing out repeating slashes 
+ : Takes a sequence of parts and builds a uri normalizing out repeating slashes
  : @param $parts URI Parts to join
  :)
 declare function engine:normalize-uri(
@@ -649,22 +649,22 @@ declare function engine:normalize-uri(
    engine:normalize-uri($parts,"")
  };
 (:~
- : Takes a sequence of parts and builds a uri normalizing out repeating slashes 
+ : Takes a sequence of parts and builds a uri normalizing out repeating slashes
  : @param $parts URI Parts to join
- : @param $base Base path to attach to 
+ : @param $base Base path to attach to
 ~:)
 declare function engine:normalize-uri(
   $parts as xs:string*,
   $base as xs:string
 ) as xs:string {
-  let $uri := 
+  let $uri :=
     fn:string-join(
         fn:tokenize(
           fn:string-join($parts ! fn:normalize-space(fn:data(.)),"/"),"/+")
     ,"/")
   let $final := fn:concat($base,$uri)
-  return  
+  return
      if(fn:matches($final,"^(http(s)?://|/)"))
      then $final
-     else "/" || $final 
+     else "/" || $final
 };

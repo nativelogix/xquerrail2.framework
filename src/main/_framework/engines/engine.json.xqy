@@ -237,9 +237,7 @@ declare function json-engine:render()
      else xdmp:set-response-content-type("application/json"),
      if(response:response-code()) then xdmp:set-response-code(response:response-code()[1], response:response-code()[2])
      else (),
-     (:for $key in map:keys(response:response-headers()):)
-     (:return xdmp:add-response-header($key,response:response-header($key)),:)
-     let $view-uri := engine:view-uri(response:controller(),(response:action(),response:view())[1],"json",fn:false())
+     let $view-uri := engine:view-uri(response:controller(),(response:view(),response:action())[1],"json",fn:false())
      let $view-uri :=
         if(engine:view-exists($view-uri))
         then $view-uri

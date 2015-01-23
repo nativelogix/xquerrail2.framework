@@ -67,15 +67,22 @@
             before-response="false"
             after-response="false"
         />
-    <interceptor
-      name="custom-interceptor-2"
-      uri="/test/mocha/app-test/extensions/custom-interceptor-2.xqy"
-      resource="custom-interceptor-2.xml"
-      before-request="false"
-      after-request="true"
-      before-response="true"
-      after-response="false"
-    />
+      <interceptor
+        name="custom-view"
+        before-request="false"
+        after-request="false"
+        before-response="true"
+        after-response="false"
+      />
+      <interceptor
+        name="custom-interceptor-2"
+        uri="/test/mocha/app-test/extensions/custom-interceptor-2.xqy"
+        resource="custom-interceptor-2.xml"
+        before-request="false"
+        after-request="true"
+        before-response="true"
+        after-response="false"
+      />
 <!--         <interceptor
     name="compressor"
     resource="compressor.xml"

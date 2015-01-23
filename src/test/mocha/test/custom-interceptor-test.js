@@ -133,4 +133,27 @@ describe('Custom Interceptor features', function() {
     });
   });
 
+  describe('custom-view interceptor', function() {
+    it('should return {"message": "custom-view"}', function(done) {
+      xquerrailCommon.login(function() {
+        httpGet('model1', 'info', {'view': 'custom'}, 'json', function(error, response) {
+          expect(response.statusCode).to.equal(200);
+          expect(response.body.response).to.equal('custom-view');
+          done();
+        });
+      });
+    });
+  });
+
+  describe('missing-custom-view interceptor', function() {
+    it('should return HTTP - 200', function(done) {
+      xquerrailCommon.login(function() {
+        httpGet('model1', 'info', {'view': 'custom1'}, 'json', function(error, response) {
+          expect(response.statusCode).to.equal(200);
+          done();
+        });
+      });
+    });
+  });
+
 });

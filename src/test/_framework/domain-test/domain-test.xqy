@@ -159,7 +159,6 @@ declare %test:case function model-profiles-permission-test() as item()* {
 declare %test:case function abstract-model-profiles-permission-test() as item()* {
   let $abstract1-model := domain:get-model("abstract1")
   let $permission := $abstract1-model/domain:permission
-  let $_ := xdmp:log(("$permission", $permission))
   return (
     assert:not-empty($abstract1-model, "$abstract1-model should not be empty"),
     assert:not-empty($permission, "$permission should not be empty"),
@@ -206,5 +205,17 @@ declare %test:case function model-multi-navigations-with-profile-test() as item(
     assert:equal($navigation[@constraintName = "description-value"]/@searchType/fn:data(), "value", "navigation element with @constraintName = description-value should have @searchType = value"),
     assert:equal(fn:count($navigation[@constraintName = "description-word"]/*), 6, "navigation element with @constraintName = description-word should have 6 child nodes"),
     assert:equal(fn:count($navigation[@constraintName = "description-value"]/*), 3, "navigation element with @constraintName = description-value should have 6 child nodes")
+  )
+};
+
+declare %test:case function model-with-attribute-with-namespace-test() as item()* {
+  let $model4 := domain:get-model("model4")
+  let $attribute1-field-namespace := domain:get-field-namespace($model4/domain:attribute[@name = "attribute1"])
+  let $id-field-namespace := domain:get-field-namespace($model4/domain:attribute[@name = "id"])
+  return (
+    assert:not-empty($model4, "$model4 should not be empty"),
+    assert:not-empty($attribute1-field-namespace, "$attribute1-field-namespace should not be empty"),
+    assert:equal($attribute1-field-namespace, "http://xquerrail.com/app-test", "$attribute1-field-namespace should be equal to http://xquerrail.com/app-test"),
+    assert:empty($id-field-namespace, "$id-field-namespace should be empty")
   )
 };

@@ -38,18 +38,38 @@
 
   <model name="program" persistence="directory" label="Program" key="id" keyLabel="id">
     <directory>/test/program/</directory>
+    <options xmlns="http://marklogic.com/appservices/search">
+     <search:operator name="sort">
+       <search:state name="name-asc">
+          <search:sort-order direction="ascending" type="xs:string">
+             <search:element ns="http://xquerrail.com/app-test" name="name"/>
+          </search:sort-order>
+          <search:sort-order>
+             <search:score/>
+          </search:sort-order>
+       </search:state>
+       <search:state name="name-desc">
+          <search:sort-order direction="descending" type="xs:string">
+             <search:element ns="http://xquerrail.com/app-test" name="name"/>
+          </search:sort-order>
+          <search:sort-order>
+             <search:score/>
+          </search:sort-order>
+       </search:state>
+     </search:operator>
+    </options>
     <attribute name="id" identity="true" type="identity" label="Id">
-      <navigation searchable="true"></navigation>
+      <navigation metadata="true" searchable="true"></navigation>
     </attribute>
     <container name="container1" label="Container #1">
-      <element name="field1" type="string" label="Field #1">
+      <element name="type" type="string" label="Field #1">
         <navigation exportable="true" searchable="true" facetable="false" metadata="true" searchType="range"></navigation>
       </element>
       <element name="field2" type="string" label="Field #2">
         <navigation exportable="false" searchable="true" facetable="false" metadata="false" searchType="range"></navigation>
       </element>
     </container>
-    <element name="field3" type="string" label="Field #3">
+    <element name="name" type="string" label="Name">
       <navigation exportable="true" searchable="true" facetable="false" searchType="range"></navigation>
     </element>
   </model>

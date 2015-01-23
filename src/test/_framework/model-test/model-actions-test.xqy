@@ -114,14 +114,12 @@ declare %test:case function model-patch-add-operation-test() {
   let $description-field := domain:get-model-field($model1, "description")
   let $_ := setup:invoke(function(){model:create($model1, $instances[1], $TEST-COLLECTION)})
   let $current-instance := model:get($model1, "model1-patch-add")
-  let $_ := xdmp:log(("$current-instance", $current-instance, "domain:get-field-value($description-field, $current-instance)", domain:get-field-value($description-field, $current-instance)))
   let $updated := map:new((
     map:entry("op", "add"),
     map:entry("path", "description"),
     map:entry("value", "test description")
   ))
   let $instance := model:patch($model1, $current-instance, $updated)
-  let $_ := xdmp:log(("updated - $instance", $instance, "domain:get-field-value($description-field, $instance)", domain:get-field-value($description-field, $instance)))
   return (
     assert:not-empty($instance),
     assert:equal(domain:get-field-value($description-field, $instance), "test description", "field description should have the value 'test description'")

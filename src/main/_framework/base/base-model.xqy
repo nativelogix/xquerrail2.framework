@@ -38,6 +38,8 @@ declare variable $FUNCTION-CACHE  := map:map();
 
 declare variable $EXPANDO-PATTERN := "\$\((\i\c*(/@?\i\c*)*)\)";
 
+declare variable $DEFAULT-PAGE-SIZE := 20;
+
 declare function model:uuid-string(
 ) as xs:string {
   model:uuid-string(xdmp:random())
@@ -1393,17 +1395,14 @@ declare function model:delete-binary-dependencies(
 (:~
  :  Returns the lookup
  :)
-declare function model:lookup($model as element(domain:model), $params as map:map)
+declare function model:lookup($model as element(domain:model), $params)
 {
     let $key := fn:data($model/@key)
     let $label := fn:data($model/@keyLabel)
     let $name := fn:data($model/@name)
     let $nameSpace :=  domain:get-field-namespace($model)
     let $qString := domain:get-param-value($params,"q")
-    let $limit :=
-        if(domain:get-param-value($params,"ps"))
-        then (domain:get-param-value($params,"ps"),'10')[1] cast as xs:integer
-        else ()
+    let $limit := model:page-size($model, $params, "ps")
     let $keyField := domain:get-model-key-field($model) (:$model//(domain:attribute|domain:element)[@name = $key]:)
     let $keyLabel := domain:get-model-keyLabel-field($model)(:$model//(domain:attribute|domain:element)[@name = $label]:)
     let $debug := domain:get-param-value($params,"debug")
@@ -1517,9 +1516,10 @@ declare function model:filter-list-result($field as element(),$result,$params) {
 : Returns a list of packageType
 : @return  element(packageType)*
 :)
-declare function model:list($model as element(domain:model), $params as item())
-as element(list)?
-{
+declare function model:list(
+  $model as element(domain:model),
+  $params as item()
+) as element(list)? {
   let $listable := fn:not(domain:navigation($model)/@listable eq "false")
   return
   if(fn:not($listable))
@@ -1534,29 +1534,36 @@ as element(list)?
       for $field in $model//(domain:element|domain:attribute)[@name = domain:get-param-keys($params)]
       return
         domain:get-field-query($field,domain:get-field-value($field,$params))
-    let $additional-query:= domain:get-param-value($params,"_query")
+    (:let $additional-query:= domain:get-param-value($params,"_query")
+    let $additional-query :=
+      if($additional-query castable as xs:string) then
+        cts:query(search:parse($additional-query, model:build-search-options($model, $params), "cts:query"))
+      else
+        $additional-query:)
+    let $additional-query := model:build-search-query($model, $params, "cts:query")
     let $list  :=
       if ($persistence = 'document') then
-        let $path := $model/domain:document/text()
+        let $path := $model/domain:document/fn:string()
         let $root := fn:data($model/domain:document/@root)
         return
-          "fn:doc($model/domain:document/text())/*:" || $root || "/*:"  || $name ||  "[cts:contains(.,cts:and-query(($search,$additional-query)))]"
+          "fn:doc('" || $path || "')/*:" || $root || "/*:"  || $name ||  "[cts:contains(.,cts:and-query(($search,$additional-query)))]"
       else
+        let $dir := cts:directory-query($model/domain:directory/text())
         let $predicate :=
-            cts:element-query(fn:QName($namespace,$name),
-                cts:and-query((
-                     domain:get-base-query($model),
-                    $additional-query,
-                    $search,
-
-                    $listExpr
-                ))
-            )
+          cts:element-query(fn:QName($namespace,$name),
+            cts:and-query((
+              domain:get-base-query($model),
+              $additional-query,
+              $search,
+              $dir,
+              $listExpr
+            ))
+          )
         let $_ := xdmp:set($predicateExpr,($predicateExpr,$predicate))
         return
         (
           fn:concat("cts:search(fn:collection(),", $predicate, ")")
-         )
+        )
     let $total :=
       if($persistence = 'document')
       then xdmp:value(fn:concat("fn:count(", $list, ")"))
@@ -1590,8 +1597,9 @@ as element(list)?
       else ()
     (: 'start' is 1-based offset in records from 'page' which is 1-based offset in pages
      : which is defined by 'rows'. Perfectly fine to give just start and rows :)
-    let $page-size  := domain:navigation($model)/@pageSize
-    let $pageSize := xs:integer((domain:get-param-value($params, 'rows'), $page-size, 50)[1])
+    (:let $page-size  := domain:navigation($model)/@pageSize:)
+    (:let $pageSize := xs:integer((domain:get-param-value($params, 'rows'), $page-size, 50)[1]):)
+    let $pageSize := model:page-size($model, $params, "rows")
     let $page     := xs:integer((domain:get-param-value($params, 'page'),1)[1])
     let $start   := xs:integer((domain:get-param-value($params, 'start'),1)[1])
     let $start    := $start + ($page - 1) * $pageSize
@@ -1611,7 +1619,6 @@ as element(list)?
     let $results :=
       if($persistence = "directory")
       then
-(:        $results:)
         for $result in $results
         return
          model:filter-list-result($model,$result/node(),$params)
@@ -1681,6 +1688,19 @@ declare function model:list-params(
                  $rules
                ))
             else  ()
+};
+
+declare private function model:page-size(
+  $model as element(domain:model),
+  $params,
+  $param-name as xs:string?
+) as xs:integer? {
+  let $param-name :=
+    if (fn:exists($param-name)) then
+      $param-name
+    else
+      "ps"
+    return xs:integer((domain:get-param-value($params, $param-name), domain:navigation($model)/@pageSize, $DEFAULT-PAGE-SIZE)[1])
 };
 
 (:~
@@ -1948,7 +1968,12 @@ declare function model:build-search-options(
      for $prop in $properties[domain:navigation/@metadata = "true"]
      let $ns := domain:get-field-namespace($prop)
      return
-        (<search:qname elem-ns="{$ns}" elem-name="{$prop/@name}"></search:qname>)
+      if ($prop instance of element(domain:attribute)) then
+        let $parent := domain:get-parent-field-attribute($prop)
+        let $parent-ns := domain:get-field-namespace($parent)
+        return <search:qname elem-ns="{$parent-ns}" elem-name="{$parent/@name}" attr-ns="{$ns}" attr-name="{$prop/@name}"/>
+      else
+        <search:qname elem-ns="{$ns}" elem-name="{$prop/@name}"></search:qname>
 
   (:Implement a base query:)
   let $persistence := fn:data($model/@persistence)
@@ -2047,6 +2072,33 @@ declare function model:search-sort-state(
   return fn:concat($name, "-", $order)
 };
 
+declare function model:build-search-query(
+  $model as element(domain:model),
+  $params as item()
+) as element()? {
+  model:build-search-query($model, $params, ())
+};
+
+declare function model:build-search-query(
+  $model as element(domain:model),
+  $params as item(),
+  $output as xs:string?
+) as element()? {
+  let $output :=
+    if (fn:empty($output)) then
+      "cts:query"
+    else if ($output eq "cts:query" or $output eq "search:query") then
+      $output
+    else
+      fn:error(xs:QName("OUTPUT-NOT-SUPPORTED"), text{"Output parameter", $output, "not supported"})
+  let $additional-query := domain:get-param-value($params,"_query")
+  return
+    if($additional-query castable as xs:string) then
+      search:parse($additional-query, model:build-search-options($model, $params), $output)
+    else
+      $additional-query
+};
+
 (:~
  : Provide search interface for the model
  : @param $model the model of the content type
@@ -2060,14 +2112,15 @@ as element(search:response)
    let $sort as xs:string?  := domain:get-param-value($params, "sort")
    let $sort-order as xs:string? := domain:get-param-value($params, "sort-order")
    let $page as xs:integer  := (domain:get-param-value($params, "pg"),1)[1] cast as xs:integer
-   let $pageLength as xs:integer  := (domain:get-param-value($params, "ps"),20)[1] cast as xs:integer
-   let $start := (($page - 1) * $pageLength) + 1
-   let $end := ($page * $pageLength)
+   let $page-size as xs:integer := model:page-size($model, $params, "ps")
+   (:let $page-size as xs:integer  := (domain:get-param-value($params, "ps"),20)[1] cast as xs:integer:)
+   let $start := (($page - 1) * $page-size) + 1
+   let $end := ($page * $page-size)
    (:let $final := fn:concat($query," ",$sort)  :)
-   let  $final := (if($query) then $query else "", $sort)
+   let $final := (if($query) then $query else "", $sort)
    let $options := model:build-search-options($model,$params)
    let $results :=
-     search:search($final,$options,$start,$pageLength)
+     search:search($final,$options,$start,$page-size)
    return
      <search:response>
      {attribute page {$page}}
@@ -2087,7 +2140,8 @@ as xs:string*
 {
    let $options := model:build-search-options($model,$params)
    let $query := (domain:get-param-value($params,"query"),"")[1]
-   let $limit := (domain:get-param-value($params,"limit"),10)[1] cast as xs:integer
+   (:let $limit := (domain:get-param-value($params,"limit"),10)[1] cast as xs:integer:)
+   let $limit := model:page-size($model, $params, "limit")
    let $position := (domain:get-param-value($params,"position"),fn:string-length($query[1]))[1] cast as xs:integer
    let $focus := (domain:get-param-value($params,"focus"),1)[1] cast as xs:integer
    return
@@ -2541,24 +2595,26 @@ declare function model:build-value(
  :  "fieldname"  - performs a value query
  :  "join"
  :)
-declare function model:find($model as element(domain:model),$params as map:map) {
-
-    let $search := model:find-params($model,$params)
-    let $persistence := $model/@persistence
-    let $name := $model/@name
-    let $namespace := domain:get-field-namespace($model)
-    let $model-qname := fn:QName($namespace,$name)
-    let $found  :=
-        if ($persistence = 'document') then
-            let $path := $model/domain:document/text()
-            return
-                fn:doc($path)/*/*[cts:contains(.,cts:and-query(($search)))]
-        else if($persistence = 'directory') then
-                cts:search(fn:collection(),cts:element-query($model-qname, $search))
-        else if($persistence = "abstract") then
-                cts:search(fn:collection(),cts:or-query(domain:get-descendant-model-query($model)))
-        else fn:error(xs:QName("INVALID-PERSISTENCE"),"Invalid Persistence", $persistence)
-   return $found
+declare function model:find(
+  $model as element(domain:model),
+  $params
+) {
+  let $search := model:find-params($model,$params)
+  let $persistence := $model/@persistence
+  let $name := $model/@name
+  let $namespace := domain:get-field-namespace($model)
+  let $model-qname := fn:QName($namespace,$name)
+  let $found  :=
+    if ($persistence = 'document') then
+      let $path := $model/domain:document/text()
+      return
+        fn:doc($path)/*/*[cts:contains(.,cts:and-query(($search)))]
+    else if($persistence = 'directory') then
+      cts:search(fn:collection(),cts:element-query($model-qname, $search))
+    else if($persistence = "abstract") then
+      cts:search(fn:collection(),cts:or-query(domain:get-descendant-model-query($model)))
+    else fn:error(xs:QName("INVALID-PERSISTENCE"),"Invalid Persistence", $persistence)
+ return $found
 };
 (:~
  :  "fieldname==" Equality
@@ -2573,9 +2629,12 @@ declare function model:find($model as element(domain:model),$params as map:map) 
  :  "!name*=" Any word or default
  :  "fieldname"  - performs a value query
  :)
-declare function find-params($model as element(domain:model),$params as map:map) {
+declare function model:find-params(
+  $model as element(domain:model),
+  $params
+) {
    let $queries :=
-    for $k in map:keys($params)[fn:not(. = "_join")]
+    for $k in domain:get-param-keys($params)[fn:not(. = "_join")]
         let $parts    := fn:analyze-string($k, "^(\i\c*)(==|!=|>=|>|<=|<|\.\.|)?$")
         let $opfield  := $parts/*:match/*:group[@nr eq 1]
         let $operator := $parts/*:match/*:group[@nr eq 2]
@@ -2615,7 +2674,8 @@ declare function find-params($model as element(domain:model),$params as map:map)
           else
             typeswitch($field)
               case element(domain:attribute) return
-                cts:element-attribute-word-query(fn:QName($ns,$model/@name),xs:QName($field/@name), domain:get-param-value($params,$k))
+                let $parent := domain:get-parent-field-attribute($field)
+                return cts:element-attribute-word-query(domain:get-field-qname($parent),xs:QName($field/@name), domain:get-param-value($params,$k))
               case element(domain:element) return
                 cts:element-word-query($qname,domain:get-param-value($params,$k))
               default return fn:error(xs:QName("FIND-PARAMS-ERROR"),"Unsupported field type")

@@ -220,7 +220,7 @@
         <range-element-index>
           <scalar-type>string</scalar-type>
           <namespace-uri>http://xquerrail.com/app-test</namespace-uri>
-          <localname>uuid id name</localname>
+          <localname>uuid id name type</localname>
           <collation>http://marklogic.com/collation/codepoint</collation>
           <range-value-positions>false</range-value-positions>
         </range-element-index>
@@ -255,7 +255,7 @@
         <range-element-attribute-index>
           <scalar-type>string</scalar-type>
           <parent-namespace-uri>http://xquerrail.com/app-test</parent-namespace-uri>
-          <parent-localname>model6 model7 model10</parent-localname>
+          <parent-localname>model6 model7 model10 program</parent-localname>
           <namespace-uri/>
           <localname>id</localname>
           <collation>http://marklogic.com/collation/codepoint</collation>

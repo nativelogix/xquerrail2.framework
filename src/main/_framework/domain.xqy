@@ -357,7 +357,7 @@ declare function domain:get-model-identity-query(
           ("collation="  || domain:get-field-collation($id-field))
         )
       case element(domain:attribute) return
-        let $parent-elem := $id-field/parent::element()
+        let $parent-elem := domain:get-parent-field-attribute($id-field)
         let $parent-ns   := domain:get-field-namespace($parent-elem)
         return
           cts:element-attribute-range-query(
@@ -412,18 +412,30 @@ declare function domain:get-field-prefix($field as element()) {
         else
             let $ns := domain:get-field-namespace($field)
             let $nses := domain:declared-namespaces($field)
-            let $pos := fn:index-of($nses,$ns)
+            let $pos :=
+              if (fn:exists($ns)) then
+                fn:index-of($nses,$ns)
+              else
+                ()
             let $prefix :=
               if (fn:empty($pos)) then
-                fn:error(xs:QName("PREFIX-NOT-DEFINED"), text{"Prefix", $ns, "is not defined in domain"})
+                if ($field instance of element(domain:attribute)) then
+                  ()
+                else
+                  fn:error(xs:QName("PREFIX-NOT-DEFINED"), text{"Prefix", $ns, "is not defined in domain"})
               else
                 fn:subsequence($nses,$pos -1 ,1)
-            let $index-ns := fn:index-of($nses,$ns)
-            let $check :=
-                if($index-ns) then ()
-                else fn:error(xs:QName("UNPREFIXED-NAMESPACE"),"Cannot resolve prefix for namespace " || $ns,
-                fn:string($field/ancestor::domain:domain/fn:local-name(.)))
-            let $prefix := fn:subsequence($nses,$index-ns -1 ,1)
+            (:let $index-ns := fn:index-of($nses,$ns):)
+            let $prefix :=
+                if($pos) then
+                  fn:subsequence($nses,$pos -1 ,1)
+                else
+                  if ($field instance of element(domain:attribute)) then
+                    ()
+                  else
+                    fn:error(xs:QName("UNPREFIXED-NAMESPACE"),"Cannot resolve prefix for namespace " || $ns,
+                      fn:string($field/ancestor::domain:domain/fn:local-name(.)))
+            (:let $prefix := fn:subsequence($nses,$pos -1 ,1):)
             return domain:set-identity-cache($key,$prefix)
 };
 (:~
@@ -1108,8 +1120,22 @@ declare function domain:set-field-attributes(
      $field/@jsonPath)],
     attribute keyId { domain:build-field-id($field) },
     attribute keyName { domain:build-field-name-key($field) },
-    attribute prefix {domain:get-field-prefix($field)},
-    attribute namespace {domain:get-field-namespace($field)},
+    (
+      let $prefix := domain:get-field-prefix($field)
+      return
+        if (fn:exists($prefix)) then
+          attribute prefix {$prefix}
+        else
+          ()
+    ),
+    (
+      let $namespace := domain:get-field-namespace($field)
+      return
+        if (fn:exists($namespace)) then
+          attribute namespace {$namespace}
+        else
+          ()
+    ),
     attribute xpath {domain:get-field-xpath($field)},
     attribute absXpath {domain:get-field-absolute-xpath($field)},
     attribute jsonPath {domain:get-field-jsonpath($field)}
@@ -1301,6 +1327,15 @@ declare function domain:get-field-namespace(
   if($cache) then $cache
   else
   let $field-namespace := (
+    if ($field instance of element(domain:attribute)) then
+      (
+        if($field/(@namespace-uri|@namespace)) then
+          $field/(@namespace-uri|@namespace)/fn:string()
+        else
+          ()
+      )
+    else
+
       if($field/(@namespace-uri|@namespace)) then
         $field/(@namespace-uri|@namespace)/fn:string()
       else if($field/ancestor::domain:model/(@namespace-uri|@namespace)) then
@@ -1491,7 +1526,7 @@ declare function domain:get-field-qname(
  typeswitch($field)
    case element(domain:model)       return fn:QName(domain:get-field-namespace($field),$field/@name)
    case element(domain:element)     return fn:QName(domain:get-field-namespace($field),$field/@name)
-   case element(domain:attribute)   return fn:QName("",$field/@name)
+   case element(domain:attribute)   return fn:QName(domain:get-field-namespace($field),$field/@name)
    case element(domain:container)   return fn:QName(domain:get-field-namespace($field),$field/@name)
    case element(domain:triple)      return xs:QName("sem:triple")
    default return fn:error(xs:QName("QNAME-ERROR"),"Cannot create qname from field",fn:local-name($field))
@@ -1829,7 +1864,7 @@ declare function domain:get-model-uniqueKey-constraint-query(
           return
            typeswitch($field)
            case element(domain:attribute) return
-              let $parent := $field/parent::domain:element
+              let $parent := domain:get-parent-field-attribute($field)
               let $parent-ns := domain:get-field-namespace($parent)
               return
                cts:element-attribute-value-query(fn:QName($parent-ns,$parent/@name),xs:QName($field/@name),$field-value)
@@ -1891,7 +1926,7 @@ declare function domain:get-model-unique-constraint-query(
         return
          typeswitch($field)
          case element(domain:attribute) return
-            let $parent := $field/parent::domain:element
+            let $parent := domain:get-parent-field-attribute($field)
             let $parent-ns := domain:get-field-namespace($parent)
             return
              cts:element-attribute-value-query(fn:QName($parent-ns,$parent/@name),xs:QName($field/@name),$field-value)
@@ -2730,4 +2765,15 @@ declare function domain:get-field-languages($field as element()) {
    $field/ancestor::domain:domain/domain:language,
    fn:tokenize($field/@languages,"\s"),
    "en"))
+};
+
+declare function domain:get-parent-field-attribute(
+  $field as element(domain:attribute)
+) as element() {
+  let $parent := $field/..
+  return
+    if ($parent instance of element(domain:model) or $parent instance of element(domain:element)) then
+      $parent
+    else
+      fn:error(xs:QName("UNSUPPORTED-PARENT-FIELD-ATTRIBUTE"), text{"Unsupported parent field", $parent/fn:name()})
 };

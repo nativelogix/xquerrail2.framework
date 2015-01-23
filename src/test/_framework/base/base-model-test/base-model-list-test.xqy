@@ -113,10 +113,10 @@ declare %test:teardown function teardown() {
   )
 };
 
-declare %test:before-each function before-test() {
+(:declare %test:before-each function before-test() {
   xdmp:set($CONFIG, app:bootstrap($TEST-APPLICATION))
 };
-
+:)
 declare %test:case function model1-exist-test() as item()*
 {
   let $model1 := domain:get-model("model1")
@@ -145,7 +145,6 @@ declare %test:case function model-list-equal-element-test() as item()*
       map:entry("searchString", "list-model1-id1")
     ))
   )
-  let $_ := xdmp:log($instances)
   return (
     assert:not-empty($instances),
     assert:equal(xs:integer($instances/totalrecords), 1)
@@ -187,7 +186,6 @@ declare %test:case function model-list-equal-element-attribute-test() as item()*
 declare %test:ignore function model-list-equal-abstract-type-attribute-test() as item()*
 {
   let $model := domain:get-model("model11")
-  let $_ := xdmp:log(("model-list-equal-abstract-type-attribute-test", $model))
   let $instances := model:list($model,
     map:new((
       map:entry("searchField", "abstract.name"),

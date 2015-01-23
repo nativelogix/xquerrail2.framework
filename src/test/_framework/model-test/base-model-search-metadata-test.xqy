@@ -24,14 +24,24 @@ declare variable $TEST-APPLICATION :=
 declare variable $TEST-DOCUMENTS :=
 (
   map:new((
-    map:entry("container1.field1", "oscar"),
+    map:entry("container1.type", "oscar"),
     map:entry("container1.field2", "best actor"),
-    map:entry("field3", "GARY")
+    map:entry("name", "GARY")
   )),
   map:new((
-    map:entry("container1.field1", "oscar"),
+    map:entry("container1.type", "oscar"),
     map:entry("container1.field2", "best actor"),
-    map:entry("field3", "gary")
+    map:entry("name", "gary")
+  )),
+  map:new((
+    map:entry("container1.type", "oscar"),
+    map:entry("container1.field2", "worst actor"),
+    map:entry("name", "Jim")
+  )),
+  map:new((
+    map:entry("container1.type", "oscar"),
+    map:entry("container1.field2", "worst actor"),
+    map:entry("name", "john")
   ))
 );
 
@@ -40,13 +50,13 @@ declare variable $TEST-IMPORT :=
 <header>
   <program>
     <id>Id</id>
-    <container1.field1>Field #1</container1.field1>
-    <field3>Field #3</field3>
+    <container1.type>Field #1</container1.type>
+    <name>Field #3</name>
   </program>
 </header>
 <body>
   <program id="1234567890" xmlns="http://marklogic.com/mdm">
-    <container1.field1>noah</container1.field1>
+    <container1.type>noah</container1.type>
   </program>
 </body>
 </results>;
@@ -74,14 +84,84 @@ declare %test:case function test-search-with-metadata() as item()*
     map:entry("query", "gary")
   ))
   let $results := model:search($program-model, $params)
-  let $_ := xdmp:log($results/search:result/search:metadata)
   return
   (
     assert:not-empty($results),
-    assert:true(fn:exists($results/search:result/search:metadata[1]/*[fn:local-name(.) = "field1"]), "field1 must exist in search response"),
+    assert:true(fn:exists($results/search:result/search:metadata[1]/*[fn:local-name(.) = "type"]), "type must exist in search response"),
     assert:false(fn:exists($results/search:result/search:metadata[1]/*[fn:local-name(.) = "field2"]), "field2 should not exist in search response"),
-    assert:false(fn:exists($results/search:result/search:metadata[1]/*[fn:local-name(.) = "field3"]), "field3 should not exist in search response"),
+    assert:false(fn:exists($results/search:result/search:metadata[1]/*[fn:local-name(.) = "name"]), "name should not exist in search response"),
     assert:equal(fn:count($results/search:result/search:metadata[1]), 2)
   )
 };
 
+declare %test:case function test-search-with-string-query-grammar-by-name-all-gary() as item()*
+{
+  let $program-model := domain:get-model("program")
+  let $params := map:new((
+    map:entry("query", "name:gary OR name:GARY")
+  ))
+  let $results := model:search($program-model, $params)
+  return
+  (
+    assert:not-empty($results),
+    assert:true(fn:exists($results/search:result/search:metadata[1]/*[fn:local-name(.) = "type"]), "type must exist in search response"),
+    assert:false(fn:exists($results/search:result/search:metadata[1]/*[fn:local-name(.) = "field2"]), "field2 should not exist in search response"),
+    assert:false(fn:exists($results/search:result/search:metadata[1]/*[fn:local-name(.) = "name"]), "name should not exist in search response"),
+    assert:equal(fn:count($results/search:result/search:metadata[1]), 2)
+  )
+};
+
+declare %test:case function test-search-with-string-query-grammar-by-name-only-gary() as item()*
+{
+  let $program-model := domain:get-model("program")
+  let $params := map:new((
+    map:entry("query", "name:gary")
+  ))
+  let $results := model:search($program-model, $params)
+  return
+  (
+    assert:not-empty($results),
+    assert:true(fn:exists($results/search:result/search:metadata[1]/*[fn:local-name(.) = "type"]), "type must exist in search response"),
+    assert:false(fn:exists($results/search:result/search:metadata[1]/*[fn:local-name(.) = "field2"]), "field2 should not exist in search response"),
+    assert:false(fn:exists($results/search:result/search:metadata[1]/*[fn:local-name(.) = "name"]), "name should not exist in search response"),
+    assert:equal(fn:count($results/search:result/search:metadata[1]), 1)
+  )
+};
+
+declare %test:case function test-search-with-string-query-grammar-by-type() as item()*
+{
+  let $program-model := domain:get-model("program")
+  let $params := map:new((
+    map:entry("query", "type:oscar")
+  ))
+  let $results := model:search($program-model, $params)
+  return
+  (
+    assert:not-empty($results),
+    assert:equal(fn:count($results/search:result/search:metadata[1]), 4)
+  )
+};
+
+declare %private function get-program(
+  $id
+) as element() {
+  model:get(domain:get-model("program"), $id)
+};
+
+declare %test:case function test-search-with-string-query-grammar-sorting() as item()*
+{
+  let $program-model := domain:get-model("program")
+  let $params := map:new((
+    map:entry("query", "sort:name-asc")
+  ))
+  let $results := model:search($program-model, $params)
+  let $last-id := $results/search:result[fn:last()]/search:metadata/search:attribute-meta[@name eq "id"]/fn:string()
+  let $first-id := $results/search:result[1]/search:metadata/search:attribute-meta[@name eq "id"]/fn:string()
+  return
+  (
+    assert:not-empty($results),
+    assert:equal(get-program($first-id)/*:name/fn:string(), "gary", "first item name should be gary"),
+    assert:equal(get-program($last-id)/*:name/fn:string(), "john", "last item name should be john"),
+    assert:equal(fn:count($results/search:result/search:metadata[1]), 4)
+  )
+};

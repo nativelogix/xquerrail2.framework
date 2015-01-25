@@ -21,12 +21,19 @@ var xquerrailCommon = (function(){
   settings.password = ml.password;
   console.log('Using XQuerrail: %j', settings)
 
-  function initialize(callback) {
+  function initialize(callback, configuration) {
     var options = {
       method: 'GET',
       url: settings.urlBase + '/initialize',
       followRedirect: true
     };
+
+    if (configuration !== undefined) {
+      options.method = 'POST';
+      options.body = configuration;
+      options.headers = {'Content-Type': 'text/xml'};
+    }
+
     request(options, function(error, response, body) {setTimeout(function(){callback(error, response, body)}, 100)});
   };
 

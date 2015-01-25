@@ -32,9 +32,21 @@ declare variable $DEFAULT-ENGINE-PATH      := fn:concat(config:framework-path(),
 declare variable $DEFAULT-ENGINES-CONFIGURATION :=
   <config xmlns="http://xquerrail.com/config" xmlns:engine="http://xquerrail.com/engine">
     <engines>
-      <engine format="html" namespace="http://xquerrail.com/engine/html" uri="{$DEFAULT-ENGINE-PATH || '/engine.html.xqy'}"/>
-      <engine format="json" namespace="http://xquerrail.com/engine/json" uri="{$DEFAULT-ENGINE-PATH || '/engine.json.xqy'}"/>
-      <engine format="xml" namespace="http://xquerrail.com/engine/xml" uri="{$DEFAULT-ENGINE-PATH || '/engine.xml.xqy'}"/>
+      <engine format="html" namespace="http://xquerrail.com/engine/html" uri="{$DEFAULT-ENGINE-PATH || '/engine.html.xqy'}">
+        <mimetypes>
+          <mimetype>text/html</mimetype>
+        </mimetypes>
+      </engine>
+      <engine format="json" namespace="http://xquerrail.com/engine/json" uri="{$DEFAULT-ENGINE-PATH || '/engine.json.xqy'}">
+        <mimetypes>
+          <mimetype>application/json</mimetype>
+        </mimetypes>
+      </engine>
+      <engine format="xml" namespace="http://xquerrail.com/engine/xml" uri="{$DEFAULT-ENGINE-PATH || '/engine.xml.xqy'}">
+        <mimetypes>
+          <mimetype>text/xml</mimetype>
+        </mimetypes>
+      </engine>
     </engines>
   </config>
 ;
@@ -165,10 +177,10 @@ declare function config:clear-cache() {
  : Initializes the application domains and caches them in the application server.
  : When using a cluster please ensure you change configuration to cache from database
  :)
-declare function config:refresh-app-cache() {
+declare function config:refresh-app-cache($application as element(config:application)?) {
   let $_ := (
     application:reset(),
-    application:bootstrap()
+    application:bootstrap($application)
   )
   return
     for $application in config:get-applications()

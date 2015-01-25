@@ -107,15 +107,19 @@ declare function request:joinx($params as map:map)
  :      request:param::xxxx
  :      request:body
  :)
-declare function request:initialize($_request as map:map) {
+declare function request:initialize($_request as map:map) as empty-sequence() {
   xdmp:set($request:request, $_request)
 };
 
 
+declare function request:parse($parameters) as map:map {
+  request:parse($parameters, ())
+};
+
 (:~
  :  Parses the map pulling all the required information from http request
  :)
-declare function request:parse($parameters) as map:map {
+declare function request:parse($parameters, $set-format) as map:map {
 
    (:Insert all custom headers:)
    let $headers :=
@@ -130,7 +134,7 @@ declare function request:parse($parameters) as map:map {
         map:put($request, $APPLICATION,xdmp:get-request-field("_application",config:default-application())),
         map:put($request, $CONTROLLER, xdmp:get-request-field("_controller",config:default-controller())),
         map:put($request, $ACTION,     xdmp:get-request-field("_action",config:default-action())),
-        map:put($request, $FORMAT,     xdmp:get-request-field("_format",config:default-format())),
+        map:put($request, $FORMAT,     xdmp:get-request-field("_format"(:,config:default-format():))),
         map:put($request, $VIEW,       xdmp:get-request-field("_view",request:action())),
         map:put($request, $ORIGIN,     xdmp:get-request-field("_url",xdmp:get-request-field("_url"))),
         map:put($request, $ROUTE,      xdmp:get-request-field("_route","")),
@@ -198,6 +202,18 @@ declare function request:parse($parameters) as map:map {
          then map:put($request, $BODY, xdmp:get-request-body("xml"))
          else map:put($request, $BODY, xdmp:get-request-body($accept-types))
 
+    let $_ :=
+      if ((fn:empty(request:format()) or request:format() eq "") and fn:exists($set-format)) then
+        map:put(
+          $request,
+          $FORMAT,
+          fn:head((
+            xdmp:apply($set-format, $request),
+            config:default-format()
+          ))
+        )
+      else
+        ()
    return $request
 };
 

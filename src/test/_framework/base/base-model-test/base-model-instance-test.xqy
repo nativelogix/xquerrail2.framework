@@ -24,8 +24,9 @@ declare variable $TEST-APPLICATION :=
 declare variable $CONFIG := ();
 
 declare %test:setup function setup() {
-  setup:setup(),
-  (app:reset(), app:bootstrap($TEST-APPLICATION))[0]
+  setup:setup($TEST-APPLICATION)
+  (:,:)
+  (:(app:reset(), app:bootstrap($TEST-APPLICATION))[0]:)
 };
 
 declare %test:teardown function teardown() {

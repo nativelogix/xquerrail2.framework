@@ -207,10 +207,6 @@ declare function dispatcher:invoke-response(
       else
         ()
       ,
-      (: Set HTTP headers :)
-      for $key in map:keys(response:response-headers())
-        return xdmp:add-response-header($key,response:response-header($key))
-      ,
       if(response:is-download()) then
       (
         xdmp:set-response-content-type(response:content-type()),
@@ -238,7 +234,7 @@ try {
       xdmp:log(xdmp:log(string-join(("dispatcher::after-request::[",request:redirect(),"]"),""),"debug"))
     )
     else
-      let $request := request:parse($init)
+      let $request := request:parse($init, xdmp:function(xs:QName("engine:set-format")))
       let $request  := interceptor:after-request(request:request())
       return
         if (response:has-error()) then
@@ -267,10 +263,23 @@ try {
               return
                 if(response:redirect()) then
                   xdmp:redirect-response(response:redirect())
-                else if(response:response-code() and response:response-code()[1] >= 400) then
-                  xdmp:set-response-code(response:response-code()[1], response:response-code()[2])
                 else
-                  $response
+                (
+                  (: Set HTTP headers :)
+                  for $key in map:keys(response:response-headers())
+                    return xdmp:add-response-header($key,response:response-header($key))
+                  ,
+                  (: Set the response content type :)
+                  if(fn:exists(response:content-type())) then
+                     xdmp:set-response-content-type(response:content-type())
+                  else
+                    (),
+                  (: Set the response code :)
+                  if(fn:exists(response:response-code())) then
+                    xdmp:set-response-code(response:response-code()[1], response:response-code()[2])
+                  else
+                    $response
+                )
           return  $response
 } catch($ex) {
   dispatcher:error($ex)

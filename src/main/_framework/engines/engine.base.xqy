@@ -37,7 +37,7 @@ declare %private function engine:get-eval-options() {
     ()
 };
 
-declare function engine:find-by-namespace(
+declare %private function engine:find-by-namespace(
   $namespace as xs:string
 ) as element(config:engine) {
   (
@@ -71,10 +71,19 @@ declare function engine:load-function(
   )
 };
 
+declare function engine:set-format(
+  $request as map:map
+) as xs:string? {
+  request:initialize($request),
+  fn:head(
+    config:get-engines()[./config:mimetypes/config:mimetype/fn:string() = request:content-type()]/@format
+  )
+};
+
 declare function engine:supported-engine(
-  $request,
+  $request as map:map,
   $response
-) {
+) as element(config:engine)* {
   let $engine :=
     for $engine in config:get-engines()
     let $is-supported-fn := engine:load-function($engine, $IS-SUPPORTED-ENGINE-FUNCTION)
@@ -88,7 +97,7 @@ declare function engine:supported-engine(
 
 declare function engine:initialize(
   $engine as element(config:engine),
-  $request,
+  $request as map:map,
   $response
 ) {
     let $_ :=
@@ -113,7 +122,7 @@ declare function  engine:register-plugin($plugin as xdmp:function)
 };
 
 (:~
- : Returns a list of plugin names registered with egine
+ : Returns a list of plugin names registered with engine
  :)
 declare function engine:plugin-names()
 {

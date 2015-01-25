@@ -6,9 +6,10 @@ import module namespace config = "http://xquerrail.com/config" at "../../main/_f
 
 declare option xdmp:mapping "false";
 
-declare function setup() as empty-sequence()
-{
-  ()
+declare function setup(
+  $application as element(config:application)
+) as empty-sequence() {
+  (app:reset(), app:bootstrap($application))[0]
 };
 
 declare function teardown() as empty-sequence()

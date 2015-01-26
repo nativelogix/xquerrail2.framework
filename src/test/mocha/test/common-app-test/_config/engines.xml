@@ -1,0 +1,10 @@
+<config xmlns="http://xquerrail.com/config" xmlns:engine="http://xquerrail.com/engine">
+  <engines>
+    <engine namespace="http://xquerrail.com/engine/html" uri="/main/_framework/engines/engine.html.xqy"/>
+    <engine namespace="http://xquerrail.com/engine/json" uri="/main/_framework/engines/engine.json.xqy"/>
+    <engine namespace="http://xquerrail.com/engine/xml" uri="/main/_framework/engines/engine.xml.xqy"/>
+  </engines>
+  <extensions>
+    <engine namespace="http://xquerrail.com/engine/customer" uri="/test/mocha/test/common-app-test/app/extensions/engine.extension.xqy"/>
+  </extensions>
+</config>

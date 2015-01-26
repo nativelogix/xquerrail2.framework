@@ -12,7 +12,7 @@
     <default-application value="app-test"/>
 
     <!--Register Your Application(s) Here-->
-    <application name="app-test" namespace="http://xquerrail.com/app-test" uri="/test/mocha/test/default-app/app">
+    <application name="app-test" namespace="http://xquerrail.com/app-test" uri="/test/mocha/test/default-app-test/app">
       <domain resource="domains/application-domain.xml" />
       <script-directory resource="resources/js/"/>
       <stylesheet-directory resource="resources/css/"/>

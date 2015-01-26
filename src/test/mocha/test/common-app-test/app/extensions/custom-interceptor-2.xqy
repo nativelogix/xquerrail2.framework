@@ -2,10 +2,10 @@ xquery version "1.0-ml";
 
 module namespace test = "http://xquerrail.com/interceptor";
 
-import module namespace interceptor = "http://xquerrail.com/interceptor" at "../../../../main/_framework/interceptor.xqy";
-import module namespace request = "http://xquerrail.com/request" at "../../../../main/_framework/request.xqy";
-import module namespace response = "http://xquerrail.com/response" at "../../../../main/_framework/response.xqy";
-import module namespace config = "http://xquerrail.com/config" at "../../../../main/_framework/config.xqy";
+import module namespace interceptor = "http://xquerrail.com/interceptor" at "/main/_framework/interceptor.xqy";
+import module namespace request = "http://xquerrail.com/request" at "/main/_framework/request.xqy";
+import module namespace response = "http://xquerrail.com/response" at "/main/_framework/response.xqy";
+import module namespace config = "http://xquerrail.com/config" at "/main/_framework/config.xqy";
 
 declare option xdmp:mapping "false";
 

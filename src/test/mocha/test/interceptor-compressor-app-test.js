@@ -107,7 +107,7 @@ describe('Compress feature', function() {
     xquerrailCommon.initialize(function(error, response, body) {
       expect(response.statusCode).to.equal(200);
       done();
-    }, configuration);
+    }, module.filename);
   });
 
   describe('model1', function() {

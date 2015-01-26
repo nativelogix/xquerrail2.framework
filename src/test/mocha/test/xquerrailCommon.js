@@ -1,5 +1,6 @@
 'use strict';
 
+var path = require('path');
 var request = require('request').defaults({jar: true});
 var assert = require('chai').assert;
 var expect = require('chai').expect;
@@ -21,18 +22,31 @@ var xquerrailCommon = (function(){
   settings.password = ml.password;
   console.log('Using XQuerrail: %j', settings)
 
+  function getApplicationConfig(filename) {
+    var configurationPath;
+    if (filename === undefined) {
+      configurationPath = '/test/mocha/test/common-app-test/_config';
+    } else {
+      configurationPath = getApplicationConfigPath(filename)
+    }
+    return '<application xmlns="http://xquerrail.com/config"><base>/main</base><config>'+configurationPath+'</config></application>'
+  }
+
+  function getApplicationConfigPath(filename) {
+    var configurationPath = filename.substring(0, filename.length - path.extname(filename).length);
+    configurationPath = configurationPath.replace(/\\/g, '/');
+    configurationPath = configurationPath.substring(configurationPath.indexOf('xquerrail2.framework/src') + 'xquerrail2.framework/src'.length);
+    return configurationPath += '/_config';
+  }
+
   function initialize(callback, configuration) {
     var options = {
-      method: 'GET',
+      method: 'POST',
       url: settings.urlBase + '/initialize',
-      followRedirect: true
+      followRedirect: true,
+      headers: {'Content-Type': 'text/xml'},
+      body: getApplicationConfig(configuration)
     };
-
-    if (configuration !== undefined) {
-      options.method = 'POST';
-      options.body = configuration;
-      options.headers = {'Content-Type': 'text/xml'};
-    }
 
     request(options, function(error, response, body) {setTimeout(function(){callback(error, response, body)}, 100)});
   };

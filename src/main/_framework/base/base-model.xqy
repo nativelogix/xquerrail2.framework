@@ -911,7 +911,8 @@ declare function model:recursive-build(
            attribute xsi:type {domain:get-field-qname($context)},
              for $a in $context/domain:attribute
              return
-                model:recursive-build($a, $current,$updates)
+                (:model:recursive-build($a, $current,$updates):)
+                model:build-attribute($a,$current,$updates,$partial,fn:false())
          )
          let $ns := domain:get-field-namespace($context)
          let $nses := model:get-namespaces($context)
@@ -982,17 +983,20 @@ declare function model:recursive-build(
               else fn:error(xs:QName("UNKNOWN-TYPE"),"The type of " || $type || " is unknown ",$context):)
 
       (: Build out any domain Attributes :)
-      case element(domain:attribute) return model:build-attribute($context,$current,$updates,$partial, fn:false())
+      case element(domain:attribute) return fn:error(xs:QName("BUILD-ATTRIBUTE-ERR"),"Call directly to build-attribute")
+      (:model:build-attribute($context,$current,$updates,$partial, fn:false()):)
       case element(domain:triple) return model:build-triple($context,$current,$updates,$partial)
       (: Build out any domain Containers :)
       case element(domain:container) return
          let $ns := domain:get-field-namespace($context)
          let $localname := fn:data($context/@name)
          return
-           element {domain:get-field-qname($context)}{
-            for $n in $context/(domain:attribute|domain:element|domain:container)
+           element {domain:get-field-qname($context)} {
+            for $a in $context/domain:attribute
+            return model:build-attribute($a, $current, $updates, $partial, fn:false()),
+            for $n in $context/(domain:element|domain:container)
             return
-              model:recursive-build($n, $current ,$updates,$partial)
+              model:recursive-build($n, $current, $updates, $partial)
             }
       (: Return nothing if the type is not of Model, Element, Attribute or Container :)
       default return fn:error(xs:QName("UNKNOWN-TYPE"),"The type of " || $type || " is unknown ",$context)
@@ -1010,21 +1014,23 @@ declare function model:build-element(
   let $current-value := domain:get-field-value($context,$current)
   let $update-value := domain:get-field-value($context, $updates)
   let $attributes :=
-    $context/domain:attribute ! (
+    for $attribute in $context/domain:attribute
+    return (
       if (domain:field-is-multivalue($context)) then
         ()
       else
-        model:recursive-build(.,$current, $updates,$partial)
+        (:model:recursive-build(.,$current, $updates,$partial):)
+        model:build-attribute($attribute,$current, $updates,$partial,fn:false())
     )
 
   return
   if($type = ($domain:SIMPLE-TYPES,$domain:COMPLEX-TYPES)) then
     if(fn:exists($update-value)) then
-      let $current-value := domain:get-field-value-node($context,$current)
+      let $current-value := domain:get-field-value-node($context, $current)
       let $update-value := domain:get-field-value-node($context, $updates)
       for $value at $position in $update-value
         let $values := model:build-value($context, $value, $current-value)
-        let $attributes := $context/domain:attribute ! (
+(:        let $attributes := $context/domain:attribute ! (
           model:build-attribute(., $current-value, $update-value[$position], $partial, fn:true())
         )
         return
@@ -1035,6 +1041,21 @@ declare function model:build-element(
             }
           else
             ()
+:)
+        let $attributes :=
+          if(domain:field-is-multivalue($context)) then
+            for $attribute in $context/domain:attribute
+            return model:build-attribute($attribute, $current-value, $update-value[$position], $partial, fn:true())
+          else $attributes
+        return
+          if (fn:exists($attributes) or fn:exists($values) or fn:empty(fn:index-of(("?", "*"), $occurrence))) then
+           element {domain:get-field-qname($context)}{
+              $attributes,
+              model:build-value($context,$value, $current-value)
+            }
+          else
+            ()
+
     else if($partial and fn:exists($current-value)) then
       for $value in $current-value
       return
@@ -1615,7 +1636,7 @@ declare function model:list(
     let $sort :=
       let $sort-field        := domain:get-param-value($params,"sidx")[1][. ne ""]
       let $sort-order        := domain:get-param-value($params,"sord")[1]
-      let $model-sort-field  := domain:navigation($model)/@sortField
+      let $model-sort-field  := domain:navigation($model)/@sortField ! domain:get-model-field($model, .)
       let $model-order       := (domain:navigation($model)/@sortOrder, "ascending")[1]
       let $domain-sort-field := $model//(domain:element|domain:attribute)[(domain:get-field-name-key(.),@name) = ($sort-field,$model-sort-field )][1]
       let $domain-sort-as :=
@@ -1627,15 +1648,20 @@ declare function model:list(
         else if($model-order) then $model-order
         else ()
       return
-      if($domain-sort-field) then
-        if($sort-order = ("desc","descending"))
-        then fn:concat("($__context__//*:",$domain-sort-field/@name,")",$domain-sort-as,"? descending")
-        else fn:concat("($__context__//*:",$domain-sort-field/@name,")",$domain-sort-as,"? ascending")
-      else if($model-sort-field and $model-sort-field ne "") then
-        if($model-order = ("desc","descending"))
-        then fn:concat("($__context__//*:",$model-sort-field,")"," descending")
-        else fn:concat("($__context__//*:",$model-sort-field,")"," ascending")
-      else ()
+          if(fn:exists($domain-sort-field)) then
+            let $sortPath := domain:get-field-xpath($domain-sort-field)
+            return
+              if($sort-order = ("desc","descending")) then
+                fn:concat("($__context__//*:",$sortPath,")",$domain-sort-as,"? descending")
+              else
+                fn:concat("($__context__//*:",$sortPath,")",$domain-sort-as,"? ascending")
+        else if(fn:exists($model-sort-field) and $model-sort-field ne "") then
+          let $sortPath := domain:get-field-xpath($model-sort-field)
+          return
+            if($model-order = ("desc","descending"))
+            then fn:concat("($__context__//*:",$sortPath,")"," descending")
+            else fn:concat("($__context__//*:",$sortPath,")"," ascending")
+        else ()
     (: 'start' is 1-based offset in records from 'page' which is 1-based offset in pages
      : which is defined by 'rows'. Perfectly fine to give just start and rows :)
     (:let $page-size  := domain:navigation($model)/@pageSize:)
@@ -2596,9 +2622,9 @@ declare function model:build-value(
         else model:generate-fnid(($value,<x>{xdmp:random()}</x>)[1])
     case "identity" return
         if(fn:exists($current))
-        then $current
+        then fn:data($current)
         else if (fn:exists($value) and fn:normalize-space($value) ne "" )
-        then $value
+        then fn:data($value)
         else model:get-identity()
     case "reference" return
         model:get-references($context,$value)

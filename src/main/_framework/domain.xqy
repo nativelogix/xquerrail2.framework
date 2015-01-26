@@ -1367,23 +1367,25 @@ declare function domain:get-field-param-value(
 };
 
 declare function domain:get-field-param-value(
-    $field as element(),
-    $params as map:map,
-    $relative as xs:boolean) {
+  $field as element(),
+  $params as map:map,
+  $relative as xs:boolean) {
   let $key := domain:get-field-id($field)
-  let $name-key := domain:get-field-name-key($field)
+  let $namekey := domain:get-field-name-key($field)
   let $key-value := map:get($params,$key)
+  let $namekey-value := map:get($params,$namekey)
   let $name-value := map:get($params,$field/@name)
-  let $namekey-value := map:get($params,$name-key)
   return
-    if($field/@type eq "langString") then  domain:get-field-param-langString-value($field,$params)
+    if($field/@type eq "langString") then
+      domain:get-field-param-langString-value($field,$params)
     else
-          domain:cast-value(
-                $field,
-                if(fn:exists($key-value)) then $key-value
-                else if(fn:exists($namekey-value)) then $namekey-value else $name-value
-           )
+      domain:cast-value(
+        $field,
+        if(fn:exists($key-value)) then $key-value
+        else if(fn:exists($namekey-value)) then $namekey-value else $name-value
+      )
 };
+
 declare function domain:get-field-param-match-key(
     $field as element(),
     $params as map:map
@@ -2797,6 +2799,16 @@ declare function domain:get-field-languages($field as element()) {
    $field/ancestor::domain:domain/domain:language,
    fn:tokenize($field/@languages,"\s"),
    "en"))
+};
+
+(:~
+ : Returns the default sort field for a given model
+ : @param $model - Model instance
+ :)
+declare function domain:get-model-sort-field(
+  $model as element(domain:model)
+) as element()* {
+  $model/domain:navigation/@sortField[. ne ""] ! domain:get-model-field($model, .)
 };
 
 declare function domain:get-parent-field-attribute(

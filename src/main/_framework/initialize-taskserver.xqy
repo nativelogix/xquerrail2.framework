@@ -5,5 +5,10 @@ xquery version "1.0-ml";
  :)
 import module namespace config ="http://xquerrail.com/config" at "config.xqy";
 declare variable $config:application as element(config:application) external;
-config:refresh-app-cache($config:application)
+config:refresh-app-cache(
+  if (fn:exists($config:application/node())) then
+    $config:application
+  else
+    ()
+)
 

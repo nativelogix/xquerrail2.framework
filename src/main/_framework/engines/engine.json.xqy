@@ -16,16 +16,12 @@ declare namespace search = "http://marklogic.com/appservices/search";
 
 declare namespace tag = "http://xquerrail.com/tag";
 
-declare default function namespace "http://www.w3.org/2005/xpath-functions";
-
-declare option xdmp:output "method=xml";
-
 (:~
  : You initialize your variables
  :)
-declare variable $REQUEST := map:map() ;
+declare variable $REQUEST := map:map();
 declare variable $RESPONSE := map:map();
-declare variable $context := map:map();
+declare %private variable $CONTEXT := map:map();
 
 (:~
    Initialize  Any custom tags your engine handles so the system can call
@@ -224,30 +220,27 @@ declare function json-engine:custom-transform($node as item())
  :)
 declare function json-engine:render()
 {
-  xdmp:log(text{"json-engine:render - response:body is empty", fn:empty(response:body())}),
-   if (fn:empty(response:body())) then
+  if (fn:empty(response:body()) and fn:empty(response:response-code())) then
     response:set-response-code(404, "Resounce not found")
-   else if(response:redirect()) then
-    xdmp:redirect-response(response:redirect())
-   else
-   (
-     (:Set the response content type:)
-     if(response:content-type())
-     then xdmp:set-response-content-type(response:content-type())
-     else xdmp:set-response-content-type("application/json"),
-     if(response:response-code()) then xdmp:set-response-code(response:response-code()[1], response:response-code()[2])
-     else (),
-     let $view-uri := engine:view-uri(response:controller(),(response:view(),response:action())[1],"json",fn:false())
-     let $view-uri :=
-        if(engine:view-exists($view-uri))
-        then $view-uri
-        else  engine:view-uri(response:controller(),response:view(),"json",fn:false())
-     let $view := if($view-uri and engine:view-exists($view-uri)) then engine:render-view() else ()
-     return
-        if(fn:exists($view))
-        then  xdmp:to-json(if($view instance of json:object or $view instance of json:array) then $view else json:object($view))
-        else if(fn:exists(response:body())) then  json-engine:render-json(response:body())
-        else ()
-   )
+  else
+  (
+    (:Set the response content type:)
+    if (fn:empty(response:content-type())) then
+      response:set-content-type("application/json")
+    else
+      (),
+    let $view-uri := engine:view-uri(response:controller(),(response:view(),response:action())[1],"json",fn:false())
+    let $view-uri :=
+      if(engine:view-exists($view-uri)) then
+        $view-uri
+      else
+        engine:view-uri(response:controller(),response:view(),"json",fn:false())
+    let $view := if($view-uri and engine:view-exists($view-uri)) then engine:render-view() else ()
+    return
+      if(fn:exists($view)) then
+        xdmp:to-json(if($view instance of json:object or $view instance of json:array) then $view else json:object($view))
+      else
+        json-engine:render-json(response:body())
+  )
 };
 

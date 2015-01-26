@@ -81,7 +81,7 @@ declare function engine:set-format(
 };
 
 declare function engine:supported-engine(
-  $request as map:map,
+  $request as map:map?,
   $response
 ) as element(config:engine)* {
   let $engine :=

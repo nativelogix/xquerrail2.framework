@@ -52,7 +52,7 @@ declare function response:__init__() {
 };
 
 declare function response:__destroy__() {
-   response:save-flash()[0]  
+   response:save-flash()[0]
 };
 declare function response:initialize($response)
 {
@@ -65,17 +65,17 @@ declare function response:initialize($response)
 declare function response:initialize(
     $response as map:map,
     $request as map:map?
-) 
+)
 {
    let $init := response:set-response($response)
-   let $defaults := 
-     if(fn:exists($request)) 
+   let $defaults :=
+     if(fn:exists($request))
      then response:set-defaults($request)
      else ()
    return
    if($init) then ()
    else fn:error(xs:QName("INITIALIZATION-ERROR"),"Unable to initialize response",$response)
-}; 
+};
 
 declare function response:set-response($_response)
 {
@@ -103,7 +103,7 @@ declare function response:set-response(
   } catch($ex)
   {
     xdmp:rethrow()
-  }  
+  }
 };
 
 (:~
@@ -112,7 +112,7 @@ declare function response:set-response(
 declare private function response:set-defaults($_request)
 {
    let $_ := request:initialize($_request)
-   return 
+   return
     if(fn:exists($_request)) then (
         if(fn:exists(response:application())) then () else response:set-application(fn:data(request:application())),
         if(fn:exists(response:controller()))  then () else response:set-controller(fn:data(request:controller())),
@@ -137,7 +137,7 @@ declare function response:user()
 declare private function response:save-flash() {
   (
     let $flash-map := map:map()
-    let $_  := 
+    let $_  :=
         for $fl in map:keys($response)[fn:starts-with(.,$FLASH)]
         return map:put($flash-map,$fl,map:get($response,$fl))
     return(
@@ -148,8 +148,8 @@ declare private function response:save-flash() {
 declare private function response:initialize-flash() as empty-sequence() {
     let $sess-field := () (:DISABLING xdmp:get-session-field("FLASH"):)
     let $_ :=       xdmp:log(("Loading Flash",$sess-field), "debug")
-    let $flash-map  := 
-        if($sess-field instance of map:map) 
+    let $flash-map  :=
+        if($sess-field instance of map:map)
         then $sess-field
         else map:map()
     let $_ := for $key in map:keys($flash-map) return map:put($response,$key,map:get($flash-map,$key))
@@ -165,7 +165,7 @@ declare function response:has-flash($code) as xs:boolean{
 };
 
 (:~
- : The Flash message is a convenient may to store information 
+ : The Flash message is a convenient may to store information
  : between requests redirects for validation and other things.
  : THe flash object is cleared between request/response calls.
  : @param $name as xs:string
@@ -180,8 +180,8 @@ declare function response:flash($code){
 };
 
 (:~
- : In order to Route the request you must flush the map at the end 
- : of a controller response.  The map is used by the dispatcher 
+ : In order to Route the request you must flush the map at the end
+ : of a controller response.  The map is used by the dispatcher
  : finalize the rendering process.
  :)
 declare function response:flush()
@@ -201,10 +201,10 @@ declare function response:response()
 declare function response:error()
 {
    map:get($response,$ERROR)
-}; 
+};
 
 declare function response:set-error(
-  $code as xs:integer, 
+  $code as xs:integer,
   $error as item()
 ) {
   map:put($response,$ERROR,($code,$error))
@@ -270,7 +270,7 @@ declare function response:set-application($application as xs:string)
    map:put($response,$APPLICATION,$application)
 };
 declare function response:application()
-{ 
+{
    map:get($response,$APPLICATION)
 };
 declare function response:set-controller($controller as xs:string)
@@ -296,11 +296,11 @@ declare function response:partial()
 {
   let $is-partial := map:get($response,$PARTIAL)
   return
-    $is-partial 
-  
+    $is-partial
+
 };
 
-declare function response:set-partial($view as xs:boolean) 
+declare function response:set-partial($view as xs:boolean)
 {
     map:put($response,$PARTIAL,$view)
 };
@@ -312,7 +312,7 @@ declare function response:set-view($view as xs:string)
 
 declare function response:view()
 {
- map:get($response,$VIEW)  
+ map:get($response,$VIEW)
 };
 
 declare function response:set-template($template as xs:string)
@@ -338,7 +338,7 @@ declare function response:redirect($controller as xs:string,$action as xs:string
  :)
 declare function response:redirect($uri as xs:string)
 {
- 
+
    map:put($response,$REDIRECT,$uri)
 };
 (:~
@@ -349,7 +349,7 @@ declare function response:redirect()
    map:get($response,$REDIRECT)
 };
 (:~
- : 
+ :
  :)
 declare function response:add-header($key as xs:string,$value as xs:string*)
 {
@@ -361,15 +361,15 @@ declare function response:add-header($key as xs:string,$value as xs:string*)
  :)
 declare function response:add-response-header($key as xs:string,$value as xs:string*)
 {
-   map:put($response,fn:concat($HEADER,$key),fn:string-join($value,"; "))
+   map:put($response,fn:concat($HEADER,fn:lower-case($key)),fn:string-join($value,"; "))
 };
 
 (:~
- : Returns a response header by key 
+ : Returns a response header by key
  :)
 declare function response:response-header($key as xs:string)
 {
-   map:get($response,fn:concat($HEADER,$key))
+   map:get($response,fn:concat($HEADER,fn:lower-case($key)))
 };
 
 declare function response:response-headers() as map:map
@@ -380,7 +380,7 @@ declare function response:response-headers() as map:map
    for $k in map:keys($response)[fn:starts-with(.,$HEADER)]
    return map:put($headers,fn:replace($k,$HEADER,""),map:get($response,$k)),
    $headers
-   )  
+   )
 };
 
 declare function response:add-param(
@@ -391,7 +391,7 @@ declare function response:add-param(
    let $pkey := fn:concat($PARAMETER,$key)
    return
      map:put($response,$pkey,(map:get($response,$pkey),$value))
-}; 
+};
 
 declare function response:set-param(
   $key as xs:string,
@@ -414,11 +414,11 @@ declare function response:delete-param($key as xs:string,$value as xs:string)
   let $pkey := fn:concat($PARAMETER,$key)
   return
     map:put($response,$pkey, map:get($response,$pkey)[. != $value])
-}; 
+};
 
 declare function response:param($key)
 {
-   map:get($response,fn:concat($PARAMETER,$key))  
+   map:get($response,fn:concat($PARAMETER,$key))
 };
 
 
@@ -454,7 +454,7 @@ declare function response:slots()
 
 declare function response:set-slot($key,$value)
 {
-   map:put($response,fn:concat($SLOT-PREFIX,$key),$value)  
+   map:put($response,fn:concat($SLOT-PREFIX,$key),$value)
 };
 
 declare function response:has-slot($key)
@@ -464,16 +464,16 @@ declare function response:has-slot($key)
 
 declare function response:slot($key)
 {
-   map:get($response,fn:concat($SLOT-PREFIX,$key))  
+   map:get($response,fn:concat($SLOT-PREFIX,$key))
 };
 (:~
  :
  :)
 declare function response:set-title($value)
 {
-  map:put($response,"TITLE", 
-     if($value instance of attribute()) 
-     then fn:data($value) 
+  map:put($response,"TITLE",
+     if($value instance of attribute())
+     then fn:data($value)
      else $value)
 };
 
@@ -487,11 +487,11 @@ declare function response:title()
 
 (:~
  :META~
- 
+
  :)
 declare function response:add-meta($key,$value)
 {
-  map:put($response,fn:concat($META,$key),$value) 
+  map:put($response,fn:concat($META,$key),$value)
 };
 
 declare function response:add-meta($key as xs:string,$value as xs:string,$append as xs:boolean)
@@ -500,7 +500,7 @@ declare function response:add-meta($key as xs:string,$value as xs:string,$append
      return
      if($append)
      then  map:put($response,$mkey,(map:get($response,$mkey),$value))
-     else  map:put($response,$mkey,$value)   
+     else  map:put($response,$mkey,$value)
 };
 
 declare function response:meta($key)
@@ -519,7 +519,7 @@ declare function response:metas()
 {
    for $key in response:meta-keys()
    for $m  in response:meta($key)
-   return 
+   return
     element meta{
       attribute name{$key},
       attribute content {$m}
@@ -529,7 +529,7 @@ declare function response:metas()
 (:~HTTP META :)
 declare function response:add-httpmeta($key,$value)
 {
-  map:put($response,fn:concat($HTTPMETA,$key),$value) 
+  map:put($response,fn:concat($HTTPMETA,$key),$value)
 };
 
 declare function response:add-httpmeta($key as xs:string,$value as xs:string,$append as xs:boolean)
@@ -538,7 +538,7 @@ declare function response:add-httpmeta($key as xs:string,$value as xs:string,$ap
      return
      if($append)
      then  map:put($response,$mkey,(map:get($response,$mkey),$value))
-     else  map:put($response,$mkey,$value)   
+     else  map:put($response,$mkey,$value)
 };
 
 declare function response:httpmeta($key)
@@ -557,7 +557,7 @@ declare function response:httpmetas()
 {
    for $key in response:httpmeta-keys()
    for $m  in response:httpmeta($key)
-   return 
+   return
     element meta{
       attribute http-equiv{$key},
       attribute content {$m}
@@ -596,11 +596,11 @@ declare %private function response:get-cookie-date-string($date as xs:dateTime) 
 };
 
 declare function response:set-cookie(
-  $name as xs:string, 
-  $value as xs:string, 
-  $max-age as xs:duration?, 
-  $secure-flag as xs:boolean?, 
-  $domain as xs:string?, 
+  $name as xs:string,
+  $value as xs:string,
+  $max-age as xs:duration?,
+  $secure-flag as xs:boolean?,
+  $domain as xs:string?,
   $path as xs:string?
 ) as xs:string? {
     fn:string-join(
@@ -632,11 +632,11 @@ declare function response:set-cookie(
 };
 
 declare function response:add-cookie(
-  $name as xs:string, 
-  $value as xs:string, 
-  $max-age as xs:duration?, 
-  $secure-flag as xs:boolean?, 
-  $domain as xs:string?, 
+  $name as xs:string,
+  $value as xs:string,
+  $max-age as xs:duration?,
+  $secure-flag as xs:boolean?,
+  $domain as xs:string?,
   $path as xs:string?
 ) as empty-sequence() {
   xdmp:add-response-header("Set-Cookie", response:set-cookie($name, $value, $max-age, $secure-flag, $domain, $path)
@@ -644,7 +644,7 @@ declare function response:add-cookie(
 };
 
 declare function response:add-cookie(
-  $name as xs:string, 
+  $name as xs:string,
   $value as xs:string
 ) as empty-sequence() {
   response:add-cookie($name, $value, (), (), (), ())
@@ -675,8 +675,8 @@ declare function response:remove-cookie(
 
 declare function response:remove-cookie(
   $name as xs:string,
-  $secure-flag as xs:boolean?, 
-  $domain as xs:string?, 
+  $secure-flag as xs:boolean?,
+  $domain as xs:string?,
   $path as xs:string?
 ) as empty-sequence() {
   response:add-cookie($name, "", xs:dayTimeDuration('PT0S'), $secure-flag, $domain, $path)
@@ -704,7 +704,7 @@ $options as element(response:options)
    (<script type="text/javascript" src="{config:resource-directory()}/{$name}.js">//</script>,
      $options
      )
-   )  
+   )
 };
 (:~
  : Add a javscript library by name
@@ -712,7 +712,7 @@ $options as element(response:options)
 declare function response:add-javascript($name)
 {
    map:put($response,fn:concat($JAVASCRIPT,$name),
-   let $url := 
+   let $url :=
       fn:concat(
         config:resource-directory(),
         if(fn:ends-with(config:resource-directory(),"/")) then () else "/",
@@ -814,7 +814,7 @@ declare function response:set-code($code as xs:integer) {
   map:put($response,$CODE,$code)
 };
 (:~
- : Returns the response code 
+ : Returns the response code
   :)
 declare function response:code() {
    map:get($response,$CODE)

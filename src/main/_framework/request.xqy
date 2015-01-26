@@ -123,11 +123,12 @@ declare function request:parse($parameters, $set-format) as map:map {
 
    (:Insert all custom headers:)
    let $headers :=
-        for $i in xdmp:get-request-header-names()
+      for $i in xdmp:get-request-header-names()
+        let $name := fn:lower-case($i)
         return
             for $j in xdmp:get-request-header($i)
             return
-               map:put($request, fn:concat($HEADER-PREFIX,$i),$j)
+               map:put($request, fn:concat($HEADER-PREFIX,$name),$j)
    (:Map All common request information:)
    let $rests :=
       (
@@ -469,7 +470,7 @@ declare function request:get-headers() {
  :  @param $name - Name of the header parameter (ie. Content-Length)
  :)
 declare function request:get-header($name as xs:string) {
-   let $key-name := fn:concat($HEADER-PREFIX,$name)
+   let $key-name := fn:concat($HEADER-PREFIX,fn:lower-case($name))
    return
      map:get($request,$key-name)
 };

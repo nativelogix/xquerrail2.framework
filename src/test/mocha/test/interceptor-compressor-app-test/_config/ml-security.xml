@@ -1,0 +1,15 @@
+<config xmlns="http://xquerrail.com/config">
+    <login-url url="/login.html"/>
+    <use-csrf value="true"/>
+    <!-- anonymous should be set in _config/config.xml -->
+    <!-- <anonymous-user value="anonymous"/> -->
+    <scope context="app-test:base:login">
+        <allow-role>xquerrail2-anonymous</allow-role>
+    </scope>
+    <scope context="app-test:base:logout">
+        <deny-role>xquerrail2-anonymous</deny-role>
+    </scope>
+    <scope context="*">
+        <deny-role>xquerrail2-anonymous</deny-role>
+    </scope>
+</config>

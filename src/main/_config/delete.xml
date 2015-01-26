@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns="http://xquerrail.com/config">
+     <default-level>info</default-level>
+
+    <scope context="app:model1:delete:*">
+    	<deny-role>anonymous</deny-role>
+        <allow-role>*</allow-role>
+    </scope>
+
+</config>

@@ -241,10 +241,24 @@ declare function controller:patch() {
  :)
 declare function controller:delete()
 {
+  try {
+    model:delete(
+      controller:model(),
+      controller:get-params()
+    )
+  } catch ($exception) {
+    response:set-response-code(404, "No Resource Found")
+  }
+(:  try {
     model:delete(
        controller:model(),
        controller:get-params()
-    )
+    )[0],
+    response:set-response-code(204, "No Content")
+  } catch ($exception) {
+    response:set-response-code(404, "No Content")
+  },
+    response:flush():)
 };
 
 (:~

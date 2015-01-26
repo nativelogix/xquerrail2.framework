@@ -165,6 +165,21 @@ describe('JSON CRUD features', function() {
         });
       });
     });
+
+    it('should delete none existing resource return 404', function(done) {
+      xquerrailCommon.login(function() {
+        var id = random('dummy-resource');
+        var data = {
+          'id': id,
+          'name': 'model1-name'
+        };
+        remove('model1', data, function(error, response, entity) {
+          expect(response.statusCode).to.equal(404);
+          done();
+        });
+      });
+    });
+
   });
 
 });

@@ -5,6 +5,6 @@
     <engine namespace="http://xquerrail.com/engine/xml" uri="/main/_framework/engines/engine.xml.xqy"/>
   </engines>
   <extensions>
-    <engine namespace="http://xquerrail.com/engine/customer" uri="/test/mocha/app-test/extensions/engine.extension.xqy"/>
+    <!-- <engine namespace="http://xquerrail.com/engine/customer" uri="/test/mocha/app-test/extensions/engine.extension.xqy"/> -->
   </extensions>
 </config>

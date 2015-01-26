@@ -1,0 +1,70 @@
+<routes xmlns="http://xquerrail.com/routing"  
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://xquerrail.com/routing file:../_framework/schemas/routing.xsd">
+  <!--Define Resources Before Controllers-->
+  <route id="_favicon" pattern="/favicon.ico" is-resource="true">
+    <prepend>/main/resources/</prepend>
+  </route>
+  
+  <route id="_resources" pattern="^/resources/*" is-resource="true">
+    <prepend>/main</prepend>
+  </route>
+  
+  <route id="application_resources" pattern="/(\i\c*)/resources/*" is-resource="true">
+    
+  </route>
+  
+  <route id="initialize" pattern="^/initialize(.xqy)?$" is-resource="true">
+    <to>/main/_framework/initialize.xqy</to>
+  </route>
+  
+  <route id="xray_index" pattern="^/xray/?$" is-resource="true">
+    <to>/xray/index.xqy</to>
+  </route>
+  
+  <route id="demo_index" pattern="^/$">
+    <default key="_controller">demo:default:index:html</default>      
+  </route>
+  
+  <route id="demo_login" pattern="^/login(.html)?">
+    <default key="_controller">demo:default:login:html</default>
+  </route>
+  <route id="demo_logout" pattern="^/logout(.html)?">
+    <default key="_controller">demo:default:logout:html</default>
+  </route>   
+  <route id="demo_default_index" pattern="^/(\i\c*[^/])/?$">
+    <default key="_controller">demo:$1:index:html</default>      
+  </route>
+  
+  <route id="docs_item" pattern="/docs/_/(.*)$">
+    <default key="_controller">demo:docs:details:html</default>
+    <param key="link">$1</param>
+  </route>
+  
+  <route id="api_item" pattern="/api/_/(.*)$">
+    <default key="_controller">demo:api:details:html</default>
+    <param key="link">$1</param>
+  </route>
+  <route id="demo_default_controller_action_format" pattern="^/(\i\c*[^/])/(\i\c*)\.(html|xml|json)$">
+    <default key="_controller">demo:$1:$2:$3</default>      
+  </route>  
+  
+  <route id="demo_default_controller_action" pattern="^/(\i\c*[^/])/(\i\c*)$">
+    <default key="_controller">demo:$1:$2:html</default>      
+  </route>  
+  
+  
+  <!--Default Routes-->
+  <route id="default_index" pattern="^/(\i\c*[^/])/?$">
+    <default key="_controller">application:$1:index:html</default>      
+  </route>
+  
+  <route id="default_controller_action_format" pattern="^/(\i\c*[^/])/(\i\c*)\.(html|xml|json)$">
+    <default key="_controller">application:$1:$2:$3</default>      
+  </route>  
+  
+  <route id="default_controller_action" pattern="^/(\i\c*[^/])/(\i\c*)$">
+    <default key="_controller">application:$1:$2:xml</default>      
+  </route>  
+  
+</routes>

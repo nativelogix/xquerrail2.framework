@@ -22,6 +22,10 @@ var xquerrailCommon = (function(){
   settings.password = ml.password;
   console.log('Using XQuerrail: %j', settings)
 
+  function random(prefix) {
+    return ((prefix)? prefix + '-': '') + Math.floor((Math.random() * 1000000) + 1)
+  };
+
   function getApplicationConfig(filename) {
     var configurationPath;
     if (filename === undefined) {
@@ -81,7 +85,8 @@ var xquerrailCommon = (function(){
     password: settings.password,
     initialize: initialize,
     login: login,
-    logout: logout
+    logout: logout,
+    random: random
   };
 })();
 

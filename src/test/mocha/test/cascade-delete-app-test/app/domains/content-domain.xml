@@ -1,0 +1,20 @@
+<domain xmlns="http://xquerrail.com/domain"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:search = "http://marklogic.com/appservices/search"
+    xsi:schemaLocation="http://xquerrail.com/domain https://raw.githubusercontent.com/nativelogix/xquerrail2.framework/master/src/main/_framework/schemas/domain.xsd">
+  <name>domain1</name>
+
+  <model name="child-model" persistence="directory" label="Child Model" extends="base" key="uuid" keyLabel="name">
+    <directory>/test/child-model/</directory>
+    <element name="name" type="string" label="Name"/>
+    <element name="parent" type="reference" reference="model:parent-model:reference" label="Parent" occurrence="*"/>
+  </model>
+
+  <model name="parent-model" persistence="directory" label="Parent Model" extends="base" key="uuid" keyLabel="name">
+    <directory>/test/parent-model/</directory>
+    <element name="name" type="string" label="Name"/>
+  </model>
+
+  <controller name="child-model" model="child-model" label="Child" class="class"/>
+  <controller name="parent-model" model="parent-model" label="Parent" class="class"/>
+</domain>

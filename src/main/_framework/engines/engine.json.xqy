@@ -191,7 +191,7 @@ declare function json-engine:render-json($node)
              ))))
           )))
      else if($is-searchable) then
-        json-engine:render-search-results($node)
+        xdmp:to-json(json-engine:render-search-results($node))
      else if($is-suggestable) then
         xdmp:to-json(js:o((
             js:e("suggest", js:a($node/* ! fn:string(.)))
@@ -238,7 +238,11 @@ declare function json-engine:render()
     let $view := if($view-uri and engine:view-exists($view-uri)) then engine:render-view() else ()
     return
       if(fn:exists($view)) then
-        xdmp:to-json(if($view instance of json:object or $view instance of json:array) then $view else json:object($view))
+        xdmp:to-json(
+          (:if($view instance of json:object or $view instance of json:array) then $view else json:object($view):)
+          if($view instance of json:object or $view instance of json:array) then
+            $view else json:object($view)
+        )
       else
         json-engine:render-json(response:body())
   )

@@ -975,7 +975,7 @@ declare %test:case function model-append-new-item-container-element-with-id-test
   let $model-abstract2 := domain:get-model("abstract2")
   let $instance19 := model:get($model19, "model19-name-append")
   let $instance19 := model:convert-to-map($model19, $instance19)
-  let $new-abstract-name := "abstract-" || setup:random()
+  let $new-abstract-value-name := "abstract-" || setup:random()
   let $abstract-value := domain:get-field-value(domain:get-model-field($model19, "abstractList.abstract"), $instance19)
   let $abstract-value-id := domain:get-field-value(domain:get-model-field($model-abstract2, "id"), $abstract-value)
   let $abstract-value-name := domain:get-field-value(domain:get-model-field($model-abstract2, "name"), $abstract-value)
@@ -984,7 +984,7 @@ declare %test:case function model-append-new-item-container-element-with-id-test
     model:new(
       $model-abstract2,
       map:new((
-        map:entry("name", $new-abstract-name)
+        map:entry("name", $new-abstract-value-name)
       ))
     )
   )
@@ -999,7 +999,12 @@ declare %test:case function model-append-new-item-container-element-with-id-test
     assert:not-empty($instance19),
     assert:equal($abstract-value-id, domain:get-field-value(domain:get-model-field($model-abstract2, "id"), $new-abstract-value[1])),
     assert:equal($abstract-value-name, domain:get-field-value(domain:get-model-field($model-abstract2, "name"), $new-abstract-value[1])),
-    assert:equal($new-abstract-name, domain:get-field-value(domain:get-model-field($model-abstract2, "name"), $new-abstract-value[2]))
+    assert:equal($new-abstract-value-name, domain:get-field-value(domain:get-model-field($model-abstract2, "name"), $new-abstract-value[2])),
+    assert:not-equal(
+      domain:get-field-value(domain:get-model-field($model-abstract2, "id"), $new-abstract-value[1]),
+      domain:get-field-value(domain:get-model-field($model-abstract2, "id"), $new-abstract-value[2])
+    ),
+    assert:not-equal($abstract-value-name, $new-abstract-value-name)
   )
 };
 
@@ -1009,7 +1014,7 @@ declare %test:case function model-prepend-new-item-container-element-with-id-tes
   let $model-abstract2 := domain:get-model("abstract2")
   let $instance19 := model:get($model19, "model19-name-prepend")
   let $instance19 := model:convert-to-map($model19, $instance19)
-  let $new-abstract-name := "abstract-" || setup:random()
+  let $new-abstract-value-name := "abstract-" || setup:random()
   let $abstract-value := domain:get-field-value(domain:get-model-field($model19, "abstractList.abstract"), $instance19)
   let $abstract-value-id := domain:get-field-value(domain:get-model-field($model-abstract2, "id"), $abstract-value)
   let $abstract-value-name := domain:get-field-value(domain:get-model-field($model-abstract2, "name"), $abstract-value)
@@ -1017,7 +1022,7 @@ declare %test:case function model-prepend-new-item-container-element-with-id-tes
     model:new(
       $model-abstract2,
       map:new((
-        map:entry("name", $new-abstract-name)
+        map:entry("name", $new-abstract-value-name)
       ))
     ),
     $abstract-value
@@ -1033,7 +1038,12 @@ declare %test:case function model-prepend-new-item-container-element-with-id-tes
     assert:not-empty($instance19),
     assert:equal($abstract-value-id, domain:get-field-value(domain:get-model-field($model-abstract2, "id"), $new-abstract-value[2])),
     assert:equal($abstract-value-name, domain:get-field-value(domain:get-model-field($model-abstract2, "name"), $new-abstract-value[2])),
-    assert:equal($new-abstract-name, domain:get-field-value(domain:get-model-field($model-abstract2, "name"), $new-abstract-value[1]))
+    assert:equal($new-abstract-value-name, domain:get-field-value(domain:get-model-field($model-abstract2, "name"), $new-abstract-value[1])),
+    assert:not-equal(
+      domain:get-field-value(domain:get-model-field($model-abstract2, "id"), $new-abstract-value[1]),
+      domain:get-field-value(domain:get-model-field($model-abstract2, "id"), $new-abstract-value[2])
+    ),
+    assert:not-equal($abstract-value-name, $new-abstract-value-name)
   )
 };
 

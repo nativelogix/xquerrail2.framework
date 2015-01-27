@@ -10,6 +10,7 @@ import module namespace model = "http://xquerrail.com/model/base" at "../../../.
 import module namespace setup = "http://xquerrail.com/test/setup";
 
 declare namespace model1 = "http://marklogic.com/model/model1";
+declare namespace model5 = "http://marklogic.com/model/model5";
 declare namespace app-test = "http://xquerrail.com/app-test";
 
 declare option xdmp:mapping "false";
@@ -23,12 +24,12 @@ declare variable $TEST-APPLICATION :=
 </application>
 ;
 
-declare variable $INSTANCE1 :=
+declare variable $INSTANCE1 := (
 <model1 xmlns="http://marklogic.com/model/model1">
   <id>crud-model1-id</id>
   <name>crud-model1-name</name>
 </model1>
-;
+);
 
 declare variable $INSTANCE2 :=
 <model2 xmlns="http://marklogic.com/model/model2">
@@ -43,6 +44,18 @@ declare variable $INSTANCE4 :=
   <name>model4-name</name>
 </model4>
 ;
+
+declare variable $INSTANCES5 := (
+<model5 xmlns="http://marklogic.com/model/model5">
+  <id>model5-id-1</id>
+  <name>model5-name-1</name>
+</model5>
+,
+<model5 xmlns="http://marklogic.com/model/model5">
+  <id>model5-id-2</id>
+  <name>model5-name-2</name>
+</model5>
+);
 
 declare variable $INSTANCE11 :=
 <model11 xmlns="http://xquerrail.com/app-test">
@@ -106,7 +119,19 @@ declare variable $CONFIG := ();
 declare %test:setup function setup() {
   let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION))
   let $model1 := domain:get-model("model1")
-  let $_ := model:create($model1, $INSTANCE1, $TEST-COLLECTION)
+  let $_ := setup:invoke(
+      function() {
+        model:create($model1, $INSTANCE1, $TEST-COLLECTION)
+      }
+    )
+  let $model5 := domain:get-model("model5")
+  let $_ := for $instance in $INSTANCES5 return (
+    setup:invoke(
+      function() {
+        model:create($model5, $instance, $TEST-COLLECTION)
+      }
+    )
+  )
   let $model19 := domain:get-model("model19")
   let $_ := for $instance in $INSTANCES19 return (
     setup:invoke(
@@ -154,6 +179,27 @@ declare %test:case function model1-model2-exist-test() as item()*
   return (
     assert:not-empty($model1),
     assert:not-empty($model2)
+  )
+};
+
+declare %test:case function model-get-from-key-label-test() as item()*
+{
+  let $key-label := $INSTANCES5[1]/model5:id/fn:string()
+  let $model5 := domain:get-model("model5")
+  let $instance := model:get($model5, $key-label)
+  return (
+    assert:not-empty($instance)
+  )
+};
+
+declare %test:case function model-get-from-uri-test() as item()*
+{
+  let $key-label := $INSTANCES5[1]/model5:id/fn:string()
+  let $model5 := domain:get-model("model5")
+  let $instance := model:get($model5, $key-label)
+  let $instance := model:get($model5, map:entry("uri", xdmp:node-uri($instance)))
+  return (
+    assert:not-empty($instance)
   )
 };
 
@@ -356,15 +402,7 @@ declare %test:case function model-document-create-test() as item()*
       )
     }
   )
-(:  let $instance1 := model:create(
-    $model1,
-    map:new((
-      map:entry("id", "1234"),
-      map:entry("name", "name-1")
-    )),
-    $TEST-COLLECTION
-  )
-:)  let $value-id := domain:get-field-value(domain:get-model-field($model1, "id"), $instance1)
+  let $value-id := domain:get-field-value(domain:get-model-field($model1, "id"), $instance1)
   let $value-name := domain:get-field-value(domain:get-model-field($model1, "name"), $instance1)
   return (
     assert:not-empty($instance1),

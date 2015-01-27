@@ -514,10 +514,7 @@ declare function model:get(
        $params instance of json:array)
     then  model:get-id-from-params($model,$params)
     else $params
-  let $uri :=
-    if($params instance of xs:anyAtomicType)
-    then ()
-    else domain:get-param-value($params,"uri")
+  let $uri := domain:get-param-value($params,"uri")
   let $identity-map := map:new((
     map:entry($identity-field-name, $id-value),
     map:entry($keylabel-field/@name,(
@@ -1381,7 +1378,6 @@ declare function model:delete(
             let $parent-instance := $item/node()
             (:let $parent-model := domain:get-domain-model($parent-instance/fn:local-name()):)
             let $parent-model := domain:get-domain-model(fn:string($parent-instance/@xsi:type))
-            let $_ := xdmp:log(("$parent-instance", $parent-instance))
             return
             if ($cascade-delete eq "remove") then
             (

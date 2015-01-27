@@ -233,6 +233,13 @@
         </range-element-index>
         <range-element-index>
           <scalar-type>string</scalar-type>
+          <namespace-uri>http://marklogic.com/model/model5</namespace-uri>
+          <localname>uuid id</localname>
+          <collation>http://marklogic.com/collation/codepoint</collation>
+          <range-value-positions>false</range-value-positions>
+        </range-element-index>
+        <range-element-index>
+          <scalar-type>string</scalar-type>
           <namespace-uri>http://marklogic.com/model/model1</namespace-uri>
           <localname>uuid id name</localname>
           <collation>http://marklogic.com/collation/codepoint</collation>

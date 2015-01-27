@@ -194,7 +194,6 @@ declare function controller:info() {
  : Creates an instance of the model representing the controller
  :)
 declare function controller:create() {(
-  xdmp:log(("controller:create::",controller:get-params()),"debug"),
   let $body := request:body()
   let $params :=
      if(fn:exists(request:body()))
@@ -209,7 +208,7 @@ declare function controller:create() {(
  :)
 declare function controller:get()
 {
-   model:get(controller:model(),request:params())
+  model:get(controller:model(),request:params())
 };
 
 (:~
@@ -247,7 +246,13 @@ declare function controller:delete()
       controller:get-params()
     )
   } catch ($exception) {
-    response:set-response-code(404, "No Resource Found")
+    (
+      xdmp:log($exception),
+      if ($exception/error:name eq 'DELETE-ERROR') then
+        response:set-response-code(404, "No Resource Found")
+      else
+      xdmp:rethrow()
+    )
   }
 (:  try {
     model:delete(

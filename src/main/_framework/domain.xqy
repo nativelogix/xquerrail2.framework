@@ -86,7 +86,7 @@ declare function domain:cast-value($field as element(),$value as item()*)
      switch($type)
         case "identity"         return $value[fn:string(.) ne ""] cast as xs:string?
         case "id"               return $value[fn:string(.) ne ""] cast as xs:ID?
-        case "anyURI"           return $value cast as xs:anyURI*
+        case "anyURI"           return $value[fn:string(.) ne ""] cast as xs:anyURI*
         (:case "string"           return $value cast as xs:string*:)
         case "string"           return
           typeswitch ($field)
@@ -111,8 +111,8 @@ declare function domain:cast-value($field as element(),$value as item()*)
         (:Custom Types:)
         case "update-timestamp" return $value[fn:string(.) ne ""] cast as xs:dateTime?
         case "create-timestamp" return $value[fn:string(.) ne ""] cast as xs:dateTime?
-        case "create-user"      return $value cast as xs:string?
-        case "update-user"      return $value cast as xs:string?
+        case "create-user"      return $value[fn:string(.) ne ""] cast as xs:string?
+        case "update-user"      return $value[fn:string(.) ne ""] cast as xs:string?
         case "schema-element"   return $value
         case "langString"  return $value
         default return $value

@@ -50,4 +50,14 @@
     </element>
   </model>
 
+  <model name="author" persistence="document" label="Author" extends="base" key="uuid" keyLabel="name">
+    <document root="authors">/test/author.xml</document>
+    <element name="name" type="string" label="Name"/>
+  </model>
+
+  <model name="authors" persistence="document" label="Authors" extends="base" key="uuid" keyLabel="name">
+    <document root="authors">/test/authors.xml</document>
+    <element name="name" type="string" label="Name"/>
+  </model>
+
 </domain>

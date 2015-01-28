@@ -219,3 +219,9 @@ declare %test:case function model-with-attribute-with-namespace-test() as item()
     assert:empty($id-field-namespace, "$id-field-namespace should be empty")
   )
 };
+
+declare %test:case function find-model-by-name-test() as item()*
+{
+  assert:equal(fn:count(domain:get-model("author")), 1)
+};
+

@@ -2561,18 +2561,29 @@ declare function domain:get-param-value(
     $key as xs:string*,
     $default
 ) {
-  fn:head((
+  let $value :=
     switch(domain:get-value-type($params))
       case "json" return
-        if($params instance of json:object) then <x>{$params}</x>//json:entry[@key = $key]//json:value/node()
-        else $params//json:entry[@key = $key]//json:value/node()
+        let $value :=
+          if($params instance of json:object) then
+            <x>{$params}</x>//json:entry[@key = $key]/json:value/node()
+          else
+            $params//json:entry[@key = $key]/json:value/node()
+        return
+          if ($value instance of element(json:array)) then
+            json:array-values(json:array($value))
+          else
+            $value
       case "param"
         return map:get($params,$key)
       case "xml"
         return $params//*[fn:local-name(.) = $key]/node()
-      default return (),
-    $default
-  ))
+      default return ()
+  return
+    if (fn:exists($value)) then
+      $value
+    else
+      $default
 };
 (:~
  :

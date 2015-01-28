@@ -225,3 +225,38 @@ declare %test:case function find-model-by-name-test() as item()*
   assert:equal(fn:count(domain:get-model("author")), 1)
 };
 
+declare %test:case function get-param-value-map-multi-test() as item()*
+{
+  let $values := ("banana", "orange")
+  return
+    assert:equal(domain:get-param-value(map:entry("fruits", $values), "fruits"), $values)
+};
+
+declare %test:case function get-param-value-json-key-value-test() as item()*
+{
+  let $value := "banana"
+  let $json-object := xdmp:from-json('{"fruit": "banana"}')
+  return
+    assert:equal(xs:string(domain:get-param-value($json-object, "fruit")), $value)
+};
+
+declare %test:case function get-param-value-json-multi-test() as item()*
+{
+  let $values := ("banana", "orange")
+  let $json-array := xdmp:from-json('{"fruits": ["banana", "orange"]}')
+  return
+    assert:equal(domain:get-param-value($json-array, "fruits"), $values)
+};
+
+declare %test:case function get-param-value-xml-multi-test() as item()*
+{
+  let $values := ("banana", "orange")
+  let $xml :=
+    <fruits>
+    {$values ! (
+      <fruit>{.}</fruit>
+    )}
+    </fruits>
+  return
+    assert:equal(domain:get-param-value($xml, "fruit")/fn:string(), $values)
+};

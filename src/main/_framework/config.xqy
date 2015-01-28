@@ -805,7 +805,7 @@ declare function config:model-uri(
 };
 
 declare function config:model-extension-location(
-) as xs:string? {
+) as xs:string* {
   config:model-extension()/@resource
 };
 

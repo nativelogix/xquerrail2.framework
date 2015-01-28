@@ -779,7 +779,8 @@ declare %private function domain:find-model-by-name(
       cts:element-attribute-value-query(
         xs:QName("domain:model"),
         xs:QName("name"),
-        $name
+        $name,
+        ("exact")
       )
     )
   ]

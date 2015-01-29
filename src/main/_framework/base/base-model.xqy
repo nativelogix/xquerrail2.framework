@@ -1587,24 +1587,20 @@ declare function model:list(
     let $search := model:list-params($model,$params)
     let $persistence := $model/@persistence
     let $namespace := domain:get-field-namespace($model)
+    let $model-prefix := domain:get-field-prefix($model)
+    let $model-qname := fn:concat("/",$model-prefix,":",$model/@name)
     let $predicateExpr := ()
     let $listExpr :=
       for $field in $model//(domain:element|domain:attribute)[@name = domain:get-param-keys($params)]
       return
         domain:get-field-query($field,domain:get-field-value($field,$params))
-    (:let $additional-query:= domain:get-param-value($params,"_query")
-    let $additional-query :=
-      if($additional-query castable as xs:string) then
-        cts:query(search:parse($additional-query, model:build-search-options($model, $params), "cts:query"))
-      else
-        $additional-query:)
     let $additional-query := model:build-search-query($model, $params, "cts:query")
     let $list  :=
       if ($persistence = 'document') then
         let $path := $model/domain:document/fn:string()
         let $root := fn:data($model/domain:document/@root)
         return
-          "fn:doc('" || $path || "')/*:" || $root || "/*:"  || $name ||  "[cts:contains(.,cts:and-query(($search,$additional-query)))]"
+          "fn:doc('" || $path || "')/"|| $model-prefix ||":" || $root || $model-qname ||  "[cts:contains(.,cts:and-query(($search,$additional-query)))]"
       else
         let $dir := cts:directory-query($model/domain:directory/text())
         let $predicate :=
@@ -1624,7 +1620,7 @@ declare function model:list(
         )
     let $total :=
       if($persistence = 'document')
-      then xdmp:value(fn:concat("fn:count(", $list, ")"))
+      then xdmp:with-namespaces(domain:declared-namespaces($model), xdmp:value(fn:concat("fn:count(", $list, ")")))
       else xdmp:estimate(cts:search(
         fn:collection(),
         cts:element-query(fn:QName($namespace,$name),cts:and-query(($search,$predicateExpr)))
@@ -1645,23 +1641,29 @@ declare function model:list(
         else ()
       return
           if(fn:exists($domain-sort-field)) then
-            let $sortPath := domain:get-field-xpath($domain-sort-field)
+            let $sortPath :=
+              if($persistence = 'document') then
+                fn:substring-after(domain:get-field-absolute-xpath($domain-sort-field), $model-qname)
+              else
+                domain:get-field-absolute-xpath($domain-sort-field)
             return
               if($sort-order = ("desc","descending")) then
-                fn:concat("($__context__//*:",$sortPath,")",$domain-sort-as,"? descending")
+                fn:concat("($__context__",$sortPath,")",$domain-sort-as,"? descending")
               else
-                fn:concat("($__context__//*:",$sortPath,")",$domain-sort-as,"? ascending")
+                fn:concat("($__context__",$sortPath,")",$domain-sort-as,"? ascending")
         else if(fn:exists($model-sort-field) and $model-sort-field ne "") then
-          let $sortPath := domain:get-field-xpath($model-sort-field)
+          let $sortPath :=
+            if($persistence = 'document') then
+              fn:substring-after(domain:get-field-absolute-xpath($model-sort-field), $model-qname)
+            else
+              domain:get-field-absolute-xpath($model-sort-field)
           return
             if($model-order = ("desc","descending"))
-            then fn:concat("($__context__//*:",$sortPath,")"," descending")
-            else fn:concat("($__context__//*:",$sortPath,")"," ascending")
+            then fn:concat("($__context__",$sortPath,")"," descending")
+            else fn:concat("($__context__",$sortPath,")"," ascending")
         else ()
     (: 'start' is 1-based offset in records from 'page' which is 1-based offset in pages
      : which is defined by 'rows'. Perfectly fine to give just start and rows :)
-    (:let $page-size  := domain:navigation($model)/@pageSize:)
-    (:let $pageSize := xs:integer((domain:get-param-value($params, 'rows'), $page-size, 50)[1]):)
     let $pageSize := model:page-size($model, $params, "rows")
     let $page     := xs:integer((domain:get-param-value($params, 'page'),1)[1])
     let $start   := xs:integer((domain:get-param-value($params, 'start'),1)[1])

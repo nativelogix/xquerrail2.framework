@@ -227,7 +227,7 @@
         <range-element-index>
           <scalar-type>string</scalar-type>
           <namespace-uri>http://marklogic.com/model/model4</namespace-uri>
-          <localname>id</localname>
+          <localname>uuid id</localname>
           <collation>http://marklogic.com/collation/codepoint</collation>
           <range-value-positions>false</range-value-positions>
         </range-element-index>

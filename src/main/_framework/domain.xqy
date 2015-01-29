@@ -403,6 +403,7 @@ declare function domain:get-model-keyLabel-field($model as element(domain:model)
             let $field := $model//(domain:element|domain:attribute)[fn:node-name(.) = $DOMAIN-NODE-FIELDS][@name eq $model/@keyLabel]
             return domain:set-identity-cache($key,$field)
 };
+
 declare function domain:get-field-prefix($field as element()) {
     if($field/@prefix) then $field/@prefix else
     let $key   := fn:concat("namespace-prefix::",fn:generate-id($field))
@@ -806,7 +807,13 @@ declare %private function domain:extend-model(
         let $model-ns := if( $model-ns ) then $model-ns else domain:get-field-namespace($model)
         let $model-attr := (
             (: take all specified model attributes :)
-            $model/@*[. except ($model/@namespace, $model/@namespace-uri)],
+            $model/@*[. except ($model/@namespace, $model/@namespace-uri, $model/@prefix)],
+            let $prefix := domain:get-field-prefix($model)
+            return
+              if (fn:exists($prefix)) then
+                attribute prefix {$prefix}
+              else
+                (),
             (: inherit certain attributes if not specified :)
             $base-model/@*[fn:name(.) = $MODEL-INHERIT-ATTRIBUTES][fn:not(fn:name(.) = $model/@*/fn:name(.))]
         )

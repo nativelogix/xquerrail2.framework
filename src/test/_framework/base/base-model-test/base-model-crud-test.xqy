@@ -38,11 +38,12 @@ declare variable $INSTANCE2 :=
 </model2>
 ;
 
-declare variable $INSTANCE4 :=
-<model4 xmlns="http://marklogic.com/model/model4">
-  <id>model4-id</id>
-  <name>model4-name</name>
-</model4>
+declare variable $INSTANCES4 := (
+  <model4 xmlns="http://marklogic.com/model/model4">
+    <id>crud-model4-id-delete</id>
+    <name>crud-model4-name-delete</name>
+  </model4>
+)
 ;
 
 declare variable $INSTANCES5 := (
@@ -117,7 +118,8 @@ declare variable $PARENT-INSTANCES := (
 declare variable $CONFIG := ();
 
 declare %test:setup function setup() {
-  let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION))
+  let $_ := setup:setup($TEST-APPLICATION)
+  let $_ := setup:create-instances("model4", $INSTANCES4, $TEST-COLLECTION)
   let $model1 := domain:get-model("model1")
   let $_ := setup:invoke(
       function() {
@@ -225,9 +227,15 @@ declare %test:case function model-document-new-test() as item()*
 declare %test:case function model-directory-new-test() as item()*
 {
   let $model4 := domain:get-model("model4")
+  let $instance4 :=
+  <model4 xmlns="http://marklogic.com/model/model4">
+    <id>model4-id</id>
+    <name>model4-name</name>
+  </model4>
+
   let $instance4 := model:new(
     $model4,
-    $INSTANCE4
+    $instance4
   )
   let $value-id := domain:get-field-value(domain:get-model-field($model4, "id"), $instance4)
   let $value-name := domain:get-field-value(domain:get-model-field($model4, "name"), $instance4)
@@ -309,11 +317,16 @@ declare %test:case function model-document-new-create-keep-identity-test() as it
 declare %test:case function model-directory-create-test() as item()*
 {
   let $model4 := domain:get-model("model4")
+  let $instance4 :=
+  <model4 xmlns="http://marklogic.com/model/model4">
+    <id>model4-id</id>
+    <name>model4-name</name>
+  </model4>
   let $instance4 := setup:eval(
     function() {
       model:create(
         $model4,
-        $INSTANCE4,
+        $instance4,
         $TEST-COLLECTION
       )
     }
@@ -1047,6 +1060,16 @@ declare %test:case function model-prepend-new-item-container-element-with-id-tes
   )
 };
 
+declare %test:case function model-delete-key-label-test() as item()*
+{
+  let $key := "crud-model4-id-delete"
+  let $model4 := domain:get-model("model4")
+  let $result := model:delete($model4, $key)
+  return (
+    assert:not-empty($result, "model:delete should have returned true")
+  )
+};
+
 declare %test:case function model-delete-cascade-remove-test() as item()*
 {
   let $key := "parent-model-1"
@@ -1058,17 +1081,9 @@ declare %test:case function model-delete-cascade-remove-test() as item()*
   let $before-child-instance := model:find($child-model, map:entry("parent", $key))
   let $result :=
     model:delete($parent-model, $instance)
-(:  let $parent-instance :=
-    setup:invoke-query(
-      function() {
-        model:find($parent-model, map:entry("child", "child-model-1"))
-      }
-    ):)
   return (
     assert:not-empty($instance),
     assert:not-empty($before-child-instance, "Should find child referencing parent parent-model-1"),
-    (:assert:empty($parent-instance, "All parents referencing child-model-1 should be deleted."),:)
-    (:assert:equal($result, fn:true(), "model:delete should have returned true"):)
     assert:not-empty($result, "model:delete should have returned true")
   )
 };

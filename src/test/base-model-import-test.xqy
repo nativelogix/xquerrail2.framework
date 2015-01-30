@@ -11,7 +11,7 @@ declare option xdmp:mapping "false";
 
 declare variable $TEST-DIRECTORY := "/test/program/";
 
-declare variable $TEST-MODEL := 
+declare variable $TEST-MODEL :=
   <model name="program" persistence="directory" label="Program" key="id" keyLabel="id" xmlns="http://xquerrail.com/domain">
     <directory>{$TEST-DIRECTORY}</directory>
     <attribute name="id" identity="true" type="identity" label="Id">
@@ -20,14 +20,14 @@ declare variable $TEST-MODEL :=
     <container name="container1" label="Container #1">
       <element name="field1" type="string" label="Field #1">
         <navigation exportable="true" searchable="true" facetable="false" metadata="true" searchType="range"></navigation>
-      </element> 
+      </element>
       <element name="field2" type="string" label="Field #2">
         <navigation exportable="false" searchable="true" facetable="false" metadata="true" searchType="range"></navigation>
       </element>
     </container>
     <element name="field3" type="string" label="Field #3">
       <navigation exportable="true" searchable="true" facetable="false" metadata="true" searchType="range"></navigation>
-    </element> 
+    </element>
   </model>
 ;
 
@@ -67,18 +67,9 @@ declare %private function create-items() as empty-sequence() {
   return ()
 };
 
-declare %test:setup function setup() as empty-sequence()
-{
-  (
-    xdmp:log("*** SETUP ***")(:,
-    create-items():)
-  )
-};
-
 declare %test:teardown function teardown() as empty-sequence()
 {
   (
-    xdmp:log("*** TEARDOWN ***"),
     xdmp:directory-delete($TEST-DIRECTORY)
    )
 };
@@ -90,7 +81,7 @@ declare %test:ignore function test-import() as item()*
     map:entry("container1.field1", "oscar")
   ))
   let $doc := model:get($TEST-MODEL, $params)
-  return 
+  return
   (
     assert:not-empty($doc),
     assert:equal($doc/*:container1/*:field1/text(), "noah")

@@ -57,7 +57,6 @@ declare %test:case function model-buils-search-options-element-attribute-sort-te
   let $search-options := model:build-search-options($model4, $params)
   let $title-sort-order-asending := $search-options/search:operator/search:state[@name eq model:search-sort-state($tag-title-field, "ascending")]
   let $title-sort-order-descending := $search-options/search:operator/search:state[@name eq model:search-sort-state($tag-title-field, "descending")]
-  let $_ := xdmp:log($search-options)
   return (
     assert:not-empty($model4/domain:element[@name eq 'tag']/domain:attribute[@name eq 'title']),
     assert:not-empty($model4/domain:element[@name eq 'tag']/domain:attribute[@name eq 'title']/domain:navigation[@searchable eq 'true' and @sortable eq 'true']),

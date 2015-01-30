@@ -54,7 +54,6 @@ declare %test:case function test-anonymous-user-by-application() as item()*
 declare %test:case function application-directory-test() as item()*
 {
   let $application := config:default-application()
-  let $_ := xdmp:log(("config:application-directory", config:application-directory($application)))
   return
   assert:equal(config:application-directory($application), "/test/_framework/config-test/app-test")
 };
@@ -76,7 +75,6 @@ declare %test:case function application-script-directory-test() as item()*
 declare %test:case function application-stylesheet-directory-test() as item()*
 {
   let $application := config:default-application()
-  let $_ := xdmp:log($application)
   return
   assert:equal(config:application-stylesheet-directory($application), "/test/_framework/config-test/app-test/resources/css/")
 };
@@ -247,7 +245,6 @@ declare %test:case function test-get-dispatcher() as item()*
 declare %test:case function test-get-domain() as item()*
 {
   let $domain := config:get-domain()
-  let $_ := xdmp:log($domain)
   return
   (
     assert:not-empty($domain),

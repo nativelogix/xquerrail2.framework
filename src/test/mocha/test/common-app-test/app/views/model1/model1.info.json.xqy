@@ -9,7 +9,6 @@ declare variable $response as map:map external;
 
 response:initialize($response),
 let $node := response:body()
-let $_ := xdmp:log(("response:body", $node))
 return
   if($node) then
     <x>{

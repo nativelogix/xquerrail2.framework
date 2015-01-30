@@ -11,7 +11,7 @@ declare option xdmp:mapping "false";
 
 declare variable $TEST-DIRECTORY := "/test/program/";
 
-declare variable $TEST-EXPORTABLE-MODEL := 
+declare variable $TEST-EXPORTABLE-MODEL :=
   <model name="program" persistence="directory" label="Program" key="id" keyLabel="id" xmlns="http://xquerrail.com/domain">
     <directory>{$TEST-DIRECTORY}</directory>
     <attribute name="id" identity="true" type="identity" label="Id">
@@ -19,13 +19,13 @@ declare variable $TEST-EXPORTABLE-MODEL :=
     </attribute>
     <element name="field1" type="string" label="Field #1">
       <navigation exportable="true" searchable="true" facetable="false" metadata="true" searchType="range"></navigation>
-    </element> 
+    </element>
     <element name="field2" type="string" label="Field #2">
       <navigation exportable="false" searchable="true" facetable="false" metadata="true" searchType="range"></navigation>
-    </element> 
+    </element>
     <element name="field3" type="string" label="Field #3">
       <navigation exportable="true" searchable="true" facetable="false" metadata="true" searchType="range"></navigation>
-    </element> 
+    </element>
   </model>
 ;
 declare variable $TEST-DOCUMENTS :=
@@ -48,27 +48,16 @@ declare %private function create-items() as empty-sequence() {
   return ()
 };
 
-declare %test:setup function setup() as empty-sequence()
-{
-  (
-    xdmp:log("*** SETUP ***")(:,
-    create-items():)
-  )
-};
-
 declare %test:teardown function teardown() as empty-sequence()
 {
-  (
-    xdmp:log("*** TEARDOWN ***"),
-    xdmp:directory-delete($TEST-DIRECTORY)
-   )
+  xdmp:directory-delete($TEST-DIRECTORY)
 };
 
 declare %test:ignore function test-export-all-fields() as item()*
 {
   let $params := map:new()
   let $table := model:export($TEST-EXPORTABLE-MODEL, $params)
-  return 
+  return
   (
     assert:not-empty($table),
     assert:true(fn:exists($table/header/mdm:program[1]/mdm:field1)),
@@ -85,8 +74,8 @@ declare %test:ignore function test-export-with-fields-filter() as item()*
 {
   let $params := map:new()
   let $table := model:export($TEST-EXPORTABLE-MODEL, $params, ("field1"))
-  
-  return 
+
+  return
   (
     assert:not-empty($table),
     assert:true(fn:exists($table/header/mdm:program[1]/mdm:field1)),
@@ -105,8 +94,8 @@ declare %test:ignore function test-export-with-convert-attributes-true() as item
     map:entry("_convert-attributes", "true")
   ))
   let $table := model:export($TEST-EXPORTABLE-MODEL, $params)
-  
-  return 
+
+  return
   (
     assert:not-empty($table),
     assert:true(fn:exists($table/header/mdm:program[1]/mdm:id)),
@@ -127,8 +116,8 @@ declare %test:ignore function test-export-with-convert-attributes-false() as ite
     map:entry("_convert-attributes", "false")
   ))
   let $table := model:export($TEST-EXPORTABLE-MODEL, $params)
-  
-  return 
+
+  return
   (
     assert:not-empty($table),
     assert:true(fn:exists($table/header/mdm:program[1]/mdm:id)),

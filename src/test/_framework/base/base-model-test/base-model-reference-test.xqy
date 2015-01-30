@@ -185,11 +185,8 @@ declare %test:case function model-update-two-reference-test() {
   )
   let $model2-instance-map := model:convert-to-map($model2, $model2-instance)
   let $_ := map:put($model2-instance-map, "model1", map:get($model2-instance-map, "model1")[1])
-  let $_ := xdmp:log(("model:get with REF", map:get($model2-instance-map, "model1"), model:get($model1, map:entry("uuid", map:get($model2-instance-map, "model1")))))
-  let $_ := xdmp:log(('model:get-id-from-params($model1, map:entry("uuid", map:get($model2-instance-map, "model1")))', model:get-id-from-params($model1, map:entry("uuid", map:get($model2-instance-map, "model1")))))
   let $model2-instance := model:update($model2, $model2-instance-map)
   let $reference-value := domain:get-field-value($reference-field, $model2-instance)
-  let $_ := xdmp:log(("$model2-instance", $model2-instance))
   return (
     assert:not-empty($model2-instance),
     assert:not-empty($reference-value),
@@ -208,22 +205,16 @@ declare %test:case function build-reference-test() {
   let $reference-field := domain:get-model-field($model2, "model1")
   let $model1-reference := model:get-model-references($reference-field, $identity-value)
   (:model:reference($model1, $itentity-map):)
-(:  let $_ := xdmp:log(("$model2", $model2)):)
-(:  let $_ := xdmp:log(("$identity-value", $identity-value)):)
-(:  let $_ := xdmp:log(("domain:get-model-fields", domain:get-model-fields:)
 (:  let $model2-instance := model:find($model2, map:new((map:entry("id", "model2-id")))):)
   let $map := map:new((
       map:entry("id", "model2-id"),
       map:entry("name", "model2-name"),
       map:entry("model1", $model1-reference)
     ))
-(:  let $_ := xdmp:log(("$map", $map)):)
   let $model2-instance := model:create(
     $model2,
     $map,
     $TEST-COLLECTION)
-(:  let $_ := xdmp:log(("model:reference", model:reference($model1, $itentity-map))):)
-(:  let $_ := xdmp:log(("model:get($model1, $identity-value)", model:get($model1, map:new((map:entry("uuid", $identity-value)))))):)
   return assert:not-empty($model2-instance)
 };
 
@@ -246,7 +237,6 @@ declare %test:case function build-reference-different-name-test() {
   let $model1-key-label-value := domain:get-field-value(domain:get-model-keylabel-field($model1), $model1-instance)
   (:~ TODO: to be fixed ~:)
   let $model1-key-label-value := "model1-id"
-  let $_ := xdmp:log(("$model1-key-label-value", $model1-key-label-value))
   return
   (
     assert:not-empty($model3-instance/*:dummyModel, "model3 should have dummyModel element name"),
@@ -263,7 +253,7 @@ declare %test:case function reference-function-test() {
   let $identity-value := xs:string(domain:get-field-value($identity-field, $model1-instance))
   let $reference-field := domain:get-model-field($model3, $reference-field-name)
   let $model1-reference := model:get-model-references($reference-field, $identity-value)
-  return assert:equal(fn:local-name($model1-reference), "model1")
+  return assert:not-empty($model1-reference, "model1-reference should not be empty")
 };
 
 declare %test:case function application-reference-from-map-test() {
@@ -303,5 +293,36 @@ declare %test:case function application-reference-from-xml-test() {
     assert:equal(domain:get-field-value($reference-field, $model9-instance)/@ref-type/fn:string(), "application"),
     assert:equal(domain:get-field-value($reference-field, $model9-instance)/@ref/fn:string(), "type"),
     assert:equal(domain:get-field-value($reference-field, $model9-instance)/@ref-id/fn:string(), "country")
+  )
+};
+
+declare %test:case function model-reference-from-nested-xml-test() {
+  let $model1 := domain:get-model("model1")
+  let $model2 := domain:get-model("model2")
+  let $instance1 :=
+    model:new(
+      $model1,
+      map:new((
+        map:entry("id", "model1-id-" || setup:random()),
+        map:entry("name", "model1-name")
+      ))
+    )
+  let $instance2 :=
+    model:new(
+      $model2,
+      map:new((
+        map:entry("id", "model2-id-" || setup:random()),
+        map:entry("name", "model2-name"),
+        map:entry("model1", $instance1)
+      ))
+    )
+  let $reference-field := domain:get-model-field($model2, "model1")
+  let $reference-value := domain:get-field-value($reference-field, $instance2)
+  return
+  (
+    assert:not-empty($reference-value, "model2/model1 reference must exist"),
+    assert:equal($reference-value/@ref-type/fn:string(), "model"),
+    assert:equal($reference-value/@ref/fn:string(), "model1"),
+    assert:equal($reference-value/@ref-id/fn:string(), domain:get-field-value(domain:get-model-identity-field($model1), $instance1))
   )
 };

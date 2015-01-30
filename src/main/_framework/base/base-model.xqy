@@ -2251,7 +2251,9 @@ declare function model:get-function-cache(
     $reference as element(domain:element),
     $params as item()*
  ) as element()* {
-  let $tokens := fn:tokenize($reference/@reference, ":")
+  let $name := fn:data($reference/@name)
+  let $target := fn:data($reference/@reference)
+  let $tokens := fn:tokenize($target, ":")
   let $type := $tokens[2]
   let $reference-function-name := $tokens[3]
   let $function-arity := 3
@@ -2259,16 +2261,10 @@ declare function model:get-function-cache(
   return
     if (fn:exists($funct)) then
       let $model := domain:get-domain-model($type)
-      (: TODO: Temporary fix or maybe not :)
-      let $node-name := xs:string($reference/@name)
-      let $identity-field-name := domain:get-model-identity-field-name($model)
       for $param in $params
-      let $map := map:new((
-          map:entry($identity-field-name, $param)
-        ))
-      return $funct($reference, $model, $map)
+      return $funct($reference, $model, $param)
     else
-      fn:error(xs:QName("ERROR"), "No Reference function available.")
+      fn:error(xs:QName("ERROR"), "No Reference function '" || $target || "' available for field '" || $name || "'.")
  };
 
 (:~
@@ -2304,15 +2300,22 @@ declare function model:reference(
 ) as element()? {
   let $keyLabel := fn:data($model/@keyLabel)
   let $key := fn:data($model/@key)
-  let $modelReference := model:get($model,$params)
+  let $modelReference :=
+    typeswitch ($params)
+      case element() return
+        if (fn:string($params/@xsi:type) eq fn:string($model/@name)) then
+          $params
+        else
+          model:get($model, $params/node())
+      default return model:get($model, $params)
   let $name := fn:data($model/@name)
   return
     if($modelReference) then
-      element {domain:get-field-qname($model)} {
+      element {domain:get-field-qname($context)} {
          attribute ref-type { "model" },
-         attribute ref-id   { fn:data($modelReference/(@*|node())[fn:local-name(.) = $key])},
+         attribute ref-id   { domain:get-field-value(domain:get-model-identity-field($model), $modelReference) },
          attribute ref      { $name },
-         fn:data($modelReference/(@*|node())[fn:local-name(.) = $keyLabel])
+         domain:get-field-value(domain:get-model-keylabel-field($model), $modelReference)
       }
     else ()(: fn:error(xs:QName("INVALID-REFERENCE-ERROR"),"Invalid Reference", fn:data($model/@name)):)
 };

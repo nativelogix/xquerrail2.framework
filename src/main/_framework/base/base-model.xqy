@@ -1680,7 +1680,7 @@ declare function model:list(
         if($sort ne "" and fn:exists($sort))
         then fn:concat("(for $__context__ in ", $list, " order by ",$sort, " return $__context__)[",$start, " to ",$end,"]")
         else fn:concat("(", $list, ")[$start to $end]")
-    let $results :=  xdmp:with-namespaces(domain:declared-namespaces($model), xdmp:value($resultsExpr))
+    let $results := xdmp:with-namespaces(domain:declared-namespaces($model), xdmp:value($resultsExpr))
     let $results :=
       if($persistence = "directory")
       then

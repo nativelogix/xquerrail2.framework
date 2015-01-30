@@ -67,7 +67,6 @@ declare %test:case function no-option-model-helper-build-json-test() {
   let $model1 := domain:get-model("model1")
   let $instance := model:new($model1, map:new((map:entry("id", "model1-id"))))
   let $instance-to-json := model-helper:build-json($model1, $instance)
-  let $_ := xdmp:log(("simple-model-helper-build-json-test", "$instance-to-json", $instance-to-json, xdmp:to-json($instance-to-json)))
   return (
     assert:not-empty($instance),
     assert:not-empty($instance-to-json),
@@ -83,7 +82,6 @@ declare %test:case function include-root-true-model-helper-build-json-test() {
   let $model1 := domain:get-model("model1")
   let $instance := model:new($model1, map:new((map:entry("id", "model1-id"))))
   let $instance-to-json := model-helper:build-json($model1, $instance, fn:true())
-  let $_ := xdmp:log(("simple-model-helper-build-json-test", "$instance-to-json", $instance-to-json, xdmp:to-json($instance-to-json)))
   return (
     assert:not-empty($instance),
     assert:not-empty($instance-to-json),
@@ -96,7 +94,6 @@ declare %test:case function option-empty-string-true-model-helper-build-json-tes
   let $instance := model:new($model1, map:new((map:entry("id", "model1-id"))))
   let $options := <json-options:options><json-options:empty-string>true</json-options:empty-string></json-options:options>
   let $instance-to-json := model-helper:build-json($model1, $instance, fn:false(), $options)
-  let $_ := xdmp:log(("empty-string-field-model-helper-build-json-test", "$instance-to-json", $instance-to-json, xdmp:to-json($instance-to-json)))
   return (
     assert:not-empty($instance),
     assert:not-empty(map:get($instance-to-json, "description"))

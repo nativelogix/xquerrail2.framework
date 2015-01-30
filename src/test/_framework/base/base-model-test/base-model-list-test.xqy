@@ -94,7 +94,7 @@ declare variable $INSTANCES15 := (
   </model15>
 );
 
-(:declare %test:setup function setup() {
+declare %test:setup function setup() {
   let $_ := setup:setup($TEST-APPLICATION)
   let $_ := setup:create-instances("model1", $INSTANCES1, $TEST-COLLECTION)
   let $_ := setup:create-instances("model7", $INSTANCES7, $TEST-COLLECTION)
@@ -103,8 +103,8 @@ declare variable $INSTANCES15 := (
   return
     ()
 };
-:)
-(:declare %test:teardown function teardown() {
+
+declare %test:teardown function teardown() {
   xdmp:invoke-function(
     function() {
       xdmp:collection-delete($TEST-COLLECTION)
@@ -115,7 +115,7 @@ declare variable $INSTANCES15 := (
     </options>
   )
 };
-:)
+
 declare %test:case function model-list-totalrecords-test() as item()*
 {
   let $model1 := domain:get-model("model1")
@@ -216,7 +216,6 @@ declare %test:case function model-list-sorting-descending-test() as item()*
       map:entry("sord", "descending")
     ))
   )
-  let $_ := xdmp:log(($instances))
   return (
     assert:not-empty($instances),
     assert:equal($instances/model1:model1[1]/model1:id, $INSTANCES1[3]/model1:id),
@@ -337,7 +336,6 @@ declare %test:case function model-list-sorting-descending-in-container-test() as
       map:entry("sord", "descending")
     ))
   )
-  let $_ := xdmp:log($instances)
   return (
     assert:not-empty($instances),
     assert:equal($instances/app-test:model15[1]/app-test:groups/app-test:group/@seq, $INSTANCES15[3]/app-test:groups/app-test:group/@seq),

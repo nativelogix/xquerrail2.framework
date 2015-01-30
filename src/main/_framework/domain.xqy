@@ -798,7 +798,7 @@ declare %private function domain:extend-model(
 ) as element(domain:model) {
   if($model/@extends) then
     let $base-model-name := fn:string($model/@extends)
-    let $base-model := domain:find-base-model($model)
+    let $base-model := domain:extend-model($application-name,$domain, domain:find-base-model($model))
     return
       if(fn:not($base-model)) then
         fn:error(xs:QName("NO-EXTENDS-MODEL"),"Missing Extension Base Model", $base-model-name)

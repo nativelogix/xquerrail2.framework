@@ -52,4 +52,15 @@
     <permission profile="perm1"/>
   </model>
 
+  <model name="component" persistence="abstract" key="id" keyLabel="id">
+    <attribute name="id" type="id"/>
+    <element name="label" type="string" label="Label"/>
+    <element name="title" type="string" label="Title"/>
+  </model>
+
+  <model name="floating-component" persistence="abstract" extends="component">
+    <element name="caption" type="string"/>
+    <element name="position" type="string"/>
+  </model>
+
 </domain>

@@ -121,6 +121,21 @@ declare %test:case function model-inheritance-two-level-test() as item()* {
   )
 };
 
+declare %test:case function extended-model-two-level-test() as item()* {
+  let $model := domain:get-model("floating-abstract-model")
+  let $field-id := domain:get-model-field($model, "id")
+  let $field-name := domain:get-model-field($model, "name")
+  let $field-label := domain:get-model-field($model, "label")
+  let $field-caption := domain:get-model-field($model, "caption")
+  return (
+    assert:not-empty($model),
+    assert:not-empty($field-id, "floating-abstract-model model must contains id field"),
+    assert:not-empty($field-name, "floating-abstract-model model must contains name field"),
+    assert:not-empty($field-label, "floating-abstract-model model must contains label field"),
+    assert:not-empty($field-caption, "floating-abstract-model model must contains caption field")
+  )
+};
+
 declare %test:case function model-inheritance-default-value-test() as item()* {
   let $model5 := domain:get-model("model5")
   let $field-type := domain:get-model-field($model5, "type")

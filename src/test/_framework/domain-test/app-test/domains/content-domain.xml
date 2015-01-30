@@ -60,4 +60,8 @@
     <element name="name" type="string" label="Name"/>
   </model>
 
+  <model name="floating-abstract-model" extends="floating-component" persistence="abstract">
+    <element name="name" type="string" label="Name"/>
+  </model>
+
 </domain>

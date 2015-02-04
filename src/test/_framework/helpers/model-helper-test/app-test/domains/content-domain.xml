@@ -8,6 +8,9 @@
     <element name="id" type="string" label="Id"/>
     <element name="name" type="string" label="Name"/>
     <element name="description" type="string" label="Description"/>
+    <element name="flag" type="boolean" label="Flag"/>
+    <element name="date" type="date" label="Date"/>
+    <element name="number" type="integer" label="Number"/>
     <element name="tags" type="string" label="Tags" occurrence="*"/>
     <container name="keywords" label="Keywords">
       <element name="keyword" type="string" label="Keyword" occurrence="*"/>

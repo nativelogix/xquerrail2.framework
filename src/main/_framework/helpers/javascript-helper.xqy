@@ -112,16 +112,36 @@ declare function helper:entry(
 ) {
   let $entry := json:object()
   let $value :=
-    if($value castable as xs:string and $value cast as xs:string eq "true") then
-      fn:true()
-    else if($value castable as xs:string and $value cast as xs:string eq "false") then
-      fn:false()
-    else if($value castable as xs:integer) then
-      xs:integer($value)
-    else if($value castable as xs:string) then
-      xs:string($value)
-    else
-      $value
+    typeswitch ($value)
+      case xs:boolean
+        return xs:boolean($value)
+      case xs:string
+      return
+        if($value cast as xs:string eq "true") then
+          fn:true()
+        else if($value cast as xs:string eq "false") then
+          fn:false()
+        else if ($value castable as xs:date) then
+          xs:date($value)
+        else if ($value castable as xs:dateTime) then
+          xs:dateTime($value)
+        else
+          xs:string($value)
+      case xs:integer
+        return xs:integer($value)
+      (: Try to guess the type based on the value :)
+      default
+        return
+          if($value castable as xs:string and $value cast as xs:string eq "true") then
+            fn:true()
+          else if($value castable as xs:string and $value cast as xs:string eq "false") then
+            fn:false()
+          else if($value castable as xs:integer) then
+            xs:integer($value)
+          else if ($value castable as xs:string) then
+            xs:string($value)
+          else
+            $value
   return (
     map:put($entry,$key,$value),
     $entry

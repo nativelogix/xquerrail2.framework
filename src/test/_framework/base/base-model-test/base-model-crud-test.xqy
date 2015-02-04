@@ -43,6 +43,26 @@ declare variable $INSTANCES4 := (
     <id>crud-model4-id-delete</id>
     <name>crud-model4-name-delete</name>
   </model4>
+  ,
+  <model4 xmlns="http://marklogic.com/model/model4">
+    <id>partial-update-model4-id</id>
+    <name>partial-update-model4-name</name>
+  </model4>
+  ,
+  <model4 xmlns="http://marklogic.com/model/model4">
+    <id>partial-update-empty-field-map-model4-id</id>
+    <name>partial-update-empty-field-model4-name</name>
+  </model4>
+  ,
+  <model4 xmlns="http://marklogic.com/model/model4">
+    <id>partial-update-empty-field-xml-model4-id</id>
+    <name>partial-update-empty-field-model4-name</name>
+  </model4>
+  ,
+  <model4 xmlns="http://marklogic.com/model/model4">
+    <id>partial-update-empty-field-json-model4-id</id>
+    <name>partial-update-empty-field-model4-name</name>
+  </model4>
 )
 ;
 
@@ -58,6 +78,20 @@ declare variable $INSTANCES5 := (
 </model5>
 );
 
+declare variable $INSTANCES6 := (
+<model6 xmlns="http://xquerrail.com/app-test" id="partial-update-empty-attribute-xml-model6-id" score="1">
+  <name>model6-name-1</name>
+</model6>
+,
+<model6 xmlns="http://xquerrail.com/app-test" id="partial-update-empty-attribute-map-model6-id" score="2">
+  <name>model6-name-2</name>
+</model6>
+,
+<model6 xmlns="http://xquerrail.com/app-test" id="partial-update-empty-attribute-json-model6-id" score="3">
+  <name>model6-name-3</name>
+</model6>
+);
+
 declare variable $INSTANCE11 :=
 <model11 xmlns="http://xquerrail.com/app-test">
   <id>model11-id</id>
@@ -65,6 +99,29 @@ declare variable $INSTANCE11 :=
   <child childId="child-id-model11" />
 </model11>
 ;
+
+declare variable $INSTANCES15 := (
+<model15 xmlns="http://xquerrail.com/app-test">
+  <id>partial-update-empty-array-xml-model15-id</id>
+  <groups>
+    <group>model15-group-1</group>
+  </groups>
+</model15>
+,
+<model15 xmlns="http://xquerrail.com/app-test">
+  <id>partial-update-empty-array-map-model15-id</id>
+  <groups>
+    <group>model15-group-1</group>
+  </groups>
+</model15>
+,
+<model15 xmlns="http://xquerrail.com/app-test">
+  <id>partial-update-empty-array-json-model15-id</id>
+  <groups>
+    <group>model15-group-1</group>
+  </groups>
+</model15>
+);
 
 declare variable $INSTANCES19 := (
 <model19 xmlns="http://xquerrail.com/app-test">
@@ -131,6 +188,22 @@ declare %test:setup function setup() {
     setup:invoke(
       function() {
         model:create($model5, $instance, $TEST-COLLECTION)
+      }
+    )
+  )
+  let $model6 := domain:get-model("model6")
+  let $_ := for $instance in $INSTANCES6 return (
+    setup:invoke(
+      function() {
+        model:create($model6, $instance, $TEST-COLLECTION)
+      }
+    )
+  )
+  let $model15 := domain:get-model("model15")
+  let $_ := for $instance in $INSTANCES15 return (
+    setup:invoke(
+      function() {
+        model:create($model15, $instance, $TEST-COLLECTION)
       }
     )
   )
@@ -374,6 +447,233 @@ declare %test:case function model-document-update-test() as item()*
     assert:equal(fn:count($find), 1),
     assert:not-empty($update1),
     assert:equal("new-name", xs:string(domain:get-field-value($name-field, $update1)))
+  )
+};
+
+declare %test:case function model-directory-partial-update-test() as item()*
+{
+  let $model4 := domain:get-model("model4")
+  let $instance4 := model:find(
+    $model4,
+    map:entry("id", "partial-update-model4-id")
+  )
+  let $name := setup:random("model4-name")
+  let $instance4 := setup:eval(
+    function() {
+      model:update(
+        $model4,
+        map:new((
+          map:entry("id", "partial-update-model4-id"),
+          map:entry("name", $name)
+        )),
+        (),
+        fn:true()
+      )
+    }
+  )
+  let $value-id := domain:get-field-value(domain:get-model-field($model4, "id"), $instance4)
+  let $value-name := domain:get-field-value(domain:get-model-field($model4, "name"), $instance4)
+  return (
+    assert:not-empty($instance4),
+    assert:equal($name, $value-name, "name must equal " || $name)
+  )
+};
+
+declare %test:case function model-partial-update-map-empty-field-test() as item()*
+{
+  let $model4 := domain:get-model("model4")
+  let $instance4 := setup:eval(
+    function() {
+      model:update(
+        $model4,
+        map:new((
+          map:entry("id", "partial-update-empty-field-map-model4-id"),
+          map:entry("name", "")
+        )),
+        (),
+        fn:true()
+      )
+    }
+  )
+  let $value-name := domain:get-field-value(domain:get-model-field($model4, "name"), $instance4)
+  return (
+    assert:not-empty($instance4),
+    assert:empty($value-name, "name must be empty")
+  )
+};
+
+declare %test:case function model-partial-update-xml-empty-field-test() as item()*
+{
+  let $model4 := domain:get-model("model4")
+  let $instance4 := setup:eval(
+    function() {
+      model:update(
+        $model4,
+        <model4 xmlns="http://marklogic.com/model/model4">
+          <id>partial-update-empty-field-xml-model4-id</id>
+          <name></name>
+        </model4>,
+        (),
+        fn:true()
+      )
+    }
+  )
+  let $value-name := domain:get-field-value(domain:get-model-field($model4, "name"), $instance4)
+  return (
+    assert:not-empty($instance4),
+    assert:empty($value-name, "name must be empty")
+  )
+};
+
+declare %test:case function model-partial-update-json-empty-field-test() as item()*
+{
+  let $model4 := domain:get-model("model4")
+  let $instance4 := setup:eval(
+    function() {
+      model:update(
+        $model4,
+        xdmp:from-json('{"id": "partial-update-empty-field-json-model4-id", "name": ""}'),
+        (),
+        fn:true()
+      )
+    }
+  )
+  let $value-name := domain:get-field-value(domain:get-model-field($model4, "name"), $instance4)
+  return (
+    assert:not-empty($instance4),
+    assert:empty($value-name, "name must be empty")
+  )
+};
+
+declare %test:case function model-partial-update-map-empty-attribute-test() as item()*
+{
+  let $model6 := domain:get-model("model6")
+  let $instance6 := setup:eval(
+    function() {
+      model:update(
+        $model6,
+        map:new((
+          map:entry("id", "partial-update-empty-attribute-map-model6-id"),
+          map:entry("score", "")
+        )),
+        (),
+        fn:true()
+      )
+    }
+  )
+  let $value-score := domain:get-field-value(domain:get-model-field($model6, "score"), $instance6)
+  return (
+    assert:not-empty($instance6),
+    assert:equal(xs:string($value-score), "", "score must be empty string")
+  )
+};
+
+declare %test:case function model-partial-update-xml-empty-attribute-test() as item()*
+{
+  let $model6 := domain:get-model("model6")
+  let $instance6 := setup:eval(
+    function() {
+      model:update(
+        $model6,
+        <model6 xmlns="http://xquerrail.com/app-test" id="partial-update-empty-attribute-xml-model6-id" score="">
+        </model6>,
+        (),
+        fn:true()
+      )
+    }
+  )
+  let $value-score := domain:get-field-value(domain:get-model-field($model6, "score"), $instance6)
+  return (
+    assert:not-empty($instance6),
+    assert:equal(xs:string($value-score), "", "score must be empty string")
+  )
+};
+
+declare %test:case function model-partial-update-json-empty-attribute-test() as item()*
+{
+  let $model6 := domain:get-model("model6")
+  let $instance6 := setup:eval(
+    function() {
+      model:update(
+        $model6,
+        <model6 xmlns="http://xquerrail.com/app-test" id="partial-update-empty-attribute-json-model6-id" score="">
+        </model6>,
+        (),
+        fn:true()
+      )
+    }
+  )
+  let $value-score := domain:get-field-value(domain:get-model-field($model6, "score"), $instance6)
+  return (
+    assert:not-empty($instance6),
+    assert:equal(xs:string($value-score), "", "score must be empty string")
+  )
+};
+
+(:declare %test:case function model-partial-update-map-empty-array-test() as item()*
+{
+  let $model10 := domain:get-model("model10")
+  let $instance4 := setup:eval(
+    function() {
+      model:update(
+        $model10,
+        map:new((
+          map:entry("id", "partial-update-empty-array-map-model10-id"),
+          map:entry("name", "")
+        )),
+        (),
+        fn:true()
+      )
+    }
+  )
+  let $value-name := domain:get-field-value(domain:get-model-field($model10, "name"), $instance4)
+  return (
+    assert:not-empty($instance4),
+    assert:empty($value-name, "name must be empty")
+  )
+};
+:)
+declare %test:case function model-partial-update-xml-empty-array-test() as item()*
+{
+  let $model15 := domain:get-model("model15")
+  let $instance15 := setup:eval(
+    function() {
+      model:update(
+        $model15,
+        <model15 xmlns="http://xquerrail.com/app-test">
+          <id>partial-update-empty-array-xml-model15-id</id>
+          <groups><group/></groups>
+        </model15>,
+        (),
+        fn:true()
+      )
+    }
+  )
+  let $value-group := domain:get-field-value(domain:get-model-field($model15, "group"), $instance15)
+  return (
+    assert:not-empty($instance15),
+    assert:empty($value-group, "group must be empty")
+  )
+};
+
+declare %test:case function model-partial-update-json-empty-array-test() as item()*
+{
+  let $model15 := domain:get-model("model15")
+  let $_ := xdmp:log($model15)
+  let $instance15 := setup:eval(
+    function() {
+      model:update(
+        $model15,
+        xdmp:from-json('{"id": "partial-update-empty-array-json-model15-id", "groups": {"group": []}}'),
+        (),
+        fn:true()
+      )
+    }
+  )
+  let $value-group := domain:get-field-value(domain:get-model-field($model15, "group"), $instance15)
+  return (
+    assert:not-empty($instance15),
+    assert:empty($value-group, "name must be empty")
   )
 };
 

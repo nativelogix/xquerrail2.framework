@@ -60,6 +60,10 @@ declare function random() as xs:string {
   fn:string(xdmp:random(1000000))
 };
 
+declare function random($name as xs:string) as xs:string {
+  fn:concat($name, "-", random())
+};
+
 declare function invoke($fn as function(*)) {
   xdmp:invoke-function(
     function() {

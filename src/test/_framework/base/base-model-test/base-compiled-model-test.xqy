@@ -186,3 +186,29 @@ declare %test:case function model11-facetable-should-not-inherit-test() as item(
   )
 };
 
+declare %test:case function model20-base-with-namespace-no-override-ns-test() as item()*
+{
+  let $model20 := domain:get-model("model20")
+  let $_ := xdmp:log(("$model20", $model20))
+  let $uuid-field := domain:get-model-field($model20, "uuid")
+  let $name-field := domain:get-model-field($model20, "name")
+  return (
+    assert:not-empty($model20),
+    assert:equal(xs:string($uuid-field/@namespace), "http://marklogic.com/model/base", "uuid@namespace must be 'http://marklogic.com/model/base'"),
+    assert:equal(xs:string($name-field/@namespace), "http://marklogic.com/model/model20", "uuid@namespace must be 'http://marklogic.com/model/model20'")
+  )
+};
+
+declare %test:case function model21-base-with-namespace-with-override-ns-test() as item()*
+{
+  let $model21 := domain:get-model("model21")
+  let $_ := xdmp:log(("$model21", $model21))
+  let $uuid-field := domain:get-model-field($model21, "uuid")
+  let $name-field := domain:get-model-field($model21, "name")
+  return (
+    assert:not-empty($model21),
+    assert:equal(xs:string($uuid-field/@namespace), "http://marklogic.com/model/model21", "uuid@namespace must be 'http://marklogic.com/model/model21'"),
+    assert:equal(xs:string($name-field/@namespace), "http://marklogic.com/model/model21", "uuid@namespace must be 'http://marklogic.com/model/model21'")
+  )
+};
+

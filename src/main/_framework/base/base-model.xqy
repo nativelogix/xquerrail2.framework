@@ -866,7 +866,6 @@ declare function model:recursive-update(
   model:recursive-build( $context, $current, $updates,$partial)
 };
 
-
 (:~
  :
  :)
@@ -925,60 +924,14 @@ declare function model:recursive-build(
              }
       (: Build out any domain Elements :)
       case element(domain:element) return
-        (:let $attributes := $context/domain:attribute ! (
-          if (domain:field-is-multivalue($context)) then
-            ()
-          else
-            model:recursive-build(.,$current, $updates,$partial)
-        ):)
-        (:let $default-value  := (fn:data($context/@default),"")[1]:)
-        (:let $occurrence := (fn:data($context/@occurrence),"?")[1]:)
-        (:return:)
-          (:Process Complex Types:)
-          switch($type)
-            case "reference"      return model:build-reference($context, $current, $updates, $partial)
-            case "binary"         return model:build-binary($context,$current,$updates,$partial)
-            case "schema-element" return model:build-schema-element($context,$current,$updates,$partial)
-            case "triple"         return model:build-triple($context,$current-value,$updates,$partial)
-            case "langString"     return model:build-langString($context,$current-value,$updates,$partial)
-            default               return model:build-element($context, $current, $updates, $partial)
-            (:default return
-              if($type = ($domain:SIMPLE-TYPES,$domain:COMPLEX-TYPES)) then
-                if(fn:exists($update-value)) then
-                  let $current-value := domain:get-field-value-node($context,$current)
-                   (:let $default-value := fn:data($context/@default):)
-                  let $update-value := domain:get-field-value-node($context, $updates)
-                  for $value at $position in $update-value
-                    let $values := model:build-value($context, $value, $current-value)
-                    let $attributes := $context/domain:attribute ! (
-                      model:build-attribute(., $current-value, $update-value[$position], $partial, fn:true())
-                    )
-                    let $_ := xdmp:log(("$context", $context, "$values", $values, "$occurrence", $occurrence))
-                    return
-                      if (fn:exists($attributes) or fn:exists($values) or $occurrence ne "?") then
-                        element {domain:get-field-qname($context)} {
-                          $attributes,
-                          $values
-                          (:model:build-value($context,$value, $current-value):)
-                        }
-                      else
-                        ()
-                else if($partial eq fn:true() and fn:exists($current-value)) then
-                  for $value in $current-value
-                  return
-                    element {domain:get-field-qname($context)}{
-                      $attributes,
-                      model:build-value($context,$value, $current-value)
-                    }
-                else
-                  element {domain:get-field-qname($context)} {
-                    $attributes,
-                    model:build-value($context, $default-value, $current-value)
-                  }
-              else if(domain:get-base-type($context) eq "instance") then
-                model:build-instance($context,$current,$updates,$partial)
-              else fn:error(xs:QName("UNKNOWN-TYPE"),"The type of " || $type || " is unknown ",$context):)
-
+        (:Process Complex Types:)
+        switch($type)
+          case "reference"      return model:build-reference($context, $current, $updates, $partial)
+          case "binary"         return model:build-binary($context,$current,$updates,$partial)
+          case "schema-element" return model:build-schema-element($context,$current,$updates,$partial)
+          case "triple"         return model:build-triple($context,$current-value,$updates,$partial)
+          case "langString"     return model:build-langString($context,$current-value,$updates,$partial)
+          default               return model:build-element($context, $current, $updates, $partial)
       (: Build out any domain Attributes :)
       case element(domain:attribute) return fn:error(xs:QName("BUILD-ATTRIBUTE-ERR"),"Call directly to build-attribute")
       (:model:build-attribute($context,$current,$updates,$partial, fn:false()):)
@@ -1009,6 +962,8 @@ declare function model:build-element(
   let $occurrence := (fn:data($context/@occurrence),"?")[1]
   let $default-value  := fn:data($context/@default)
   let $current-value := domain:get-field-value($context,$current)
+  let $update-field-exists := domain:field-value-exists($context, $updates)
+  (:let $update-field-value-node := domain:get-field-value-node($context, $updates):)
   let $update-value := domain:get-field-value($context, $updates)
   let $attributes :=
     for $attribute in $context/domain:attribute
@@ -1016,10 +971,8 @@ declare function model:build-element(
       if (domain:field-is-multivalue($context)) then
         ()
       else
-        (:model:recursive-build(.,$current, $updates,$partial):)
         model:build-attribute($attribute,$current, $updates,$partial,fn:false())
     )
-
   return
   if($type = ($domain:SIMPLE-TYPES,$domain:COMPLEX-TYPES)) then
     if(fn:exists($update-value)) then
@@ -1027,18 +980,6 @@ declare function model:build-element(
       let $update-value := domain:get-field-value-node($context, $updates)
       for $value at $position in $update-value
         let $values := model:build-value($context, $value, $current-value)
-(:        let $attributes := $context/domain:attribute ! (
-          model:build-attribute(., $current-value, $update-value[$position], $partial, fn:true())
-        )
-        return
-          if (fn:exists($attributes) or fn:exists($values) or fn:empty(fn:index-of(("?", "*"), $occurrence))) then
-            element {domain:get-field-qname($context)} {
-              $attributes,
-              $values
-            }
-          else
-            ()
-:)
         let $attributes :=
           if(domain:field-is-multivalue($context)) then
             for $attribute in $context/domain:attribute
@@ -1052,7 +993,10 @@ declare function model:build-element(
             }
           else
             ()
-
+    else if($partial and $update-field-exists) then
+        element {domain:get-field-qname($context)}{
+          $attributes
+        }
     else if($partial and fn:exists($current-value)) then
       for $value in $current-value
       return
@@ -1606,7 +1550,8 @@ declare function model:list(
         let $predicate :=
           cts:element-query(fn:QName($namespace,$name),
             cts:and-query((
-              domain:get-base-query($model),
+              domain:model-root-query($model),
+              (:domain:get-base-query($model),:)
               $additional-query,
               $search,
               $dir,
@@ -2140,7 +2085,7 @@ declare function model:search-sort-state(
 declare function model:build-search-query(
   $model as element(domain:model),
   $params as item()
-) as element()? {
+) {
   model:build-search-query($model, $params, ())
 };
 
@@ -2148,7 +2093,7 @@ declare function model:build-search-query(
   $model as element(domain:model),
   $params as item(),
   $output as xs:string?
-) as element()? {
+) {
   let $output :=
     if (fn:empty($output)) then
       "cts:query"
@@ -2159,7 +2104,12 @@ declare function model:build-search-query(
   let $additional-query := domain:get-param-value($params,"_query")
   return
     if($additional-query castable as xs:string) then
-      search:parse($additional-query, model:build-search-options($model, $params), $output)
+      let $query := search:parse($additional-query, model:build-search-options($model, $params), $output)
+      return
+        if ($output eq "cts:query") then
+          cts:query($query)
+        else
+          $query
     else
       $additional-query
 };

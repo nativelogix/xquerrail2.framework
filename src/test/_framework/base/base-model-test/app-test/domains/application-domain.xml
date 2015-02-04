@@ -6,11 +6,14 @@
   <content-namespace prefix="app-test" namespace-uri="http://xquerrail.com/app-test"/>
   <application-namespace prefix="xquerrail" namespace-uri="http://xquerrail.com/app-test"/>
   <default-collation>http://marklogic.com/collation/codepoint</default-collation>
+  <declare-namespace prefix="base" namespace-uri="http://marklogic.com/model/base"/>
   <declare-namespace prefix="model1" namespace-uri="http://marklogic.com/model/model1"/>
   <declare-namespace prefix="model2" namespace-uri="http://marklogic.com/model/model2"/>
   <declare-namespace prefix="model3" namespace-uri="http://marklogic.com/model/model3"/>
   <declare-namespace prefix="model4" namespace-uri="http://marklogic.com/model/model4"/>
   <declare-namespace prefix="model5" namespace-uri="http://marklogic.com/model/model5"/>
+  <declare-namespace prefix="model20" namespace-uri="http://marklogic.com/model/model20"/>
+  <declare-namespace prefix="model21" namespace-uri="http://marklogic.com/model/model21"/>
   <import id="content" resource="content-domain.xml"/>
   <import id="lookups" resource="lookup-domain.xml"/>
   <!--Implement a base class to inherit metadata-->
@@ -27,5 +30,14 @@
     <element name="created" type="create-timestamp" label="Created Date">
       <ui type="hidden" colWidth="0"/>
     </element>
+  </model>
+
+  <model name="base-with-namespace" description="Base Extension Class" persistence="abstract" namespace="http://marklogic.com/model/base">
+    <element name="uuid" type="identity" identity="true" label="Globally Unique Identifier">
+      <navigation  searchable="true" sortable="true" facetable="true" />
+      <constraint />
+    </element>
+    <element name="create-user" type="create-user" label="Created User"/>
+    <element name="created" type="create-timestamp" label="Created Date"/>
   </model>
 </domain>

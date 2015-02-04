@@ -3,7 +3,7 @@
     xmlns:search = "http://marklogic.com/appservices/search"
     xsi:schemaLocation="http://xquerrail.com/domain https://raw.githubusercontent.com/nativelogix/xquerrail2.framework/master/src/main/_framework/schemas/domain.xsd">
   <name>pippo</name>
-  <model name="model1" persistence="document" label="Model #1" extends="base" namespace-uri="http://marklogic.com/model/model1" key="uuid" keyLabel="id">
+  <model name="model1" persistence="document" label="Model #1" extends="base" namespace-uri="http://marklogic.com/model/model1" key="uuid" keyLabel="id" override-ns="true">
     <document root="models">/test/model1.xml</document>
     <navigation listable="true" pageSize="20">
       <search:facet-option>frequency-order</search:facet-option>
@@ -133,7 +133,7 @@
   </model>
 
   <model name="model15" persistence="directory" label="Model #15" key="id" keyLabel="id">
-    <directory root="models14">/test/model15/</directory>
+    <directory root="models15">/test/model15/</directory>
     <element name="id" type="identity" identity="true" />
     <container name="groups" label="Groups">
       <element name="group" type="string" label="Group" occurrence="*">
@@ -181,6 +181,16 @@
     </container>
   </model>
 
+  <model name="model20" persistence="directory" label="Model #19" extends="base-with-namespace" key="uuid" keyLabel="name" namespace="http://marklogic.com/model/model20">
+    <directory>/test/model20/</directory>
+    <element name="name" type="string" label="Name"/>
+  </model>
+
+  <model name="model21" persistence="directory" label="Model #19" extends="base-with-namespace" key="uuid" keyLabel="name" override-ns="true" namespace="http://marklogic.com/model/model21">
+    <directory>/test/model21/</directory>
+    <element name="name" type="string" label="Name"/>
+  </model>
+
   <model name="child-model" persistence="directory" label="Child Model" extends="base" key="uuid" keyLabel="name">
     <directory>/test/child-model/</directory>
     <element name="name" type="string" label="Name"/>
@@ -192,3 +202,5 @@
     <element name="name" type="string" label="Name"/>
   </model>
 </domain>
+
+

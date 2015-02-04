@@ -25,7 +25,7 @@
 
   <model name="model4" persistence="document" extends="abstract1" override="true">
     <attribute name="id" type="string"/>
-    <attribute name="attribute1" namespace-uri="http://xquerrail.com/app-test" type="string"/>
+    <attribute name="attribute1" namespace="http://xquerrail.com/app-test" type="string"/>
     <element name="title" type="string"/>
     <element name="content" type="string"/>
     <element override="true" name="type" type="string" default="biblio"/>

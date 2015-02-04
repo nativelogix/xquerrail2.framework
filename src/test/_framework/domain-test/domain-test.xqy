@@ -8,6 +8,8 @@ import module namespace app = "http://xquerrail.com/application" at "../../../ma
 import module namespace config = "http://xquerrail.com/config" at "../../../main/_framework/config.xqy";
 import module namespace domain = "http://xquerrail.com/domain" at "../../../main/_framework/domain.xqy";
 
+declare namespace app-test = "http://xquerrail.com/app-test";
+
 declare option xdmp:mapping "false";
 
 declare variable $TEST-APPLICATION :=
@@ -127,10 +129,15 @@ declare %test:case function extended-model-two-level-test() as item()* {
   let $field-name := domain:get-model-field($model, "name")
   let $field-label := domain:get-model-field($model, "label")
   let $field-caption := domain:get-model-field($model, "caption")
+  (:let $_ := xdmp:log(("$field-id", $field-id)):)
   return (
     assert:not-empty($model),
     assert:not-empty($field-id, "floating-abstract-model model must contains id field"),
+    assert:empty($field-id/@prefix, "field id/@prefix should not exist"),
+    assert:empty($field-id/@namespace, "field id/@namespace should not exist"),
     assert:not-empty($field-name, "floating-abstract-model model must contains name field"),
+    assert:equal(fn:string($field-name/@prefix), "app-test", "field name/@prefix must equal to app-test"),
+    assert:equal(fn:string($field-name/@namespace), "http://xquerrail.com/app-test", "field name/@namespace must equal to exist"),
     assert:not-empty($field-label, "floating-abstract-model model must contains label field"),
     assert:not-empty($field-caption, "floating-abstract-model model must contains caption field")
   )

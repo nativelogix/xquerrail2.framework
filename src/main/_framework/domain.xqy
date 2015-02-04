@@ -404,40 +404,45 @@ declare function domain:get-model-keyLabel-field($model as element(domain:model)
             return domain:set-identity-cache($key,$field)
 };
 
-declare function domain:get-field-prefix($field as element()) {
-    if($field/@prefix) then $field/@prefix else
+declare function domain:get-field-prefix(
+  $field as element()
+) as xs:string? {
+  if($field/@prefix) then
+    $field/@prefix
+  else if ($field instance of element(domain:attribute)) then
+    ()
+  else
     let $key   := fn:concat("namespace-prefix::",fn:generate-id($field))
     let $cache := domain:get-identity-cache($key)
     return
-        if($cache) then $cache
-        else
-            let $ns := domain:get-field-namespace($field)
-            let $nses := domain:declared-namespaces($field)
-            let $pos :=
-              if (fn:exists($ns)) then
-                fn:index-of($nses,$ns)
-              else
-                ()
-            let $prefix :=
-              if (fn:empty($pos)) then
-                if ($field instance of element(domain:attribute)) then
-                  ()
-                else
-                  fn:error(xs:QName("PREFIX-NOT-DEFINED"), text{"Prefix", $ns, "is not defined in domain"})
-              else
-                fn:subsequence($nses,$pos -1 ,1)
-            (:let $index-ns := fn:index-of($nses,$ns):)
-            let $prefix :=
-                if($pos) then
-                  fn:subsequence($nses,$pos -1 ,1)
-                else
-                  if ($field instance of element(domain:attribute)) then
-                    ()
-                  else
-                    fn:error(xs:QName("UNPREFIXED-NAMESPACE"),"Cannot resolve prefix for namespace " || $ns,
-                      fn:string($field/ancestor::domain:domain/fn:local-name(.)))
-            (:let $prefix := fn:subsequence($nses,$pos -1 ,1):)
-            return domain:set-identity-cache($key,$prefix)
+      if($cache) then
+        $cache
+      else
+        let $ns := domain:get-field-namespace($field)
+        let $nses := domain:declared-namespaces($field)
+        let $pos :=
+          if (fn:exists($ns)) then
+            fn:index-of($nses,$ns)
+          else
+            ()
+        let $prefix :=
+          if (fn:empty($pos)) then
+            if ($field instance of element(domain:attribute)) then
+              ()
+            else
+              fn:error(xs:QName("PREFIX-NOT-DEFINED"), text{"Prefix", $ns, "is not defined in domain"})
+          else
+            fn:subsequence($nses,$pos -1 ,1)
+        let $prefix :=
+          if($pos) then
+            fn:subsequence($nses,$pos -1 ,1)
+          else
+            fn:error(
+              xs:QName("UNPREFIXED-NAMESPACE"),
+              "Cannot resolve prefix for namespace " || $ns,
+              fn:string($field/ancestor::domain:domain/fn:local-name(.))
+            )
+        return domain:set-identity-cache($key,$prefix)
 };
 (:~
  : Returns the field that matches the given field name or key
@@ -787,6 +792,19 @@ declare %private function domain:find-model-by-name(
   ]
 };
 
+declare %private function domain:is-ns-override(
+  $application-name as xs:string,
+  $domain as element(domain:domain),
+  $model as element(domain:model)
+) as xs:boolean {
+  fn:head((
+      $model/@override-ns,
+      $domain/@override-ns,
+      config:get-application($application-name)/@override-ns,
+      fn:false()
+    ))
+};
+
 (:~
  : Recursively construct an extended domain model
  : @param $model - Model to return, after optionally merging in extension fields
@@ -798,11 +816,14 @@ declare %private function domain:extend-model(
 ) as element(domain:model) {
   if($model/@extends) then
     let $base-model-name := fn:string($model/@extends)
+    let $override-ns := domain:is-ns-override($application-name, $domain, $model)
     let $base-model := domain:extend-model($application-name,$domain, domain:find-base-model($model))
     return
       if(fn:not($base-model)) then
         fn:error(xs:QName("NO-EXTENDS-MODEL"),"Missing Extension Base Model", $base-model-name)
       else
+        let $base-model-ns := fn:head( ($base-model/@namespace, $base-model/@namespace-uri) )/fn:string()
+        let $base-model-ns := if( $base-model-ns ) then $base-model-ns else domain:get-field-namespace($base-model)
         let $model-ns := fn:head( ($model/@namespace, $model/@namespace-uri, $base-model/@namespace, $base-model/@namespace-uri) )/fn:string()
         let $model-ns := if( $model-ns ) then $model-ns else domain:get-field-namespace($model)
         let $model-attr := (
@@ -826,10 +847,24 @@ declare %private function domain:extend-model(
           attribute domain:extension { fn:string-join( ($base-model-name, $base-model/@extension), ' ' ) },
           for $field in  $base-model/(domain:element|domain:container|domain:attribute|domain:triple|domain:optionlist)
             let $field-name := domain:get-field-qname( $field )
-            let $field-ns := (domain:get-field-namespace($model), fn:namespace-uri-from-QName( $field-name )) [1]
+            let $field-ns :=
+              typeswitch ($field)
+                case element(domain:attribute)
+                  return
+                    if (fn:string(fn:namespace-uri-from-QName($field-name)) ne "") then
+                      fn:namespace-uri-from-QName($field-name)
+                    else
+                      ()
+                default
+                  return
+                    if ($override-ns) then
+                      ($model-ns, fn:namespace-uri-from-QName($field-name)) [1]
+                    else
+                      fn:head(($base-model-ns, $model-ns, fn:namespace-uri-from-QName($field-name)))
             let $overlap := $model/(domain:element|domain:container|domain:attribute|domain:triple|domain:optionlist)
                             [fn:node-name(.) eq fn:node-name($field)]
                             [domain:get-field-qname(.) eq $field-name]
+            (:let $_ := xdmp:log(text{"domain:extend-model", $model/@name, $base-model-name, $override-ns, $field/@name, $field-ns}):)
             return
               if( $overlap ) then
                  if( fn:data($overlap/@override) or fn:data($model/@override) ) then
@@ -841,7 +876,7 @@ declare %private function domain:extend-model(
                   (: Copy all attributes except namespace or namespace-uri :)
                   $field/@*[. except ($field/@namespace, $field/@namespace-uri)],
                   (: Create a resolved namespace attribute :)
-                  if( $field-ns ) then attribute namespace { $field-ns  } else (),
+                  if(fn:exists($field-ns)) then attribute namespace { $field-ns } else (),
                   (: If the base field doesn't have a model definition, add one :)
                   if( fn:not( $field/@domain:model ) ) then
                     attribute domain:model { $base-model-name }
@@ -1328,39 +1363,44 @@ declare %private function domain:build-field-id($field as node()) {
 declare function domain:get-field-namespace(
   $field as element()
 ) as xs:string? {
-  if($field/@namespace) then fn:string($field/@namespace) else
-  let $key   := fn:concat("field-namespace::",fn:generate-id($field))
-  let $cache := domain:get-identity-cache($key)
-  return
-  if($cache) then $cache
+  if($field/@namespace) then
+    fn:string($field/@namespace)
+  else if ($field instance of element(domain:attribute)) then
+    ()
   else
-  let $field-namespace := (
-    if ($field instance of element(domain:attribute)) then
-      (
-        if($field/(@namespace-uri|@namespace)) then
-          $field/(@namespace-uri|@namespace)/fn:string()
-        else
-          ()
-      )
+    let $key   := fn:concat("field-namespace::",fn:generate-id($field))
+    let $cache := domain:get-identity-cache($key)
+    return
+    if($cache) then
+      $cache
     else
+      let $field-namespace := (
+        if ($field instance of element(domain:attribute)) then
+          (
+            if($field/(@namespace-uri|@namespace)) then
+              $field/(@namespace-uri|@namespace)/fn:string()
+            else
+              ()
+          )
+        else
 
-      if($field/(@namespace-uri|@namespace)) then
-        $field/(@namespace-uri|@namespace)/fn:string()
-      else if($field/ancestor::domain:model/(@namespace-uri|@namespace)) then
-        $field/ancestor::domain:model/(@namespace-uri|@namespace)/fn:string()
-      else if($field/ancestor::domain:domain/domain:content-namespace/(@namespace-uri|text())) then
-        $field/ancestor::domain:domain/domain:content-namespace/(@namespace-uri|/text())
-      (:else (domain:get-content-namespace-uri(),""):)
-      else if (domain:get-content-namespace-uri()) then
-        domain:get-content-namespace-uri()
-      else
-        (
-          config:application-namespace(config:default-application()),
-          ""
-        )
+          if($field/(@namespace-uri|@namespace)) then
+            $field/(@namespace-uri|@namespace)/fn:string()
+          else if($field/ancestor::domain:model/(@namespace-uri|@namespace)) then
+            $field/ancestor::domain:model/(@namespace-uri|@namespace)/fn:string()
+          else if($field/ancestor::domain:domain/domain:content-namespace/(@namespace-uri|text())) then
+            $field/ancestor::domain:domain/domain:content-namespace/(@namespace-uri|/text())
+          (:else (domain:get-content-namespace-uri(),""):)
+          else if (domain:get-content-namespace-uri()) then
+            domain:get-content-namespace-uri()
+          else
+            (
+              config:application-namespace(config:default-application()),
+              ""
+            )
 
-  )[1]
-  return domain:set-identity-cache($key,$field-namespace)
+      )[1]
+      return domain:set-identity-cache($key,$field-namespace)
 };
 
 (:~
@@ -1371,27 +1411,33 @@ declare function domain:get-field-namespace(
 declare function domain:get-field-param-value(
     $field as element(),
     $params as map:map) {
-  domain:get-field-param-value($field, $params, fn:false())
+  domain:get-field-param-value($field, $params, fn:false(), fn:true())
 };
 
 declare function domain:get-field-param-value(
   $field as element(),
   $params as map:map,
-  $relative as xs:boolean) {
+  $relative as xs:boolean,
+  $cast as xs:boolean
+) {
   let $key := domain:get-field-id($field)
   let $namekey := domain:get-field-name-key($field)
   let $key-value := map:get($params,$key)
   let $namekey-value := map:get($params,$namekey)
   let $name-value := map:get($params,$field/@name)
   return
-    if($field/@type eq "langString") then
-      domain:get-field-param-langString-value($field,$params)
+    if ($cast) then
+      if($field/@type eq "langString") then
+        domain:get-field-param-langString-value($field,$params)
+      else
+        domain:cast-value(
+          $field,
+          if(fn:exists($key-value)) then $key-value
+          else if(fn:exists($namekey-value)) then $namekey-value else $name-value
+        )
     else
-      domain:cast-value(
-        $field,
-        if(fn:exists($key-value)) then $key-value
-        else if(fn:exists($namekey-value)) then $namekey-value else $name-value
-      )
+      if(fn:exists($key-value)) then $key-value
+      else if(fn:exists($namekey-value)) then $namekey-value else $name-value
 };
 
 declare function domain:get-field-param-match-key(
@@ -2353,18 +2399,6 @@ declare function domain:get-field-value(
 ) as item()* {
   if ($field instance of element(domain:model)) then () else
   let $return-value := domain:get-field-value-node($field, $value, $relative)
-        (:typeswitch($value)
-          case json:object          return domain:get-field-json-value($field,$value,$relative)
-          case json:array           return domain:get-field-json-value($field,$value,$relative)
-          case element(json:object) return domain:get-field-json-value($field,$value,$relative)
-          case element(json:array)  return domain:get-field-json-value($field,$value,$relative)
-          case element(map:map)     return domain:get-field-param-value($field,map:map($value),$relative)
-          case map:map              return domain:get-field-param-value($field,$value,$relative)
-          case element()            return domain:get-field-xml-value($field,$value,$relative)
-          case document-node()      return domain:get-field-xml-value($field,$value/element(),$relative)
-          case empty-sequence() return ()
-          default return (:fn:error((),"Unknown Value Type",$value):)
-          $value:)
   return domain:cast-value($field,
     if(fn:exists($return-value) )
     then ( $return-value )
@@ -2372,7 +2406,6 @@ declare function domain:get-field-value(
     else ()
   )
 };
-
 
 (:~
  : Gets the node from an object type
@@ -2394,13 +2427,99 @@ declare function domain:get-field-value-node(
     case json:array           return domain:get-field-json-value($field,$value,$relative)
     case element(json:object) return domain:get-field-json-value($field,$value,$relative)
     case element(json:array)  return domain:get-field-json-value($field,$value,$relative)
-    case element(map:map)     return domain:get-field-param-value($field,map:map($value),$relative)
-    case map:map              return domain:get-field-param-value($field,$value,$relative)
+    case element(map:map)     return domain:get-field-param-value($field,map:map($value),$relative,fn:false())
+    case map:map              return domain:get-field-param-value($field,$value,$relative,fn:false())
     case element()            return domain:get-field-xml-value($field,$value,$relative)
     case document-node()      return domain:get-field-xml-value($field,$value/element(),$relative)
     case empty-sequence() return ()
     default return (:fn:error((),"Unknown Value Type",$value):)
     $value
+};
+
+declare function domain:field-value-exists(
+  $field as element(),
+  $value as item()*
+) as xs:boolean {
+  typeswitch($value)
+    case json:object          return domain:field-json-exists($field,$value)
+    case json:array           return domain:field-json-exists($field,$value)
+    case element(json:object) return domain:field-json-exists($field,$value)
+    case element(json:array)  return domain:field-json-exists($field,$value)
+    case element(map:map)     return domain:field-param-exists($field,map:map($value))
+    case map:map              return domain:field-param-exists($field,$value)
+    case element()            return domain:field-xml-exists($field,$value)
+    case document-node()      return domain:field-xml-exists($field,$value/element())
+    case empty-sequence()     return fn:false()
+    default return fn:false()
+};
+
+declare function domain:field-param-exists(
+  $field as element(),
+  $params as map:map
+) as xs:boolean {
+  let $key := domain:get-field-id($field)
+  let $namekey := domain:get-field-name-key($field)
+  let $key-value := map:get($params,$key)
+  let $namekey-value := map:get($params,$namekey)
+  let $name-value := map:get($params,$field/@name)
+  return (fn:exists($key-value) or fn:exists($namekey-value) or fn:exists($name-value))
+};
+
+declare function domain:field-json-exists(
+  $field as element(),
+  $values as item()?
+) as xs:boolean {
+  let $value :=
+    for $v in $values
+    return
+      typeswitch($v)
+      case json:object return <x>{$v}</x>/*
+      case json:array return <x>{$v}</x>/*
+      case element(json:object) return $v
+      case element(json:array) return json:array-values(json:array($v))
+      default return fn:error(xs:QName("UNKNOWN-JSON-OBJECT"),"Type is not json",xdmp:describe($v))
+  return
+    if(domain:exists-field-function-cache($field,"json-exists"))
+    then domain:get-field-function-cache($field,"json-exists")($value)
+    else
+      let $type := domain:get-base-type($field)
+      let $path := domain:get-field-jsonpath($field)
+      let $path :=
+        if (domain:field-is-multivalue($field)) then
+          if (domain:get-base-type($field) eq "instance") then
+            fn:substring($path, 1, fn:string-length($path) - fn:string-length("/json:value/json:object"))
+          else
+            fn:substring($path, 1, fn:string-length($path) - fn:string-length("/json:value"))
+        else
+          $path
+      let $func :=
+          switch($type)
+          case "simple" return xdmp:value(fn:concat("function($value) { fn:exists($value",$path, ")}"))
+          default return xdmp:value(fn:concat("function($value) { fn:exists($value", $path,")}"))
+      return (
+        domain:set-field-function-cache($field,"json-exists",$func),
+        $func($value)
+      )
+ };
+
+declare function domain:field-xml-exists(
+  $field as element(),
+  $value as item()*
+) as xs:boolean {
+  (:if(domain:exists-field-function-cache($field,"xml")):)
+  (:then domain:get-field-function-cache($field,"xml")($value):)
+  (:else:)
+    let $type := domain:get-base-type($field)
+    let $path := domain:get-field-xpath($field, fn:false())
+    let $expr := fn:concat("$value", $path)
+    let $func :=
+      switch($type)
+        case "simple" return xdmp:with-namespaces(domain:declared-namespaces($field),xdmp:value(fn:concat("function($value){fn:exists(", $expr, ")}")))
+        default return xdmp:with-namespaces(domain:declared-namespaces($field),xdmp:value(fn:concat("function($value){fn:exists(", $expr, ")}")))
+    return (
+       domain:set-field-function-cache($field,"xml-exists",$func),
+       $func($value)
+    )
 };
 
 (:~

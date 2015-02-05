@@ -2954,7 +2954,7 @@ declare function domain:get-parent-field-attribute(
 ) as element() {
   let $parent := $field/..
   return
-    if ($parent instance of element(domain:model) or $parent instance of element(domain:element)) then
+    if ($parent instance of element(domain:model) or $parent instance of element(domain:container) or $parent instance of element(domain:element)) then
       $parent
     else
       fn:error(xs:QName("UNSUPPORTED-PARENT-FIELD-ATTRIBUTE"), text{"Unsupported parent field", $parent/fn:name()})

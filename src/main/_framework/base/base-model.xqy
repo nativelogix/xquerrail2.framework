@@ -1704,13 +1704,13 @@ declare private function model:page-size(
   $model as element(domain:model),
   $params,
   $param-name as xs:string?
-) as xs:integer? {
+) as xs:unsignedLong? {
   let $param-name :=
     if (fn:exists($param-name)) then
       $param-name
     else
       "ps"
-    return xs:integer((domain:get-param-value($params, $param-name), domain:navigation($model)/@pageSize, $DEFAULT-PAGE-SIZE)[1])
+  return xs:unsignedLong((domain:get-param-value($params, $param-name), domain:navigation($model)/@pageSize, $DEFAULT-PAGE-SIZE)[1])
 };
 
 (:~
@@ -1902,6 +1902,7 @@ declare function model:build-search-options(
       then $model/search:options
       else if(fn:exists(domain:get-param-value($params, "search:options"))) then domain:get-param-value($params, "search:options")
       else ()
+  let $_ := xdmp:log((text{"model:build-search-options", "$baseOptions"}, $baseOptions))
   let $nav := domain:navigation($model)
   let $constraints := model:build-search-constraints($model, $params)
   let $suggestOptions :=
@@ -2005,7 +2006,7 @@ declare function model:build-search-constraints(
   $model as element(domain:model),
   $params as item()
 ) {
-  let $properties := $model//(domain:element|domain:attribute)[fn:not(domain:navigation/@searchable = ('false'))]
+  let $properties := $model//(domain:element|domain:attribute)[fn:not(domain:navigation/@searchable = ('false') and domain:navigation/@facetable = ('false'))]
   return
     for $prop in $properties (:[domain:navigation/@searchable = "true"]:)
       for $prop-nav in $prop/domain:navigation
@@ -2117,8 +2118,7 @@ as element(search:response)
    let $sort as xs:string?  := domain:get-param-value($params, "sort")
    let $sort-order as xs:string? := domain:get-param-value($params, "sort-order")
    let $page as xs:integer  := (domain:get-param-value($params, "pg"),1)[1] cast as xs:integer
-   let $page-size as xs:integer := model:page-size($model, $params, "ps")
-   (:let $page-size as xs:integer  := (domain:get-param-value($params, "ps"),20)[1] cast as xs:integer:)
+   let $page-size as xs:integer? := model:page-size($model, $params, "ps")
    let $start := (($page - 1) * $page-size) + 1
    let $end := ($page * $page-size)
    (:let $final := fn:concat($query," ",$sort)  :)

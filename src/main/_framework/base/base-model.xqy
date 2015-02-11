@@ -1700,7 +1700,7 @@ declare function model:list-params(
             else  ()
 };
 
-declare private function model:page-size(
+declare function model:page-size(
   $model as element(domain:model),
   $params,
   $param-name as xs:string?
@@ -1902,7 +1902,6 @@ declare function model:build-search-options(
       then $model/search:options
       else if(fn:exists(domain:get-param-value($params, "search:options"))) then domain:get-param-value($params, "search:options")
       else ()
-  let $_ := xdmp:log((text{"model:build-search-options", "$baseOptions"}, $baseOptions))
   let $nav := domain:navigation($model)
   let $constraints := model:build-search-constraints($model, $params)
   let $suggestOptions :=
@@ -2116,13 +2115,13 @@ as element(search:response)
 {
    let $query as xs:string* := domain:get-param-value($params, "query")
    let $sort as xs:string?  := domain:get-param-value($params, "sort")
-   let $sort-order as xs:string? := domain:get-param-value($params, "sort-order")
    let $page as xs:integer  := (domain:get-param-value($params, "pg"),1)[1] cast as xs:integer
    let $page-size as xs:integer? := model:page-size($model, $params, "ps")
    let $start := (($page - 1) * $page-size) + 1
    let $end := ($page * $page-size)
-   (:let $final := fn:concat($query," ",$sort)  :)
-   let $final := (if($query) then $query else "", $sort)
+   let $final := fn:concat($query," ",$sort)
+   (:let $final := (if($query) then $query else "", $sort):)
+   (:let $_ := xdmp:log(text{"$final", $final, "$start", $start, "$page-size", $page-size}):)
    let $options := model:build-search-options($model,$params)
    let $results :=
      search:search($final,$options,$start,$page-size)

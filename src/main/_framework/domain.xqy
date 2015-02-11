@@ -2835,14 +2835,20 @@ declare function domain:get-model-function(
   $function-arity as xs:integer?,
   $fatal as xs:boolean?
  ) as xdmp:function? {
-  fn:head((
-    domain:get-model-module-function( $application-name, $model-name, $action, $function-arity),
-    domain:get-model-extension-function($action, $function-arity),
-    domain:get-model-base-function($action, $function-arity),
-    if($fatal) then
-      fn:error(xs:QName("ACTION-NOT-EXISTS"), "The action '" || $action || "' for model '" || $model-name || "' does not exist")
-    else ()
-  ))
+  let $function :=
+    fn:head((
+      domain:get-model-module-function( $application-name, $model-name, $action, $arity ),
+      domain:get-model-extension-function( $action, $arity ),
+      domain:get-model-base-function( $action, $arity )
+    ))
+  return
+    if (fn:exists($function)) then
+      $function
+    else
+      if($fatal) then
+        fn:error(xs:QName("ACTION-NOT-EXISTS"), "The action '" || $action || "' for model '" || $model-name || "' does not exist")
+      else
+        ()
 };
 
 declare function domain:get-model-extension-function(

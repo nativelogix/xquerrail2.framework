@@ -449,13 +449,28 @@ declare function domain:get-field-prefix(
  : @param $model - The model to extract the given field
  : @param $name  - name or key of the field
  :)
-declare function domain:get-model-field($model as element(domain:model),$name as xs:string) {
-  let $key := ($model/@name || ":field:" || $name)
+declare function domain:get-model-field(
+  $model as element(domain:model),
+  $name as xs:string
+) {
+  domain:get-model-field($model, $name, fn:false())
+};
+
+declare function domain:get-model-field(
+  $model as element(domain:model),
+  $name as xs:string,
+  $include-container as xs:boolean
+) {
+  let $key := ($model/@name || ":field:" || $name || $include-container)
   let $cache := domain:get-identity-cache($key)
   return
     if(fn:exists($cache)) then $cache
     else
-      let $value := $model//(domain:element|domain:attribute)[$name eq @name or $name eq @keyId or $name eq @keyName]
+      let $value :=
+        if ($include-container) then
+          $model//(domain:container|domain:element|domain:attribute)[$name eq @name or $name eq @keyId or $name eq @keyName or $name eq @jsonName]
+        else
+          $model//(domain:element|domain:attribute)[$name eq @name or $name eq @keyId or $name eq @keyName or $name eq @jsonName]
       return domain:set-identity-cache($key,$value)
 };
 
@@ -1160,6 +1175,7 @@ declare function domain:set-field-attributes(
      $field/@namespace,
      $field/@xpath,
      $field/@absXpath,
+     $field/@jsonName,
      $field/@jsonPath)],
     attribute keyId { domain:build-field-id($field) },
     attribute keyName { domain:build-field-name-key($field) },
@@ -1181,6 +1197,7 @@ declare function domain:set-field-attributes(
     ),
     attribute xpath {domain:get-field-xpath($field)},
     attribute absXpath {domain:get-field-absolute-xpath($field)},
+    attribute jsonName {domain:get-field-json-name($field)},
     attribute jsonPath {domain:get-field-jsonpath($field)}
     )
 };
@@ -2320,6 +2337,28 @@ declare function domain:fire-after-event(
        xdmp:apply($call,$event,$context)
    else $context
 };
+
+declare function domain:get-field-json-name(
+  $field as element()
+) as xs:string {
+  if($field/@jsonName) then
+    fn:string($field/@jsonName)
+  else
+    let $name := fn:string($field/@name)
+    (:let $json-name :=
+      fn:string-join(
+        (fn:tokenize($name,'-')[1],
+        for $word in fn:tokenize($name,'-')[fn:position() > 1]
+        return functx:capitalize-first($word))
+      ,''):)
+    return
+      typeswitch($field)
+        case element(domain:attribute)
+          return fn:concat(config:attribute-prefix(), $name)
+        default
+          return $name
+};
+
 (:~
  : Gets the json path for a given field definition. The path expression by default is relative to the root of the json type
 :)
@@ -2353,6 +2392,7 @@ $base-path as xs:string?
      fn:string-join((
           $base-path,
           for $path at $pos in $paths
+          let $json-name := domain:get-field-json-name($field)
           let $key :=
              typeswitch($path)
              case element(domain:attribute) return fn:concat(config:attribute-prefix(),fn:data($path/@name))
@@ -2364,20 +2404,20 @@ $base-path as xs:string?
                 switch($base-type)
                     case "instance" return
                        if($is-multi)
-                       then fn:concat("json:entry[@key = '",$key,"']/json:value/json:array/json:value/json:object")
-                       else fn:concat("json:entry[@key = '",$key,"']/json:value/json:object")
+                       then fn:concat("json:entry[@key = ('",$key,"','",$json-name,"')]/json:value/json:array/json:value/json:object")
+                       else fn:concat("json:entry[@key = ('",$key,"','",$json-name,"')]/json:value/json:object")
                     case ("simple") return
                        if($is-multi)
-                       then fn:concat("json:entry[@key = '",$key, "']/json:value/json:array/json:value")
-                       else fn:concat("json:entry[@key = '",$key, "']/json:value")
+                       then fn:concat("json:entry[@key = ('",$key,"','",$json-name,"')]/json:value/json:array/json:value")
+                       else fn:concat("json:entry[@key = ('",$key,"','",$json-name,"')]/json:value")
                     case ("complex") return
                       if($is-multi)
-                       then fn:concat("json:entry[@key = '",$key, "']/json:value/json:array/json:value")
-                       else fn:concat("json:entry[@key = '",$key, "']/json:value")
+                       then fn:concat("json:entry[@key = ('",$key,"','",$json-name,"')]/json:value/json:array/json:value")
+                       else fn:concat("json:entry[@key = ('",$key,"','",$json-name,"')]/json:value")
                     case "model" return
                       if($include-root) then "/json:object"
                       else ""
-                    case "container" return fn:concat("json:entry[@key = '",$key,"']/json:value/json:object")
+                    case "container" return fn:concat("json:entry[@key = ('",$key,"','",$json-name,"')]/json:value/json:object")
                     default return fn:error(xs:QName("JSON-PATH-ERROR"),"Unknown Path Type",$base-type)
      ) ,"/")
 };
@@ -2837,9 +2877,9 @@ declare function domain:get-model-function(
  ) as xdmp:function? {
   let $function :=
     fn:head((
-      domain:get-model-module-function( $application-name, $model-name, $action, $arity ),
-      domain:get-model-extension-function( $action, $arity ),
-      domain:get-model-base-function( $action, $arity )
+      domain:get-model-module-function( $application-name, $model-name, $action, $function-arity ),
+      domain:get-model-extension-function( $action, $function-arity ),
+      domain:get-model-base-function( $action, $function-arity )
     ))
   return
     if (fn:exists($function)) then

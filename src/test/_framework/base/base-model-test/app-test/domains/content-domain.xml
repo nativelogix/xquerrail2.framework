@@ -201,6 +201,13 @@
     <directory>/test/parent-model/</directory>
     <element name="name" type="string" label="Name"/>
   </model>
+
+  <model name="model22" key="id" keyLabel="id" persistence="directory">
+      <directory>/test/model22/</directory>
+      <attribute name="id" type="identity" identity="true" />
+      <element name="content-type" jsonName="contentType"  type="string" />
+      <element name="MyDescription" jsonName="description" type="string"/>
+  </model>
 </domain>
 
 

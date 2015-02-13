@@ -201,13 +201,38 @@ declare %test:case function integer-value-string-field-model-helper-build-json-t
       ))
     )
   let $instance-to-json := model-helper:build-json($model1, $instance)
-  let $_ := xdmp:log(("$instance-to-json", $instance-to-json))
+  (:let $_ := xdmp:log(("$instance-to-json", $instance-to-json)):)
   return (
     assert:not-empty($instance),
     assert:not-empty($instance-to-json),
     assert:equal(map:get($instance-to-json, "description"), "2000", "description must be equal to 2000"),
     assert:equal(map:get($instance-to-json, "number"), 999, "number must be equal to 999"),
     assert:equal(map:get($instance-to-json, "flag"), fn:false(), "description must be false")
+  )
+};
+
+declare %test:case function custom-json-name-helper-build-json-test() {
+  let $model3 := domain:get-model("model3")
+  let $instance :=
+    model:new(
+      $model3,
+      map:new((
+        map:entry("id", "model3-id"),
+        map:entry("name", "john doe"),
+        map:entry("MyDescription", "dummy-description"),
+        map:entry("first-name", "john"),
+        map:entry("last-name", "Doe")
+      ))
+    )
+  let $instance-to-json := model-helper:build-json($model3, $instance)
+  let $_ := xdmp:log(("$instance-to-json", $instance-to-json))
+  return (
+    assert:not-empty($instance),
+    assert:not-empty($instance-to-json),
+    assert:equal(map:get($instance-to-json, "name"), "john doe", "name must be equal to john doe"),
+    assert:equal(map:get($instance-to-json, "description"), "dummy-description", "description must be equal to dummy-description"),
+    assert:equal(map:get($instance-to-json, "firstName"), "john", "firstName must be equal to john"),
+    assert:equal(map:get($instance-to-json, "lastName"), "Doe", "lastName must be Doe")
   )
 };
 

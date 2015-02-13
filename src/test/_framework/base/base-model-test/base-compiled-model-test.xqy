@@ -38,6 +38,14 @@ declare %test:teardown function teardown() {
   )
 };
 
+declare %test:case function model1-all-fields-must-have-json-name-attribute(
+) as item()* {
+  let $model1 := domain:get-model("model1")
+  return $model1/(domain:attribute|domain:element) ! (
+    assert:not-empty(./@jsonName)
+  )
+};
+
 declare %test:case function model1-navigation-test() as item()*
 {
   let $model1 := domain:get-model("model1")
@@ -209,6 +217,19 @@ declare %test:case function model21-base-with-namespace-with-override-ns-test() 
     assert:not-empty($model21),
     assert:equal(xs:string($uuid-field/@namespace), "http://marklogic.com/model/model21", "uuid@namespace must be 'http://marklogic.com/model/model21'"),
     assert:equal(xs:string($name-field/@namespace), "http://marklogic.com/model/model21", "uuid@namespace must be 'http://marklogic.com/model/model21'")
+  )
+};
+
+declare %test:case function model22-json-name-attributes(
+) as item()* {
+  let $model22 := domain:get-model("model22")
+  let $id-field := domain:get-model-field($model22, "id")
+  let $content-type-field := domain:get-model-field($model22, "content-type")
+  let $my-description-field := domain:get-model-field($model22, "MyDescription")
+  return (
+    assert:equal(xs:string($id-field/@jsonName), fn:concat(config:attribute-prefix(), "id"), "field[@name eq 'id']@jsonName must be '" || config:attribute-prefix() || "id'"),
+    assert:equal(xs:string($content-type-field/@jsonName), "contentType", "field[@name eq 'content-type']@jsonName must be 'contentType'"),
+    assert:equal(xs:string($my-description-field/@jsonName), "description", "field[@name eq 'MyDescription']@jsonName must be 'description'")
   )
 };
 

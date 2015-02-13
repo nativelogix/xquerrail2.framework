@@ -71,4 +71,17 @@
     </element>
   </model>
 
+  <model name="model4" persistence="directory" label="Model #4" extends="base" key="uuid" keyLabel="id">
+    <directory>/test/model4/</directory>
+    <element name="id" type="string"/>
+    <container name="model5List">
+      <element name="model5" type="model5" occurrence="*"/>
+    </container>
+  </model>
+
+  <model name="model5" persistence="abstract" label="Model #5">
+    <attribute name="id" type="id"/>
+    <element name="name" type="string"/>
+  </model>
+
 </domain>

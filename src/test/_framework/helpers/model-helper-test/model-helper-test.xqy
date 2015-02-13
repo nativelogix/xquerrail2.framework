@@ -201,7 +201,6 @@ declare %test:case function integer-value-string-field-model-helper-build-json-t
       ))
     )
   let $instance-to-json := model-helper:build-json($model1, $instance)
-  (:let $_ := xdmp:log(("$instance-to-json", $instance-to-json)):)
   return (
     assert:not-empty($instance),
     assert:not-empty($instance-to-json),
@@ -225,7 +224,6 @@ declare %test:case function custom-json-name-helper-build-json-test() {
       ))
     )
   let $instance-to-json := model-helper:build-json($model3, $instance)
-  let $_ := xdmp:log(("$instance-to-json", $instance-to-json))
   return (
     assert:not-empty($instance),
     assert:not-empty($instance-to-json),
@@ -233,6 +231,43 @@ declare %test:case function custom-json-name-helper-build-json-test() {
     assert:equal(map:get($instance-to-json, "description"), "dummy-description", "description must be equal to dummy-description"),
     assert:equal(map:get($instance-to-json, "firstName"), "john", "firstName must be equal to john"),
     assert:equal(map:get($instance-to-json, "lastName"), "Doe", "lastName must be Doe")
+  )
+};
+
+declare %test:case function model-nested-abtract-model-helper-build-json-test() {
+  let $model4 := domain:get-model("model4")
+  let $model5 := domain:get-model("model5")
+  let $model4-id :=setup:random("model4-id")
+  let $model5-name-1 :=setup:random("model5-name")
+  let $model5-name-2 :=setup:random("model5-name")
+  let $instance :=
+    model:new(
+      $model4,
+      map:new((
+        map:entry("id", $model4-id),
+        map:entry("name", "dummy-model4-name"),
+        map:entry(
+          "model5List.model5",
+          (
+            model:new(
+              $model5,
+              map:entry("name", $model5-name-1)
+            ),
+            model:new(
+              $model5,
+              map:entry("name", $model5-name-2)
+            )
+          )
+        )
+      ))
+    )
+  let $instance-to-json := model-helper:build-json($model4, $instance)
+  return (
+    assert:not-empty($instance),
+    assert:not-empty($instance-to-json),
+    assert:equal(map:get($instance-to-json, "id"), $model4-id, "id must be equal to " || $model4-id),
+    assert:equal(map:get(map:get(map:get($instance-to-json, "model5List"), "model5")[1], "name"), $model5-name-1, "model5[1].name must be equal to " || $model5-name-1),
+    assert:equal(map:get(map:get(map:get($instance-to-json, "model5List"), "model5")[2], "name"), $model5-name-2, "model5[2].name must be equal to " || $model5-name-2)
   )
 };
 

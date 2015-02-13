@@ -1898,10 +1898,12 @@ declare function model:build-search-options(
   let $properties := $model//(domain:element|domain:attribute)[domain:navigation/@searchable = ('true')]
   let $modelNamespace :=  domain:get-field-namespace($model)
   let $baseOptions :=
-      if($model/search:options)
-      then $model/search:options
-      else if(fn:exists(domain:get-param-value($params, "search:options"))) then domain:get-param-value($params, "search:options")
-      else ()
+      if(fn:exists(domain:get-param-value($params, "search:options"))) then
+        domain:get-param-value($params, "search:options")
+      else if(fn:exists($model/search:options)) then
+        $model/search:options
+      else
+        ()
   let $nav := domain:navigation($model)
   let $constraints := model:build-search-constraints($model, $params)
   let $suggestOptions :=

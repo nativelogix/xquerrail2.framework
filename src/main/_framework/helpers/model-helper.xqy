@@ -12,6 +12,33 @@ declare namespace json = "json:options";
 
 declare option xdmp:mapping "false";
 
+(:~
+ : Holds a cache of json options per models
+ :)
+declare variable $JSON-OPTIONS-MODEL-CACHE := map:map();
+
+(:~
+ : Sets the function in the value cache
+ :)
+declare function model:set-options-cache(
+  $key as xs:string,
+  $value
+) {
+  (
+    map:put($JSON-OPTIONS-MODEL-CACHE,$key,$value),
+    $value
+  )
+};
+
+(:~
+ : Gets the function for the xxx-path from the cache
+:)
+declare function model:get-options-cache(
+  $key as xs:string
+) {
+   map:get($JSON-OPTIONS-MODEL-CACHE,$key)
+};
+
 declare function model:field-value(
   $field as element(),
   $instance as element(),
@@ -41,7 +68,7 @@ declare function model:build-json(
   $field as element() ,
   $instance as element()
 ) {
-  model:build-json($field,$instance,fn:false(),<json:options/>)
+  model:build-json($field,$instance,fn:false())
 };
 
 declare function model:build-json(
@@ -49,7 +76,7 @@ declare function model:build-json(
   $instance as element(),
   $include-root as xs:boolean
 ) {
-  model:build-json($field,$instance,$include-root,<json:options/>)
+  model:build-json($field,$instance,$include-root,model:get-json-options($field/ancestor::domain:model, ()))
 };
 
 (:~
@@ -225,16 +252,23 @@ declare %private function model:get-json-options(
   $model as element(domain:model),
   $options as element(json:options)?
 ) as element(json:options) {
-  if (fn:exists($options)) then
-    $options
-  else
-    let $get-options-fn := domain:get-model-function((), $model, "get-json-options", 1, fn:false())
-    return
-      if (fn:exists($get-options-fn)) then
-        xdmp:apply(
-          $get-options-fn,
-          $model
-        )
-      else
-        <json:options/>
+  let $cached-options := model:get-options-cache($model/@name)
+  return
+    if (fn:exists($cached-options)) then
+      $cached-options
+    else
+      let $cached-options :=
+        if (fn:exists($options)) then
+          $options
+        else
+          let $get-options-fn := domain:get-model-function((), $model, "get-json-options", 1, fn:false())
+          return
+            if (fn:exists($get-options-fn)) then
+              xdmp:apply(
+                $get-options-fn,
+                $model
+              )
+            else
+              <json:options/>
+      return model:set-options-cache($model/@name, $cached-options)
 };

@@ -24,6 +24,15 @@
     <element name="model1" type="reference" reference="model:model1:reference" label="Model #1"/>
   </model>
 
+  <model name="model3" persistence="directory" label="Model #1" extends="base" namespace-uri="http://marklogic.com/model/model3" key="uuid" keyLabel="id">
+    <directory>/test/model3/</directory>
+    <element name="id" type="string" label="Id"/>
+    <element name="name" type="string" label="Name"/>
+    <element name="MyDescription" jsonName="description" type="string" label="Description"/>
+    <element name="first-name" type="string" jsonName="firstName" label="FirstName"/>
+    <element name="last-name" type="string" jsonName="lastName" label="LastName"/>
+  </model>
+
   <model name="program" persistence="directory" label="Program" key="id" keyLabel="id">
     <directory>/test/program/</directory>
     <options xmlns="http://marklogic.com/appservices/search">

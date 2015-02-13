@@ -1425,3 +1425,20 @@ declare %test:case function model-no-delete-cascade-test() as item()*
     assert:error($result, "You are attempting to delete document which is referenced by other documents")
   )
 };
+
+declare %test:case function model-new-json-name-attribute-test() as item()*
+{
+  let $model22 := domain:get-model("model22")
+  let $instance22 := model:new(
+    $model22,
+    xdmp:from-json('{"contentType": "dummy-content-type", "description": "dummy-description"}')
+  )
+  let $content-type-value := domain:get-field-value(domain:get-model-field($model22, "content-type"), $instance22)
+  let $my-description-value := domain:get-field-value(domain:get-model-field($model22, "MyDescription"), $instance22)
+  return (
+    assert:not-empty($instance22),
+    assert:equal("dummy-content-type", xs:string($content-type-value)),
+    assert:equal("dummy-description", xs:string($my-description-value))
+  )
+};
+

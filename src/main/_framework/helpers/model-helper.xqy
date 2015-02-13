@@ -25,6 +25,18 @@ declare function model:field-value(
       $field-value
 };
 
+declare function model:field-key(
+  $field as element()
+) as xs:string {
+  if ($field/@jsonName ne "") then
+    $field/@jsonName
+  else
+    if ($field instance of element(domain:attribute)) then
+      fn:concat(config:attribute-prefix(),$field/@name)
+    else
+      $field/@name
+};
+
 declare function model:build-json(
   $field as element() ,
   $instance as element()
@@ -87,9 +99,9 @@ declare function model:build-json(
             let $value := domain:get-field-value($field,$instance)
             return
               if(fn:empty($value)) then
-                js:kv($field/@name,())
+                js:kv(model:field-key($field),())
               else
-                js:kv($field/@name,
+                js:kv(model:field-key($field),
                   js:a(
                     for $ref in $field-value
                     return
@@ -97,7 +109,7 @@ declare function model:build-json(
                         fn:string($ref)
                       else
                         js:kv(
-                          $field/@name,
+                          model:field-key($field),
                           js:o((
                             js:kv("text", fn:string($ref)),
                             js:kv("id", fn:string($ref/@ref-id)),
@@ -108,10 +120,10 @@ declare function model:build-json(
                 )
           else
             if($options/json:flatten-reference/xs:boolean(.)) then
-              js:kv($field/@name,fn:string($field-value))
+              js:kv(model:field-key($field),fn:string($field-value))
             else
               js:kv(
-                $field/@name,
+                model:field-key($field),
                 js:o((
                   js:kv("text", fn:string($field-value)),
                   js:kv("id", fn:string($field-value/@ref-id)),
@@ -122,28 +134,28 @@ declare function model:build-json(
           let $value := domain:get-field-value($field,$instance)
           return
             if($value) then
-              js:kv($field/@name,
+              js:kv(model:field-key($field),
                 (
                   js:kv("uri", fn:string($field-value)),
                   js:kv("filename", fn:string($field-value/@filename)),
                   js:kv("contentType",fn:string($field-value/@content-type))
                 )
               )
-            else js:kv($field/@name,"")
+            else js:kv(model:field-key($field),"")
         else if($field/@type eq "identity") then
-          js:kv($field/@name,fn:string($field-value))
+          js:kv(model:field-key($field),fn:string($field-value))
         else if($field/@type eq "schema-element") then
-          js:kv($field/@name,$field-value/node() ! xdmp:quote(.))
+          js:kv(model:field-key($field),$field-value/node() ! xdmp:quote(.))
         else if(domain:model-exists($field/@type)) then
           if($field/@occurrence = ("*","+")) then
-            js:kv($field/@name,js:a(
+            js:kv(model:field-key($field),js:a(
               for $v in $field-value
               return js:o((
                 domain:get-model($field/@type) ! model:build-json(.,$v,$include-root,$options)
               ))
             ))
           else
-            js:kv($field/@name,
+            js:kv(model:field-key($field),
               for $v in $field-value
               return js:o((
                 domain:get-model($field/@type) ! model:build-json(.,$v,$include-root,$options)
@@ -151,21 +163,21 @@ declare function model:build-json(
             )
         else
           if($field/@occurrence = ("*","+")) then
-            js:kv($field/@name, js:a($field-value ! fn:string(.)[. ne ""]))
+            js:kv(model:field-key($field), js:a($field-value ! fn:string(.)[. ne ""]))
           else
-            js:kv($field/@name, $field-value)
+            js:kv(model:field-key($field), $field-value)
       )
     case element(domain:attribute) return
       let $field-value := model:field-value($field,$instance,$options)
       return
-        js:kv(fn:concat(config:attribute-prefix(),$field/@name),$field-value)
+        js:kv(model:field-key($field),$field-value)
     case element(domain:container) return
       if($options/json:strip-container/xs:boolean(.)) then
         for $field in $field/(domain:element|domain:container|domain:attribute)
         return model:build-json($field,$instance,$include-root,$options)
       else
         js:kv(
-          $field/@name,
+          model:field-key($field),
           js:o(
             for $field in $field/(domain:element|domain:container|domain:attribute)
             return model:build-json($field,$instance,$include-root,$options)
@@ -178,7 +190,7 @@ declare function model:to-json(
   $model as element(domain:model),
   $instance as element()
 ) {
-  model:to-json($model,$instance,fn:false(),<options xmlns="json:options"/>)
+  model:to-json($model,$instance,fn:false(),())
 };
 
 declare function model:to-json(
@@ -186,20 +198,43 @@ declare function model:to-json(
   $instance as element(),
   $include-root as xs:boolean
 ) {
-  model:to-json($model,$instance,$include-root,<json:options/>)
+  model:to-json($model,$instance,$include-root,())
 };
 
 declare function model:to-json(
   $model as element(domain:model),
   $instance as element(),
   $include-root as xs:boolean,
-  $options as element(json:options)
+  $options as element(json:options)?
 ) {
   if($model/@name eq fn:local-name($instance)) then
-    model:build-json($model,$instance,$include-root,$options)
+    model:build-json(
+      $model,
+      $instance,
+      $include-root,
+      model:get-json-options($model, $options)
+    )
   else
     fn:error(xs:QName("MODEL-INSTANCE-MISMATCH"),
     fn:string(
       <msg>{$instance/fn:local-name(.)} does not have same signature model name:{fn:data($model/@name)}</msg>)
     )
  };
+
+declare %private function model:get-json-options(
+  $model as element(domain:model),
+  $options as element(json:options)?
+) as element(json:options) {
+  if (fn:exists($options)) then
+    $options
+  else
+    let $get-options-fn := domain:get-model-function((), $model, "get-json-options", 1, fn:false())
+    return
+      if (fn:exists($get-options-fn)) then
+        xdmp:apply(
+          $get-options-fn,
+          $model
+        )
+      else
+        <json:options/>
+};

@@ -223,7 +223,6 @@ declare %test:case function model-patch-test-operation-failed-test() {
     return model:patch($model1, $current-instance, $updated)
   } catch ($ex) { $ex }
   return (
-    xdmp:log($actual/error:name),
     assert:error($actual, text{"Test failed", "path", $path, "value", $value})
   )
 };

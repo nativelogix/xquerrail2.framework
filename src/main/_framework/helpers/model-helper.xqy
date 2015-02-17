@@ -55,13 +55,7 @@ declare function model:field-value(
 declare function model:field-key(
   $field as element()
 ) as xs:string {
-  if ($field/@jsonName ne "") then
-    $field/@jsonName
-  else
-    if ($field instance of element(domain:attribute)) then
-      fn:concat(config:attribute-prefix(),$field/@name)
-    else
-      $field/@name
+  domain:get-field-json-name($field)
 };
 
 declare function model:build-json(
@@ -76,7 +70,7 @@ declare function model:build-json(
   $instance as element(),
   $include-root as xs:boolean
 ) {
-  model:build-json($field,$instance,$include-root,model:get-json-options($field/ancestor::domain:model, ()))
+  model:build-json($field,$instance,$include-root,model:get-json-options($field/ancestor-or-self::domain:model, ()))
 };
 
 (:~
@@ -261,7 +255,7 @@ declare %private function model:get-json-options(
         if (fn:exists($options)) then
           $options
         else
-          let $get-options-fn := domain:get-model-function((), $model, "get-json-options", 1, fn:false())
+          let $get-options-fn := domain:get-model-function((), $model/@name, "get-json-options", 1, fn:false())
           return
             if (fn:exists($get-options-fn)) then
               xdmp:apply(

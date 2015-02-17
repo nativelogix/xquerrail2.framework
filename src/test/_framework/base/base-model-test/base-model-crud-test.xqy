@@ -596,8 +596,7 @@ declare %test:case function model-partial-update-json-empty-attribute-test() as 
     function() {
       model:update(
         $model6,
-        <model6 xmlns="http://xquerrail.com/app-test" id="partial-update-empty-attribute-json-model6-id" score="">
-        </model6>,
+        xdmp:from-json('{"' || config:attribute-prefix() || 'id": "partial-update-empty-attribute-json-model6-id", "' || config:attribute-prefix() || 'score": ""}'),
         (),
         fn:true()
       )
@@ -659,7 +658,6 @@ declare %test:case function model-partial-update-xml-empty-array-test() as item(
 declare %test:case function model-partial-update-json-empty-array-test() as item()*
 {
   let $model15 := domain:get-model("model15")
-  let $_ := xdmp:log($model15)
   let $instance15 := setup:eval(
     function() {
       model:update(

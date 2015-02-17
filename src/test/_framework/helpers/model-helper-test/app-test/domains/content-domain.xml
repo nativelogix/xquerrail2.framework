@@ -84,4 +84,12 @@
     <element name="name" type="string"/>
   </model>
 
+  <model name="model6" persistence="directory" label="Model #6" extends="base" namespace-uri="http://marklogic.com/model/model3" key="uuid" keyLabel="id">
+    <directory>/test/model6/</directory>
+    <element name="id" type="string"/>
+    <element name="name" type="string"/>
+    <element name="first-name" type="string"/>
+    <element name="last-name" type="string"/>
+  </model>
+
 </domain>

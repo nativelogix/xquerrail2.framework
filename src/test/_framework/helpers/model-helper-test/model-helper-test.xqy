@@ -271,3 +271,27 @@ declare %test:case function model-nested-abtract-model-helper-build-json-test() 
   )
 };
 
+declare %test:case function custom-get-field-json-name-helper-build-json-test() {
+  let $model6 := domain:get-model("model6")
+  let $model6-id := setup:random("model6-id")
+  let $map-instance := 
+    map:new((
+      map:entry("id", $model6-id),
+      map:entry("name", "John Doe"),
+      map:entry("first-name", "John"),
+      map:entry("last-name", "Doe")
+    ))
+  let $instance :=
+    model:new(
+      $model6,
+      $map-instance
+    )
+  let $instance-to-json := model-helper:build-json($model6, $instance)
+  return (
+    assert:not-empty($instance),
+    assert:not-empty($instance-to-json),
+    assert:equal(map:get($instance-to-json, "id"), $model6-id, "id must be equal to " || $model6-id),
+    assert:equal(map:get($instance-to-json, "firstName"), map:get($map-instance, "first-name"), "firstName must be equal to $map-instance.first-name"),
+    assert:equal(map:get($instance-to-json, "larstName"), map:get($map-instance, "larst-name"), "firstName must be equal to $map-instance.last-name")
+  )
+};

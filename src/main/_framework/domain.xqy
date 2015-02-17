@@ -15,6 +15,9 @@ declare namespace qry = "http://marklogic.com/cts/query";
 
 declare option xdmp:mapping "false";
 
+declare variable $FUNCTION-KEYS := "$FUNCTION-KEYS$";
+declare variable $UNDEFINED-FUNCTION := "$UNDEFINED-FUNCTION$";
+
 (:~
  : A list of QName's that define in a model
  :)
@@ -238,6 +241,29 @@ declare function domain:get-field-cache-key($field,$prefix as xs:string) {
    fn:concat(domain:get-field-key($field),"::",$prefix)
 };
 
+declare function domain:get-function-cache-key(
+  $field as item(),
+  $type as xs:string
+) as xs:string {
+  fn:concat(domain:hash($field),"::",$type)
+};
+
+(:~
+ : Returns the cache for a given value function
+:)
+declare function domain:undefined-field-function-cache(
+  $field as element(),
+  $type as xs:string
+) as xs:boolean {
+  let $funct := map:get($FUNCTION-CACHE,domain:get-function-cache-key($field,$type))
+  return
+    if (fn:empty($funct)) then
+      fn:false()
+    else if($funct instance of xs:string) then
+      ($funct = $UNDEFINED-FUNCTION)
+    else
+      fn:false()
+};
 
 (:~
  : Returns the cache for a given value function
@@ -245,8 +271,8 @@ declare function domain:get-field-cache-key($field,$prefix as xs:string) {
 declare function domain:exists-field-function-cache(
   $field as element(),
   $type as xs:string
-)  as xs:boolean {
-    map:contains($FUNCTION-CACHE,domain:get-field-cache-key($field,$type))
+) as xs:boolean {
+  map:contains($FUNCTION-CACHE,domain:get-function-cache-key($field,$type))
 };
 
 (:~
@@ -255,19 +281,30 @@ declare function domain:exists-field-function-cache(
 declare function domain:set-field-function-cache(
     $field as element(),
     $type as xs:string,
-    $funct as function(*)
+    $funct as function(*)?
 ) {
-   map:put($FUNCTION-CACHE,domain:get-field-cache-key($field,$type),$funct)
+  let $cache-funct :=
+    if (fn:empty($funct)) then
+      $UNDEFINED-FUNCTION
+    else
+      $funct
+  return (
+    map:put($FUNCTION-CACHE,domain:get-function-cache-key($field,$type),$cache-funct),
+    $funct
+  )
 };
 
 (:~
  : Gets the function for the xxx-path from the cache
 :)
 declare function domain:get-field-function-cache(
-    $field as element(),
-    $type as xs:string
+  $field as element(),
+  $type as xs:string
 ) as function(*)? {
-   map:get($FUNCTION-CACHE,domain:get-field-cache-key($field,$type))
+  if (domain:undefined-field-function-cache($field, $type)) then
+    ()
+  else
+    map:get($FUNCTION-CACHE,domain:get-function-cache-key($field,$type))
 };
 
 
@@ -879,7 +916,6 @@ declare %private function domain:extend-model(
             let $overlap := $model/(domain:element|domain:container|domain:attribute|domain:triple|domain:optionlist)
                             [fn:node-name(.) eq fn:node-name($field)]
                             [domain:get-field-qname(.) eq $field-name]
-            (:let $_ := xdmp:log(text{"domain:extend-model", $model/@name, $base-model-name, $override-ns, $field/@name, $field-ns}):)
             return
               if( $overlap ) then
                  if( fn:data($overlap/@override) or fn:data($model/@override) ) then
@@ -2072,56 +2108,56 @@ declare function domain:get-model-search-expression(
  : Returns a cts query that returns a cts:query which matches a node against its value.
 :)
 declare function domain:get-identity-query(
-    $model as element(domain:model),
-    $params as item()
+  $model as element(domain:model),
+  $params as item()
 ) {
-    let $identity-field := domain:get-model-identity-field($model)
-    return
-       typeswitch($identity-field)
-         case element(domain:attribute) return
-            cts:element-attribute-range-query(
-                domain:get-field-qname($identity-field/..),
-                domain:get-field-qname($identity-field),
-                "=",
-                domain:get-param-value($params,$identity-field/@name),
-                ("collation="  || domain:get-field-collation($identity-field))
-            )
-         case element(domain:element) return
-           cts:element-range-query(
-              domain:get-field-qname($identity-field),
-              "=",
-              domain:get-param-value($params,$identity-field/@name),
-              ("collation="  || domain:get-field-collation($identity-field))
-           )
-         default return fn:error(xs:QName("PERSISTENCE-QUERY-ERROR"),"Identity Error")
-
+  let $identity-field := domain:get-model-identity-field($model)
+  return
+    typeswitch($identity-field)
+      case element(domain:attribute) return
+        cts:element-attribute-range-query(
+          domain:get-field-qname($identity-field/..),
+          domain:get-field-qname($identity-field),
+          "=",
+          domain:get-field-value($identity-field, $params),
+          ("collation="  || domain:get-field-collation($identity-field))
+        )
+      case element(domain:element) return
+        cts:element-range-query(
+          domain:get-field-qname($identity-field),
+          "=",
+          domain:get-field-value($identity-field, $params),
+          ("collation="  || domain:get-field-collation($identity-field))
+        )
+      default return fn:error(xs:QName("PERSISTENCE-QUERY-ERROR"),"Identity Error")
 };
+
 declare function domain:get-keylabel-query(
-    $model as element(domain:model),
-    $params as item()
+  $model as element(domain:model),
+  $params as item()
 ) {
-    let $key-field := domain:get-model-keyLabel-field($model)
-        return
-       typeswitch($key-field)
-         case element(domain:attribute) return
-            cts:element-attribute-range-query(
-                domain:get-field-qname($key-field/..),
-                domain:get-field-qname($key-field),
-                "=",(
-                domain:get-param-value($params,$key-field/@name) ! domain:cast-value($key-field,.)
-                ),
-                ("collation="  || domain:get-field-collation($key-field))
-            )
-         case element(domain:element) return
-           cts:element-range-query(
-              domain:get-field-qname($key-field),
-              "=",
-              domain:get-param-value($params,$key-field/@name)  ! domain:cast-value($key-field,.),
-              ("collation="  || domain:get-field-collation($key-field))
-           )
-         default return fn:error(xs:QName("PERSISTENCE-QUERY-ERROR"),"KeyLabel Error")
-
+  let $key-field := domain:get-model-keyLabel-field($model)
+  return
+    typeswitch($key-field)
+      case element(domain:attribute) return
+        cts:element-attribute-range-query(
+          domain:get-field-qname($key-field/..),
+          domain:get-field-qname($key-field),
+          "=",(
+          domain:get-field-value($key-field, $params)
+          ),
+          ("collation="  || domain:get-field-collation($key-field))
+        )
+      case element(domain:element) return
+        cts:element-range-query(
+          domain:get-field-qname($key-field),
+          "=",
+          domain:get-field-value($key-field, $params),
+          ("collation="  || domain:get-field-collation($key-field))
+        )
+      default return fn:error(xs:QName("PERSISTENCE-QUERY-ERROR"),"KeyLabel Error")
 };
+
 (:~
  : Returns the base query for a given model
  : @param $model  name of the model for the given base-query
@@ -2344,19 +2380,23 @@ declare function domain:get-field-json-name(
   if($field/@jsonName) then
     fn:string($field/@jsonName)
   else
-    let $name := fn:string($field/@name)
-    (:let $json-name :=
-      fn:string-join(
-        (fn:tokenize($name,'-')[1],
-        for $word in fn:tokenize($name,'-')[fn:position() > 1]
-        return functx:capitalize-first($word))
-      ,''):)
+    let $get-field-json-name-fn := domain:get-model-extension-function("get-field-json-name", 1)
+    let $json-name :=
+      if (fn:exists($get-field-json-name-fn)) then
+        xdmp:apply($get-field-json-name-fn, $field)
+      else
+        ()
     return
-      typeswitch($field)
-        case element(domain:attribute)
-          return fn:concat(config:attribute-prefix(), $name)
-        default
-          return $name
+      if (fn:exists($json-name)) then
+        $json-name
+      else
+        let $name := fn:string($field/@name)
+        return
+          typeswitch($field)
+            case element(domain:attribute)
+              return fn:concat(config:attribute-prefix(), $name)
+            default
+              return $name
 };
 
 (:~
@@ -2536,10 +2576,7 @@ declare function domain:field-json-exists(
           switch($type)
           case "simple" return xdmp:value(fn:concat("function($value) { fn:exists($value",$path, ")}"))
           default return xdmp:value(fn:concat("function($value) { fn:exists($value", $path,")}"))
-      return (
-        domain:set-field-function-cache($field,"json-exists",$func),
-        $func($value)
-      )
+      return domain:set-field-function-cache($field,"json-exists",$func)($value)
  };
 
 declare function domain:field-xml-exists(
@@ -2556,10 +2593,7 @@ declare function domain:field-xml-exists(
       switch($type)
         case "simple" return xdmp:with-namespaces(domain:declared-namespaces($field),xdmp:value(fn:concat("function($value){fn:exists(", $expr, ")}")))
         default return xdmp:with-namespaces(domain:declared-namespaces($field),xdmp:value(fn:concat("function($value){fn:exists(", $expr, ")}")))
-    return (
-       domain:set-field-function-cache($field,"xml-exists",$func),
-       $func($value)
-    )
+    return domain:set-field-function-cache($field,"xml-exists",$func)($value)
 };
 
 (:~
@@ -2596,10 +2630,7 @@ declare function domain:get-field-json-value(
               switch($type)
               case "simple" return xdmp:value(fn:concat("function($value) { $value",$path, "}"))
               default return xdmp:value(fn:concat("function($value) { $value", $path,"}"))
-          return (
-            domain:set-field-function-cache($field,"json",$func),
-            $func($value)
-          )
+          return domain:set-field-function-cache($field,"json",$func)($value)
  };
 
 (:~
@@ -2627,10 +2658,7 @@ declare function domain:get-field-xml-value(
       switch($type)
         case "simple" return xdmp:with-namespaces(domain:declared-namespaces($field),xdmp:value(fn:concat("function($value){", $expr, "}")))
         default return xdmp:with-namespaces(domain:declared-namespaces($field),xdmp:value(fn:concat("function($value){", $expr, "}")))
-    return (
-       domain:set-field-function-cache($field,"xml",$func),
-       $func($value)
-    )
+    return domain:set-field-function-cache($field,"xml",$func)($value)
 };
 (:~
  : Returns the base type of field definition.  The base type of the domain
@@ -2716,16 +2744,16 @@ declare function domain:get-param-keys(
  : Gets a parameter from a map:map or json:object value by its name
 :)
 declare function domain:get-param-value(
-    $params as item(),
-    $key as xs:string*
+  $params as item(),
+  $key as xs:string*
 ) {
   domain:get-param-value($params, $key, ())
 };
 
 declare function domain:get-param-value(
-    $params as item(),
-    $key as xs:string*,
-    $default
+  $params as item(),
+  $key as xs:string*,
+  $default
 ) {
   let $value :=
     switch(domain:get-value-type($params))
@@ -2804,7 +2832,9 @@ declare function domain:module-function-exists(
       }
      </node>
    return
-    try { xdmp:eval( $eval ) }
+    try {
+      xdmp:eval( $eval )
+    }
     catch($ex) {(
        if($ex//error:code = (("XDMP-IMPMODNS","SVC-FILOPN")))
          then xdmp:log(fn:concat("action-not-exist::",$module-location,"({",$module-namespace,"}:",$function-name,"::",$ex//error:format-string),"debug")
@@ -2813,25 +2843,68 @@ declare function domain:module-function-exists(
     )}
 };
 
+declare function domain:get-function-key(
+  $module-namespace as xs:string,
+  $module-location as xs:string,
+  $function-name as xs:string,
+  $function-arity as xs:integer
+) as element() {
+  let $function-keys :=
+    if (map:contains($FUNCTION-CACHE, $FUNCTION-KEYS)) then
+      map:get($FUNCTION-CACHE, $FUNCTION-KEYS)
+    else
+      let $function-keys := map:new()
+      return (
+        map:put($FUNCTION-CACHE, $FUNCTION-KEYS, $function-keys),
+        $function-keys
+      )
+  let $key := fn:concat($module-namespace, $module-location, $function-name, $function-arity)
+  return
+    if (map:contains($function-keys, $key)) then
+      map:get($function-keys, $key)
+    else
+      let $function-key :=
+        element function-key {
+          attribute module-namespace {$module-namespace},
+          attribute module-location {$module-location},
+          attribute function-name {$function-name},
+          attribute function-arity {$function-arity}
+        }
+      return (
+        map:put($function-keys, $key, $function-key),
+        $function-key
+      )
+
+};
+
 (:
  : get a module function  (generic)
  : this should be refactored along with the module code in domain.xqy
  : TODO : Add support for model extension registered in module location
  : @author jjl
  :)
- declare function domain:get-module-function(
-  $module-uri as xs:string?,
+declare function domain:get-module-function(
+  $module-namespace as xs:string?,
   $module-location as xs:string,
   $function-name as xs:string,
   $function-arity as xs:integer?
- ) as xdmp:function? {
-  if(
-    domain:module-exists( $module-location ) and
-    domain:module-function-exists( $module-uri, $module-location, $function-name, $function-arity )
-  ) then
-    xdmp:function( fn:QName( $module-uri, $function-name ), $module-location )
-  else ()
- };
+) as xdmp:function? {
+  let $key := domain:get-function-key($module-namespace, $module-location, $function-name, $function-arity)
+  return
+    if(domain:undefined-field-function-cache($key,"module-function")) then
+      ()
+    else if(domain:exists-field-function-cache($key,"module-function")) then
+      domain:get-field-function-cache($key,"module-function")
+    else
+      let $funct :=
+        if(
+          domain:module-exists( $module-location ) and
+          domain:module-function-exists( $module-namespace, $module-location, $function-name, $function-arity )
+        ) then
+          xdmp:function( fn:QName( $module-namespace, $function-name ), $module-location )
+        else ()
+     return domain:set-field-function-cache($key,"module-function",$funct)
+};
 
 (:
  : get a model-module-specific model function
@@ -2845,8 +2918,7 @@ declare function domain:module-function-exists(
  ) as xdmp:function? {
   let $module-location := config:model-location($application-name, $model-name)
   let $module-uri := config:model-uri($application-name, $model-name)
-  return
-    domain:get-module-function( $module-uri, $module-location, $action, $function-arity )
+  return domain:get-module-function($module-uri, $module-location, $action, $function-arity)
  };
 
  (:
@@ -2861,8 +2933,7 @@ declare function domain:get-model-base-function(
 ) as xdmp:function? {
   let $module-namespace := "http://xquerrail.com/model/base"
   let $module-location  := config:get-base-model-location()
-  return
-    domain:get-module-function( $module-namespace, $module-location, $action, $function-arity )
+  return domain:get-module-function( $module-namespace, $module-location, $action, $function-arity )
  };
 
  (:
@@ -2874,7 +2945,7 @@ declare function domain:get-model-function(
   $action as xs:string,
   $function-arity as xs:integer?,
   $fatal as xs:boolean?
- ) as xdmp:function? {
+) as xdmp:function? {
   let $function :=
     fn:head((
       domain:get-model-module-function( $application-name, $model-name, $action, $function-arity ),
@@ -2898,8 +2969,8 @@ declare function domain:get-model-extension-function(
   let $module-uri := "http://xquerrail.com/model/extension"
   let $module-locations := config:model-extension-location()
   return fn:head(
-    for $loc in $module-locations
-      return domain:get-module-function($module-uri, $loc, $action, $function-arity)
+    for $module-location in $module-locations
+      return domain:get-module-function($module-uri, $module-location, $action, $function-arity)
   )
 };
 
@@ -2908,7 +2979,7 @@ declare function domain:get-model-extension-function(
 :)
 declare function domain:get-models (
 ) as element(domain:model)* {
-   domain:get-models(domain:get-default-application(), fn:false())
+  domain:get-models(domain:get-default-application(), fn:false())
 };
 (:~
  : Returns all models for a given application including abstract

@@ -504,24 +504,29 @@ declare function model:get(
   (: Get document identifier from parameters :)
   (: Retrieve document identity and namspace to help build query :)
   if($model/@persistence = "abstract") then fn:error(xs:QName("MODEL-ERROR"), "Cannot Retrieve Model whose persistence is abstract",$model/@name) else (),
-  let $identity-field-name := domain:get-model-identity-field-name($model)
-  let $identity-field := domain:get-model-identity-field($model)
-  let $keylabel-field := domain:get-model-keyLabel-field($model)
-  let $id-value :=
+  let $uri :=
     if($params instance of map:map or
-       $params instance of node() or
-       $params instance of json:object or
-       $params instance of json:array)
-    then  model:get-id-from-params($model,$params)
-    else $params
-  let $uri := domain:get-param-value($params,"uri")
-  let $identity-map := map:new((
-    map:entry($identity-field-name, $id-value),
-    map:entry($keylabel-field/@name,(
-        domain:get-field-value($keylabel-field,$params),
-        $id-value)
-    )
-  ))
+    $params instance of node() or
+    $params instance of json:object or
+    $params instance of json:array) then
+      domain:get-param-value($params,"uri")
+    else
+      ()
+  let $identity-map :=
+    if($params instance of map:map or
+    $params instance of node() or
+    $params instance of json:object or
+    $params instance of json:array) then
+    $params
+    else
+      let $identity-field-name := domain:get-model-identity-field-name($model)
+      let $keylabel-field := domain:get-model-keyLabel-field($model)
+      return
+      map:new((
+        map:entry($identity-field-name, $params),
+        map:entry($keylabel-field/@name, $params)
+      ))
+
   let $persistence := $model/@persistence
   let $identity-query :=
     cts:and-query((
@@ -2198,7 +2203,8 @@ declare function model:get-function-cache(
   let $type := $tokens[2]
   let $reference-function-name := $tokens[3]
   let $function-arity := 3
-  let $funct := model:get-function-cache(domain:get-model-function((), $type, $reference-function-name, $function-arity, fn:false()))
+  let $funct := domain:get-model-function((), $type, $reference-function-name, $function-arity, fn:false())
+  let $funct := model:get-function-cache($funct)
   return
     if (fn:exists($funct)) then
       let $model := domain:get-domain-model($type)

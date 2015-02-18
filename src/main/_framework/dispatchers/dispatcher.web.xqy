@@ -35,59 +35,51 @@ declare option xdmp:ouput "omit-xml-declaration=yes";
 (:~
  : Returns whether the controller exists or not.
  :)
-declare function dispatcher:controller-exists($controller-uri as xs:string) as xs:boolean {
+declare function dispatcher:controller-exists(
+  $controller-uri as xs:string
+) as xs:boolean {
 	module:resource-exists($controller-uri)
 };
 
-declare function dispatcher:extension-exists(
-){
-   let $exists := fn:exists(config:controller-extension())
-   return (
-     $exists
-   )
-};
 (:~
  : Determines if the extension for the controller exists or a plugin exists.
 ~:)
 declare function dispatcher:extension-action-exists(
   $action as xs:string
 ) as xs:boolean {
-   let $location :=  config:controller-extension()/@resource
-   let $eval :=
-      fn:string(<node>import module namespace func = "http://xquerrail.com/controller/extension" at '{fn:data($location)}';
-       fn:function-available("func:{$action}",0)
-     </node>)
-   let $exists :=
-        try {xdmp:eval($eval)}catch($ex){(
-           if($ex//error:code = (("XDMP-IMPMODNS","SVC-FILOPN")))
-           then xdmp:log(fn:concat("action-not-exist::",$location,"::",$ex//error:format-string),"debug")
-           else xdmp:rethrow()
-           ,fn:false()
-        )}
-    return (
-        $exists
-    )
+  fn:exists(dispatcher:extension-action($action))
 };
 
 (:~
  : Checks that a given controller function exists
  :)
 declare function dispatcher:action-exists(
-$controller-uri,
-$controller-location,
-$controller-action
+  $controller-uri,
+  $controller-location,
+  $controller-action
 ) as xs:boolean {
-   let $eval :=
-      <node>import module namespace func = '{$controller-uri}' at '{$controller-location}';
-       fn:function-available("func:{$controller-action}",0)
-     </node>
-   return
-    try {xdmp:eval($eval)}catch($ex){(
-       if($ex//error:code = (("XDMP-IMPMODNS","SVC-FILOPN")))
-       then xdmp:log(fn:concat("action-not-exist::",$controller-uri,"-",$controller-action,"::",$ex//error:format-string),"debug")
-       else xdmp:rethrow()
-       ,fn:false()
-    )}
+  (
+    domain:module-exists($controller-location) and
+    domain:module-function-exists($controller-uri, $controller-location, $controller-action, ())
+  )
+};
+
+declare function dispatcher:extension-action(
+  $action as xs:string
+) as xs:string? {
+  let $controller-extension-namespace := "http://xquerrail.com/controller/extension"
+  let $controller-locations := config:controller-extension-location()
+  return fn:head(
+    for $controller-location in $controller-locations
+    return
+      if (
+        dispatcher:action-exists($controller-extension-namespace, $controller-location, "initialize") and
+        dispatcher:action-exists($controller-extension-namespace, $controller-location, $action)
+      ) then
+        $controller-location
+      else
+        ()
+  )
 };
 
 (:~
@@ -167,9 +159,10 @@ declare function dispatcher:invoke-controller()
         let $controller-func := xdmp:function(fn:QName($controller-uri,$action),$controller-location)
         return
            $controller-func()
-     else if(dispatcher:extension-exists() and dispatcher:extension-action-exists($action)) then
-          let $extension-init   :=  xdmp:function(xs:QName("extension:initialize"),config:controller-extension()/@resource)
-          let $extension-action :=  xdmp:function(xs:QName("extension:" || $action),config:controller-extension()/@resource)
+     else if(dispatcher:extension-action-exists($action)) then
+      let $controller-location := dispatcher:extension-action($action)
+          let $extension-init   :=  xdmp:function(xs:QName("extension:initialize"),$controller-location)
+          let $extension-action :=  xdmp:function(xs:QName("extension:" || $action),$controller-location)
           return (
             $extension-init(request:request()),
             $extension-action()

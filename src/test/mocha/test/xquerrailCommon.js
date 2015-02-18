@@ -79,6 +79,47 @@ var xquerrailCommon = (function(){
     request(options, callback);
   };
 
+  function httpMethod(method, model, action, data, qs, callback, format) {
+    var options = {
+      method: method,
+      url: xquerrailCommon.urlBase + '/' + model + '/' + action + (format === undefined? '.json': format),
+      headers: {'userId': settings.currentUser},
+      json: data,
+      qs: qs,
+      followRedirect: true
+    };
+    request(options, function(error, response) {
+      return parseResponse(model, error, response, callback);
+    });
+  };
+
+  function parseResponse(model, error, response, callback) {
+    var body;
+    try {
+      body = JSON.parse(response.body);
+    } catch(e) {
+      body = response.body;
+    }
+    if (response.statusCode === 500) {
+      console.dir(body)
+      error = parseError(body);
+    }
+    if (callback !== undefined) {
+      callback(error, response, body);
+    }
+
+  };
+
+  function parseError(body) {
+    return {
+      code: body.error.code,
+      message: body.error.message,
+      description: body.error['format_string'],
+      data: body.error.data,
+      stack: body.error.stack
+    }
+  };
+
   return {
     urlBase: settings.urlBase,
     username: settings.username,
@@ -86,7 +127,8 @@ var xquerrailCommon = (function(){
     initialize: initialize,
     login: login,
     logout: logout,
-    random: random
+    random: random,
+    httpMethod: httpMethod
   };
 })();
 

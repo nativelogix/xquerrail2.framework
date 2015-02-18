@@ -2802,7 +2802,7 @@ declare function domain:model-exists(
  : Returns whether the module exists or not.
  :)
 declare function domain:module-exists(
-    $module-location as xs:string
+  $module-location as xs:string
 ) as xs:boolean {
 	if (xdmp:modules-database() ne 0) then
 		xdmp:eval(fn:concat('fn:doc-available("', $module-location, '")'), (),
@@ -2910,16 +2910,16 @@ declare function domain:get-module-function(
  : get a model-module-specific model function
  : @author jjl
  :)
- declare function domain:get-model-module-function(
+declare function domain:get-model-module-function(
   $application-name as xs:string?,
   $model-name as xs:string,
   $action as xs:string,
   $function-arity as xs:integer?
- ) as xdmp:function? {
+) as xdmp:function? {
   let $module-location := config:model-location($application-name, $model-name)
   let $module-uri := config:model-uri($application-name, $model-name)
   return domain:get-module-function($module-uri, $module-location, $action, $function-arity)
- };
+};
 
  (:
   : This needs to figure in any _extension/model.extension.xqy

@@ -813,14 +813,19 @@ declare function config:model-extension-location(
  : Returns the configurations for any controller extension
 ~:)
 declare function config:controller-extension() {
-   config:get-config()/config:controller-extension
+  config:get-config()/config:controller-extension
+};
+
+declare function config:controller-extension-location(
+) as xs:string* {
+  config:controller-extension()/@resource
 };
 
 (:~
  : Returns the configurations for any model extension
 ~:)
 declare function config:model-extension() {
-   config:get-config()/config:model-extension
+  config:get-config()/config:model-extension
 };
 
 (:~

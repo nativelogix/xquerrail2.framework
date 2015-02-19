@@ -87,7 +87,7 @@ declare function model:build-json(
 ) {
   typeswitch($field)
     case element(domain:model) return
-      let $to-json-function := domain:get-model-function((), $field/@name, "to-json", 2, fn:false())
+      let $to-json-function := domain:get-model-function((), $field/@name, (fn:data($options/json:to-json), "to-json")[1], 2, fn:false())
       return
         if (fn:exists($to-json-function)) then
           xdmp:apply(
@@ -254,6 +254,8 @@ declare %private function model:get-json-options(
       let $cached-options :=
         if (fn:exists($options)) then
           $options
+        else if (fn:exists($model/json:options) or (fn:exists($model/ancestor-or-self::domain:domain/json:options))) then
+          ($model/json:options, $model/ancestor-or-self::domain:domain/json:options)[1]
         else
           let $get-options-fn := domain:get-model-function((), $model/@name, "get-json-options", 1, fn:false())
           return

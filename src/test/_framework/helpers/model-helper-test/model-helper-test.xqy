@@ -274,7 +274,7 @@ declare %test:case function model-nested-abtract-model-helper-build-json-test() 
 declare %test:case function custom-get-field-json-name-helper-build-json-test() {
   let $model6 := domain:get-model("model6")
   let $model6-id := setup:random("model6-id")
-  let $map-instance := 
+  let $map-instance :=
     map:new((
       map:entry("id", $model6-id),
       map:entry("name", "John Doe"),
@@ -292,6 +292,51 @@ declare %test:case function custom-get-field-json-name-helper-build-json-test() 
     assert:not-empty($instance-to-json),
     assert:equal(map:get($instance-to-json, "id"), $model6-id, "id must be equal to " || $model6-id),
     assert:equal(map:get($instance-to-json, "firstName"), map:get($map-instance, "first-name"), "firstName must be equal to $map-instance.first-name"),
-    assert:equal(map:get($instance-to-json, "larstName"), map:get($map-instance, "larst-name"), "firstName must be equal to $map-instance.last-name")
+    assert:equal(map:get($instance-to-json, "lastName"), map:get($map-instance, "last-name"), "firstName must be equal to $map-instance.last-name")
+  )
+};
+
+declare %test:case function custom-json-options-from-model-helper-build-json-test() {
+  let $model7 := domain:get-model("model7")
+  let $model7-id := setup:random("model7-id")
+  let $map-instance :=
+    map:new((
+      map:entry("id", $model7-id),
+      map:entry("first-name", "John"),
+      map:entry("last-name", "Doe")
+    ))
+  let $instance :=
+    model:new(
+      $model7,
+      $map-instance
+    )
+  let $instance-to-json := model-helper:build-json($model7, $instance)
+  return (
+    assert:not-empty($instance),
+    assert:not-empty($instance-to-json),
+    assert:equal(map:get($instance-to-json, "id"), $model7-id, "id must be equal to " || $model7-id),
+    assert:equal(map:get($instance-to-json, config:attribute-prefix() || "name"), "", config:attribute-prefix() || "name must be equal to empty string"),
+    assert:equal(map:get($instance-to-json, "last-name"), map:get($map-instance, "last-name"), "firstName must be equal to $map-instance.last-name")
+  )
+};
+
+declare %test:case function custom-to-json-function-from-model-helper-build-json-test() {
+  let $model8 := domain:get-model("model8")
+  let $model8-id := setup:random("model8-id")
+  let $map-instance :=
+    map:new((
+      map:entry("id", $model8-id),
+      map:entry("last-name", "Doe")
+    ))
+  let $instance :=
+    model:new(
+      $model8,
+      $map-instance
+    )
+  let $instance-to-json := model-helper:build-json($model8, $instance)
+  return (
+    assert:not-empty($instance),
+    assert:not-empty($instance-to-json),
+    assert:equal(map:get($instance-to-json, "first-name"), "dummy-first-name", "firstName must be equal to dummy-first-name")
   )
 };

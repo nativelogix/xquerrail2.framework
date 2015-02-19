@@ -1051,7 +1051,9 @@ declare function model:build-attribute(
         $value
       }
     else if($partial and fn:exists($current)) then
-      $current-value
+      attribute {$qname} {
+        $current-value
+      }
     else if(fn:exists($value)) then
       attribute {$qname} {
         $value

@@ -172,17 +172,33 @@ declare variable $PARENT-INSTANCES := (
 </parent-model>
 );
 
+declare variable $INSTANCES23 := (
+<model23 xmlns="http://xquerrail.com/app-test">
+  <name>model23-name-with-default</name>
+</model23>
+,
+<model23 xmlns="http://xquerrail.com/app-test" description="no-default">
+  <name>model23-name-no-default</name>
+  <comment>no-default</comment>
+</model23>
+,
+<model23 xmlns="http://xquerrail.com/app-test">
+  <name>model23-name-default-attribute</name>
+  <comment>no-default</comment>
+</model23>
+);
+
 declare variable $CONFIG := ();
 
 declare %test:setup function setup() {
   let $_ := setup:setup($TEST-APPLICATION)
-  let $_ := setup:create-instances("model4", $INSTANCES4, $TEST-COLLECTION)
   let $model1 := domain:get-model("model1")
   let $_ := setup:invoke(
       function() {
         model:create($model1, $INSTANCE1, $TEST-COLLECTION)
       }
     )
+  let $_ := setup:create-instances("model4", $INSTANCES4, $TEST-COLLECTION)
   let $model5 := domain:get-model("model5")
   let $_ := for $instance in $INSTANCES5 return (
     setup:invoke(
@@ -212,6 +228,14 @@ declare %test:setup function setup() {
     setup:invoke(
       function() {
         model:create($model19, $instance, $TEST-COLLECTION)
+      }
+    )
+  )
+  let $model23 := domain:get-model("model23")
+  let $_ := for $instance in $INSTANCES23 return (
+    setup:invoke(
+      function() {
+        model:create($model23, $instance, $TEST-COLLECTION)
       }
     )
   )
@@ -1437,6 +1461,112 @@ declare %test:case function model-new-json-name-attribute-test() as item()*
     assert:not-empty($instance22),
     assert:equal("dummy-content-type", xs:string($content-type-value)),
     assert:equal("dummy-description", xs:string($my-description-value))
+  )
+};
+
+declare %test:case function model-new-map-default-fields-test() as item()*
+{
+  let $model23 := domain:get-model("model23")
+  let $name := setup:random("dummy-name")
+  let $instance23 := model:new(
+    $model23,
+    map:new((
+      map:entry("name", $name)
+    ))
+  )
+  let $comment-value := domain:get-field-value(domain:get-model-field($model23, "comment"), $instance23)
+  let $description-value := domain:get-field-value(domain:get-model-field($model23, "description"), $instance23)
+  return (
+    assert:not-empty($instance23),
+    assert:equal("default-comment", xs:string($comment-value)),
+    assert:equal("default-description", xs:string($description-value))
+  )
+};
+
+declare %test:case function model-new-json-default-fields-test() as item()*
+{
+  let $model23 := domain:get-model("model23")
+  let $name := setup:random("dummy-name")
+  let $instance23 := model:new(
+    $model23,
+    xdmp:from-json('{"name": "'||$name||'"}')
+  )
+  let $comment-value := domain:get-field-value(domain:get-model-field($model23, "comment"), $instance23)
+  let $description-value := domain:get-field-value(domain:get-model-field($model23, "description"), $instance23)
+  return (
+    assert:not-empty($instance23),
+    assert:equal("default-comment", xs:string($comment-value)),
+    assert:equal("default-description", xs:string($description-value))
+  )
+};
+
+declare %test:case function model-update-default-element-test() as item()*
+{
+  let $model23 := domain:get-model("model23")
+  let $instance23 := model:get($model23, "model23-name-with-default")
+  let $comment-value := domain:get-field-value(domain:get-model-field($model23, "comment"), $instance23)
+  let $description-value := domain:get-field-value(domain:get-model-field($model23, "description"), $instance23)
+  let $instance23-map := model:convert-to-map($model23, $instance23)
+  let $_ := map:put($instance23-map, "comment", ())
+  let $_ := map:put($instance23-map, "description", "updated-description")
+  let $_ := xdmp:log($instance23-map)
+  let $update23 := setup:eval(
+    function() {
+      model:update(
+        $model23,
+        $instance23-map,
+        $TEST-COLLECTION
+      )
+    }
+  )
+  let $description-updated-value := domain:get-field-value(domain:get-model-field($model23, "description"), $update23)
+  let $comment-updated-value := domain:get-field-value(domain:get-model-field($model23, "comment"), $update23)
+  return (
+    assert:equal("default-comment", xs:string($comment-value)),
+    assert:equal("default-description", xs:string($description-value)),
+    assert:equal("updated-description", xs:string($description-updated-value)),
+    assert:empty($comment-updated-value)
+  )
+};
+
+declare %test:case function model-update-default-attribute-test() as item()*
+{
+  let $model23 := domain:get-model("model23")
+  let $instance23 := model:get($model23, "model23-name-default-attribute")
+  let $comment-value := domain:get-field-value(domain:get-model-field($model23, "comment"), $instance23)
+  let $description-value := domain:get-field-value(domain:get-model-field($model23, "description"), $instance23)
+  let $instance23-map := model:convert-to-map($model23, $instance23)
+  let $_ := map:put($instance23-map, "comment", "updated-comment")
+  let $_ := map:put($instance23-map, "description", ())
+  let $_ := xdmp:log($instance23-map)
+  let $update23 := setup:eval(
+    function() {
+      model:update(
+        $model23,
+        $instance23-map,
+        $TEST-COLLECTION
+      )
+    }
+  )
+  let $description-updated-value := domain:get-field-value(domain:get-model-field($model23, "description"), $update23)
+  let $comment-updated-value := domain:get-field-value(domain:get-model-field($model23, "comment"), $update23)
+  return (
+    assert:equal("no-default", xs:string($comment-value)),
+    assert:equal("default-description", xs:string($description-value)),
+    assert:equal("updated-comment", xs:string($comment-updated-value), "updated comment field must equal 'updated-comment'"),
+    assert:empty($description-updated-value, "updated description attribute must be empty")
+  )
+};
+
+declare %test:case function model-create-xml-no-default-test() as item()*
+{
+  let $model23 := domain:get-model("model23")
+  let $instance23 := model:get($model23, "model23-name-no-default")
+  let $comment-value := domain:get-field-value(domain:get-model-field($model23, "comment"), $instance23)
+  let $description-value := domain:get-field-value(domain:get-model-field($model23, "description"), $instance23)
+  return (
+    assert:equal("no-default", xs:string($comment-value)),
+    assert:equal("no-default", xs:string($description-value))
   )
 };
 

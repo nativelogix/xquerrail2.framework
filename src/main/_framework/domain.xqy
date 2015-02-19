@@ -2482,7 +2482,6 @@ declare function domain:get-field-value(
   return domain:cast-value($field,
     if(fn:exists($return-value) )
     then ( $return-value )
-    else if($field/@default) then $field/@default
     else ()
   )
 };

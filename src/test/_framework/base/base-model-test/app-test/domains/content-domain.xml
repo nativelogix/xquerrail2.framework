@@ -208,6 +208,14 @@
       <element name="content-type" jsonName="contentType"  type="string" />
       <element name="MyDescription" jsonName="description" type="string"/>
   </model>
+
+  <model name="model23" key="id" keyLabel="name" persistence="directory">
+      <directory>/test/model23/</directory>
+      <attribute name="id" type="identity" identity="true" />
+      <attribute name="description" type="string" default="default-description" />
+      <element name="name" type="string" />
+      <element name="comment" type="string" default="default-comment" />
+  </model>
 </domain>
 
 

@@ -1010,7 +1010,11 @@ declare function model:build-element(
           model:build-value($context,$value, $current-value)
         }
     else
-      let $values := model:build-value($context, $default-value, $current-value)
+      let $values :=
+        if (fn:exists($current) and fn:exists($updates) and fn:not($update-field-exists)) then
+          ()
+        else
+          model:build-value($context, $default-value, $current-value)
       return
         if (fn:exists($attributes) or fn:exists($values) or fn:empty(fn:index-of(("?", "*"), $occurrence))) then
           element {domain:get-field-qname($context)} {
@@ -1033,45 +1037,33 @@ declare function model:build-attribute(
   $updates as item(),
   $partial as xs:boolean,
   $relative as xs:boolean
-) {
+) as attribute()? {
   let $type := fn:data($context/@type)
   let $current-value := domain:get-field-value($context,$current)
-  let $field-values := domain:get-field-value($context, $updates, $relative)
+  let $update-values := domain:get-field-value($context, $updates, $relative)
   let $default-value := fn:data($context/@default)
   let $qname := domain:get-field-qname($context)
   let $occurrence := (fn:data($context/@occurrence),"?")[1]
-  let $value := model:build-value($context, $field-values, $current-value)
-
-(:      else if(fn:empty(fn:index-of(("?", "*"), $occurrence))) then
-        attribute {$qname} {
-
-        }
-:)
-(:      if ($position > 0) then (
-        let $value := domain:get-field-value($context,$updates, fn:true())
-        return $value
-      )
-      else
-        domain:get-field-value($context,$updates)
-:)    return
-      if(fn:exists($field-values)) then
-        attribute {$qname} {
-          $value
-        }
-      else if($partial and fn:exists($current)) then
-        $current-value
-      else if(fn:exists(model:build-value($context, $field-values,$current-value))) then
-        attribute {$qname} {
-          $value
-        }
-      else if(fn:exists($default-value)) then
-        attribute {$qname} {
-          $default-value
-        }
-      else if($occurrence = "+") then
-        attribute {$qname} { }
-      else
-        ()
+  let $value := model:build-value($context, $update-values, $current-value)
+  return
+    if(fn:exists($update-values)) then
+      attribute {$qname} {
+        $value
+      }
+    else if($partial and fn:exists($current)) then
+      $current-value
+    else if(fn:exists($value)) then
+      attribute {$qname} {
+        $value
+      }
+    else if(fn:empty($current) and fn:exists($default-value)) then
+      attribute {$qname} {
+        $default-value
+      }
+    else if($occurrence = "+") then
+      attribute {$qname} { }
+    else
+      ()
 };
 (:~
  : Builds a Reference Value by its type

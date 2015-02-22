@@ -28,15 +28,13 @@ declare %private variable $CONTEXT := map:map();
    your custom transform functions
  :)
 declare variable $custom-engine-tags as xs:QName*:=
-(
-  fn:QName("json-engine","to-json")
-);
+  (
+    fn:QName("json-engine","to-json")
+  );
+
 (:Set your engines custom transformer:)
-declare variable $custom-transform-function :=
-   xdmp:function(
-     xs:QName("engine:custom-transform"),
-     "engine.json.xqy"
-);
+declare variable $custom-transform-function := xdmp:function(xs:QName("engine:custom-transform"), "engine.json.xqy");
+
 declare function json-engine:is-supported(
   $request,
   $response
@@ -49,159 +47,80 @@ declare function json-engine:is-supported(
  : The Main Controller will call your initialize method
  : and register your engine with the engine.base.xqy
  :)
-declare function json-engine:initialize($_request,$_response){
-    (
-      let $init :=
-      (
-           response:initialize($_response),
-           request:initialize($_request),
-           engine:set-engine-transformer($custom-transform-function),
-           engine:register-tags($custom-engine-tags)
-      )
-      return
-       json-engine:render()
-    )
+declare function json-engine:initialize($_request,$_response) {
+  let $init := (
+    response:initialize($_response),
+    request:initialize($_request),
+    engine:set-engine-transformer($custom-transform-function),
+    engine:register-tags($custom-engine-tags)
+  )
+  return json-engine:render()
 };
 
 declare function json-engine:get-view-uri($response) {
-   if(response:base())
-   then fn:concat("../base/views/base.",response:action(),".json.xqy")
-   else fn:concat("/",request:application(),"/views/", request:controller(),"/",request:controller(), ".", response:view(),".json.xqy")
+  if(response:base()) then
+    fn:concat("../base/views/base.",response:action(),".json.xqy")
+  else
+    fn:concat("/",request:application(),"/views/", request:controller(),"/",request:controller(), ".", response:view(),".json.xqy")
 };
 
-declare function json-engine:render-search-results($node) {
-    js:o((
-      js:entry("response",js:o((
-            js:kv("page",$node/@page),
-            js:kv("snippet_format",$node/@snippet-format),
-            js:kv("total",$node/@total),
-            js:kv("start",$node/@start),
-            js:kv("page_length",$node/@page-length),
-            js:entry("results",js:a(
-              for $result in $node/search:result
-              return
-                js:o((
-                   js:kv("index",$result/@index),
-                   js:kv("uri",$result/@uri),
-                   js:kv("path",$result/@start),
-                   js:kv("score",$result/@score),
-                   js:kv("confidence",$result/@confidence),
-                   js:kv("fitness",$result/@fitness),
-                   js:entry("metadata",js:o(
-                     for $meta in $result/search:metadata/*
-                     return
-                        js:kv(fn:local-name($meta),fn:data($meta))
-                   )),
-                   js:entry("snippets",js:a(
-                     for $snippet in $result/search:snippet
-                     return
-                        js:entry("matches",js:a(
-                           for $match in $snippet/node()
-                           return
-                             typeswitch($match)
-                               case element(search:match) return
-                                  js:o((
-                                    js:kv("path",$match/@path),
-                                    js:kv("text",$match/text())
-                                  ))
-                               case text() return $match
-                               default return ()
-                        ))
-                   ))
-                ))
-             )
-         ),
-         (:Facets:)
-         js:entry("facets",js:a(
-            for $facet in $node/search:facet
-            return
-                js:entry("facet",js:o((
-                    js:kv("name",$facet/@name),
-                    js:kv("type",$facet/@type),
-                    js:entry("values",js:a(
-                        for $value in $facet/search:facet-value
-                        return js:o((
-                            js:kv("name",$value/@name),
-                            js:kv("count",$value/@count cast as xs:integer)
-
-                        ))
-                    ))
-                )))
-         )),
-         (:QText:)
-         js:entry("qtext",js:a(
-            for $qtext in $node/search:qtext
-            return
-              fn:string($qtext)
-         )),
-         (:QText:)
-         js:entry("query",js:a(
-            cts:query($node/search:query/node())
-         )),
-         (:Metrics:)
-         js:entry("metrics",js:o(
-            $node/search:metrics ! (
-                js:kv("query_time",./search:query-resolution-time),
-                js:kv("facet_time",./search:facet-resolution-time),
-                js:kv("snippet_time",./search:snippet-resolution-time),
-                js:kv("metadata_time",./search:metadata-resolution-time),
-                js:kv("total_time",./search:total_time)
-            )
-         ))
+declare function json-engine:render-array(
+  $model as element(domain:model)*,
+  $node
+) as json:object {
+  let $types := $model/@name ! fn:string(.)
+  let $types :=
+    if ($types = "_type") then
+      fn:error(xs:QName("INVALID-MODEL-NAME"), text{"Model name cannot be '_type'"})
+    else
+      $types
+  return js:object((
+    js:keyvalue("_type",
+      if (fn:count($types) eq 1) then
+        $types
+      else
+        js:array($types)
+    ),
+    for $type in $types
+    let $model := $model[./@name eq $type]
+    return
+    js:entry(
+      $type,
+      js:array(
+        for $n in $node/*[./@xsi:type/fn:string() eq $type or fn:local-name() eq $type]
+        return model-helper:to-json( $model, $n )
       )
-    ))
+    )
   ))
 };
-declare function json-engine:render-json($node)
-{
-   let $is-listable := $node instance of element(list)
-   let $is-lookup   := $node instance of element(lookups)
-   let $is-searchable := $node instance of element(search:response)
-   let $is-suggestable := $node instance of element(s)
-   let $model :=
-      if(response:model()) then response:model()
-      else if($is-listable or $is-lookup)
-      then domain:get-domain-model($node/@type)
-      else if($is-searchable) then ()
-      else if($is-suggestable) then ()
-      else if(domain:model-exists(fn:local-name($node))) then domain:get-model(fn:local-name($node))
-      else ()
-   return
-     if($is-listable and $model) then
-         xdmp:to-json(js:o((
-            js:kv("_type",$node/@type   ),
-            js:kv("currentpage",$node/currentpage cast as xs:integer),
-            js:kv("pagesize",$node/pagesize cast as xs:integer),
-            js:kv("totalpages",$node/totalpages cast as xs:integer),
-            js:kv("totalrecords",$node/totalrecords cast as xs:integer),
 
-            js:e($node/@type,js:a(
-               for $n in $node/*[fn:local-name(.) = $node/@type]
-               return
-                   model-helper:to-json($model,$n)
-            ))
-         )))
-     else if($is-lookup) then
-         xdmp:to-json( js:o ((
-             js:e("lookups", js:a(
-             for $n in $node/*:lookup
-             return js:o((
-                js:kv("key",fn:string($n/*:key)),
-                js:kv("label",fn:string($n/*:label))
-             ))))
-          )))
-     else if($is-searchable) then
-        xdmp:to-json(json-engine:render-search-results($node))
-     else if($is-suggestable) then
-        xdmp:to-json(js:o((
-            js:e("suggest", js:a($node/* ! fn:string(.)))
-        )))
-     else if($model) then (
-             xdmp:to-json(model-helper:to-json($model,$node))
-          )
-     else (:fn:error(xs:QName("JSON-PROCESSING-ERROR"),"Cannot generate JSON response without model"):)
-        jsh:to-json($node)
+declare function json-engine:render-json(
+  $node
+) {
+  let $is-multiple := xs:boolean(($node/@multi, fn:false())[1])
+  let $is-array := xs:boolean(($node/@array, fn:false())[1])
+  let $model :=
+    if($is-array) then
+      domain:get-model-from-instance($node/element()[1])
+    else if(response:model()) then
+      response:model()
+    else if(domain:model-exists(fn:local-name($node))) then
+      domain:get-model(fn:local-name($node))
+    else ()
+  return
+    if($is-array and fn:exists($model)) then
+      json-engine:render-array($model, $node)
+    (: Multiple allow heterogenous members, groups by name, and emits an array, recursively calling render-json for each :)
+    else if($is-multiple) then
+      let $types := fn:distinct-values( $node/element() ! ( domain:get-model-name-from-instance(.) ) )
+      let $models := domain:get-domain-model($types)
+      return json-engine:render-array($models, $node)
+    else if(fn:exists($model)) then
+      model-helper:to-json($model,$node)
+    else (:fn:error(xs:QName("JSON-PROCESSING-ERROR"),"Cannot generate JSON response without model"):)
+      jsh:to-json($node)
 };
+
 (:~
   Handle your custom tags in this method or the method you have assigned
   initialized with the base.engine
@@ -212,6 +131,7 @@ declare function json-engine:custom-transform($node as item())
 {
    $node
 };
+
 (:~
  : The Kernel controller will call your render method.
  : From this point it is up to your engine
@@ -244,7 +164,12 @@ declare function json-engine:render()
             $view else json:object($view)
         )
       else
-        json-engine:render-json(response:body())
+        let $response := json-engine:render-json(response:body())
+        return
+          if( $response instance of json:object ) then
+            xdmp:to-json($response)
+          else
+            $response
   )
 };
 

@@ -120,6 +120,49 @@ var xquerrailCommon = (function(){
     }
   };
 
+  var create = function(model, data, callback) {
+    httpMethod('POST', model, 'create', data, undefined, callback);
+  };
+
+  var update = function(model, data, callback) {
+    httpMethod('POST', model, 'update', data, undefined, callback);
+  };
+
+  var get = function (model, data, callback) {
+    httpMethod('GET', model, 'get', undefined, data, callback);
+  };
+
+  var remove = function(model, data, callback) {
+    httpMethod('POST', model, 'delete', data, undefined, callback);
+  };
+
+  var list = function(model, data, callback) {
+    httpMethod('GET', model, 'list', undefined, data, callback);
+  };
+
+  var lookup = function(model, data, callback) {
+    httpMethod('GET', model, 'lookup', undefined, data, callback);
+  };
+
+  var suggest = function(model, data, callback) {
+    httpMethod('GET', model, 'suggest', undefined, data, callback);
+  };
+
+  var search = function(model, data, callback) {
+    httpMethod('GET', model, 'search', undefined, data, callback);
+  };
+
+  var model = {
+    create: create,
+    update: update,
+    get: get,
+    remove: remove,
+    list: list,
+    lookup: lookup,
+    suggest: suggest,
+    search: search
+  };
+
   return {
     urlBase: settings.urlBase,
     username: settings.username,
@@ -128,7 +171,9 @@ var xquerrailCommon = (function(){
     login: login,
     logout: logout,
     random: random,
-    httpMethod: httpMethod
+    model: model,
+    httpMethod: httpMethod,
+    parseResponse: parseResponse
   };
 })();
 

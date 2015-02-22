@@ -3075,3 +3075,23 @@ declare function domain:get-parent-field-attribute(
     else
       fn:error(xs:QName("UNSUPPORTED-PARENT-FIELD-ATTRIBUTE"), text{"Unsupported parent field", $parent/fn:name()})
 };
+
+declare function domain:get-model-name-from-instance(
+  $instance as element()
+) as xs:string? {
+  if ($instance/@xsi:type) then
+    fn:string($instance/@xsi:type)
+  else
+    $instance/fn:local-name()
+};
+
+declare function domain:get-model-from-instance(
+  $instance as element()
+) as element(domain:model)? {
+  let $model-name := domain:get-model-name-from-instance($instance)
+  return
+    if (domain:model-exists($model-name)) then
+      domain:get-domain-model($model-name)
+    else
+      ()
+};

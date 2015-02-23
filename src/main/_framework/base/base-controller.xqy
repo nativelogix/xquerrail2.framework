@@ -287,11 +287,12 @@ declare function controller:search()
  :)
 declare function controller:suggest()
 {(
-  let $suggestions :=  model:suggest(controller:model(),request:params())
+  let $suggestions :=  model:suggest(controller:model(),controller:get-params())
   return
-    <s>
-    { for $suggestion in $suggestions return <t>{$suggestion}</t>}
-    </s>
+    <suggest>
+      {attribute type {controller:model()/@name}}
+    { for $suggestion in $suggestions return <term>{$suggestion}</term>}
+    </suggest>
 )};
 
 
@@ -422,9 +423,9 @@ declare function controller:remove()
 };
 
 declare function controller:lookup()
-{(
-     model:lookup(controller:model(),request:params())
-)};
+{
+  model:lookup(controller:model(), controller:get-params())
+};
 
 declare function controller:put() {
    model:update(controller:model(),request:body(),(),fn:true())
@@ -469,11 +470,6 @@ declare function controller:binary() {
      response:flush()
   )
 };
-(:
-declare function controller:findAndModify() {
-   model:findAndModify(request:params())
-};
-:)
 
 declare function controller:login()
 {

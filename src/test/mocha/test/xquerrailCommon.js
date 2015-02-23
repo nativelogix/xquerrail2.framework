@@ -4,6 +4,8 @@ var path = require('path');
 var request = require('request').defaults({jar: true});
 var assert = require('chai').assert;
 var expect = require('chai').expect;
+var xml2js = require('xml2js');
+var parser = new xml2js.Parser({explicitArray: false});
 
 var xquerrailCommon = (function(){
   var settings = {};
@@ -79,21 +81,39 @@ var xquerrailCommon = (function(){
     request(options, callback);
   };
 
+  function getFormat(format) {
+    if(format === undefined) {
+      format = 'json';
+    }
+    if (format.substring(0, 1) === '.') {
+      format = format.substring(1);
+    }
+    return format;
+  };
+
   function httpMethod(method, model, action, data, qs, callback, format) {
+    format = getFormat(format);
     var options = {
       method: method,
-      url: xquerrailCommon.urlBase + '/' + model + '/' + action + (format === undefined? '.json': format),
-      headers: {'userId': settings.currentUser},
+      url: xquerrailCommon.urlBase + '/' + model + '/' + action + '.' + format,
       json: data,
       qs: qs,
       followRedirect: true
     };
     request(options, function(error, response) {
-      return parseResponse(model, error, response, callback);
+      return parseResponse(model, format, error, response, callback);
     });
   };
 
-  function parseResponse(model, error, response, callback) {
+  function parseResponse(model, format, error, response, callback) {
+    if (format === 'xml') {
+      parseXml(model, error, response, callback);
+    } else {
+      parseJson(model, error, response, callback);
+    }
+  };
+
+  function parseJson(model, error, response, callback) {
     var body;
     try {
       body = JSON.parse(response.body);
@@ -107,7 +127,21 @@ var xquerrailCommon = (function(){
     if (callback !== undefined) {
       callback(error, response, body);
     }
+  };
 
+  function parseXml(model, error, response, callback) {
+    if (response.body !== undefined) {
+      var entity = response.body;
+      parser.parseString(entity, function (err, result) {
+        if (err === null) {
+          callback(error, response, result);
+        } else {
+          new Error('Xml parsing error: [' + err + ']');
+        }
+      });
+    } else {
+      callback(error, response, undefined);
+    }
   };
 
   function parseError(body) {

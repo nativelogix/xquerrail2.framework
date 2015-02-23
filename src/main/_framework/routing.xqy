@@ -43,70 +43,89 @@ declare function get-route($url as xs:string)
   let $params := if(fn:contains($url,"?")) then fn:substring-after($url,"?") else ()
   let $path   := if(fn:contains($url,"?")) then fn:substring-before($url,"?") else $url
   let $request-method := fn:lower-case(xdmp:get-request-method())
-  let $matching-routes := $routes//routing:route[fn:matches($path,./@pattern,"six")]
-  let $matching-route :=
-     (
-      if($matching-routes[$request-method eq @method])
-      then($matching-routes[$request-method eq @method])
-      else $matching-routes[fn:not(@method)]
-     )[1]
-  let $is-resource := $matching-route/@is-resource
+  let $matching-routes := $routes//routing:route[fn:matches($path, ./@pattern, "six")]
+  let $matching-route := (
+    if($matching-routes[$request-method eq @method]) then
+      $matching-routes[$request-method eq @method]
+    else
+      $matching-routes[fn:not(@method)]
+  )[1]
+
+  let $is-resource := xs:boolean(($matching-route/@is-resource, fn:false())[1])
   let $route :=
-      if($is-resource eq "true") then
-          let $resource-path :=
-              if($matching-route/routing:to)
-              then fn:concat($matching-route/(@to,routing:to)[1],"?",$params)
-              else if($matching-route/routing:replace) then
-                   fn:concat(fn:replace($path,$matching-route/@path,$matching-route/routing:replace),"?",$params)
-              else if($matching-route/routing:prepend) then
-                   fn:concat($matching-route/routing:prepend,$path,"?",$params)
-              else $path
-          return
-            if(config:resource-handler())
-            then fn:concat(config:resource-handler()/@resource,"?_url=",$resource-path,if($params ne "") then fn:concat("&amp;",$params) else ())
-            else $resource-path
-      else if($matching-route) then
-            let $controller := $matching-route/routing:default[@key eq "_controller"]
-            let $parts      := fn:tokenize(fn:normalize-space($controller),":")
-            let $add-params :=
-              ( map:put($params-map,"_route",fn:data($matching-route/@id)),
-                map:put($params-map,"_url",xdmp:url-encode($url)),
-                for $p in $matching-route/routing:param
-                return
-                  if(fn:matches($p,"\$\d"))
-                  then map:put($params-map,$p/@key, fn:replace($path,$matching-route/@pattern,$p))
-                  else map:put($params-map,$p/@key,$p/text())
-              )
-             let $defaults   :=
-                 for $i in (1 to 4)
-                 let $value := fn:string(fn:subsequence($parts,$i,1))
-                 return (:Need to support regex parameters:)
-                   if ($i eq 1) then map:put($params-map,"_application",$value)
-                   else if($i eq 2) then
-                       if(fn:matches($value,"^\$\d+"))
-                       then
-                       let $controller := fn:replace($path,$matching-route/@pattern,$value)
-                       return map:put($params-map,"_controller",fn:concat(fn:lower-case(fn:substring($controller, 1, 1)),fn:substring($controller, 2, fn:string-length($controller))))
-                       else map:put($params-map,"_controller",($value,config:default-controller())[1])
-                   else if($i eq 3) then
-                        if(fn:matches($value,"^\$\d+"))
-                        then
-                       let $action := fn:replace($path,$matching-route/@pattern,$value)
-                       return map:put($params-map,"_action",fn:concat(fn:lower-case(fn:substring($action, 1, 1)),fn:substring($action, 2, fn:string-length($action))))
-                       else map:put($params-map,"_action",($value,config:default-action())[1])
-                   else if($i eq 4) then
-                       if(fn:matches($value,"^\$\d+"))
-                       then map:put($params-map,"_format",fn:replace($path,$matching-route/@pattern,$value))
-                       else map:put($params-map,"_format",$value)
-                   else ()
-       let $new-url := fn:concat(config:get-dispatcher(),"?",map-to-params($params-map),if($params ne "") then fn:concat("&amp;",$params) else ())
-       return
-         (
-            xdmp:log(("rewriter url:",$new-url),"finest"),
-            if(fn:normalize-space($new-url) eq "")
-             then fn:error(xs:QName("NO-ROUTE"),fn:concat("No Route for ", $path),$path)
-             else $new-url
-         )
-     else (xdmp:log(("Not Routing Right",$url),"debug"), "/" ,xdmp:set-response-code(404,$path) )
+    if($is-resource) then
+      let $resource-path :=
+        if($matching-route/routing:to) then
+          fn:concat($matching-route/(@to,routing:to)[1],"?",$params)
+        else if($matching-route/routing:replace) then
+         fn:concat(fn:replace($path,$matching-route/@path,$matching-route/routing:replace),"?",$params)
+        else if($matching-route/routing:prepend) then
+         fn:concat($matching-route/routing:prepend,$path,"?",$params)
+        else
+          $path
+      return
+        if(config:resource-handler()) then
+          fn:concat(
+            config:resource-handler()/@resource,"?_url=",
+            $resource-path,
+            if($params ne "") then
+              fn:concat("&amp;",$params)
+            else
+              ()
+          )
+        else
+          $resource-path
+    else if($matching-route) then
+      let $controller := $matching-route/routing:default[@key eq "_controller"]
+      let $parts      := fn:tokenize(fn:normalize-space($controller),":")
+      let $add-params := (
+        map:put($params-map,"_route",fn:data($matching-route/@id)),
+        map:put($params-map,"_url",xdmp:url-encode($url)),
+        for $p in $matching-route/routing:param
+        return
+          if(fn:matches($p,"\$\d")) then
+            map:put($params-map,$p/@key, fn:replace($path,$matching-route/@pattern,$p))
+          else
+            map:put($params-map,$p/@key,$p/text())
+      )
+      let $defaults   :=
+        for $i in (1 to 4)
+        let $value := fn:string(fn:subsequence($parts,$i,1))
+        return (:Need to support regex parameters:)
+          if ($i eq 1) then
+            map:put($params-map,"_application",$value)
+          else if($i eq 2) then
+            if(fn:matches($value,"^\$\d+")) then
+              let $controller := fn:replace($path,$matching-route/@pattern,$value)
+              return map:put($params-map,"_controller",fn:concat(fn:lower-case(fn:substring($controller, 1, 1)),fn:substring($controller, 2, fn:string-length($controller))))
+            else
+              map:put($params-map,"_controller",($value,config:default-controller())[1])
+          else if($i eq 3) then
+            if(fn:matches($value,"^\$\d+")) then
+              let $action := fn:replace($path,$matching-route/@pattern,$value)
+              return map:put($params-map,"_action",fn:concat(fn:lower-case(fn:substring($action, 1, 1)),fn:substring($action, 2, fn:string-length($action))))
+            else
+              map:put($params-map,"_action",($value,config:default-action())[1])
+          else if($i eq 4) then
+            if(fn:matches($value,"^\$\d+")) then
+              map:put($params-map,"_format",fn:replace($path,$matching-route/@pattern,$value))
+            else
+              map:put($params-map,"_format",$value)
+          else ()
+      let $new-url := fn:concat(config:get-dispatcher(),"?",map-to-params($params-map),if($params ne "") then fn:concat("&amp;",$params) else ())
+      return
+      (
+        xdmp:log(("rewriter url:",$new-url),"finest"),
+        if(fn:normalize-space($new-url) eq "") then
+          fn:error(xs:QName("NO-ROUTE"),fn:concat("No Route for ", $path), $path)
+        else
+          $new-url
+      )
+    else
+      (
+        xdmp:log(("Not Routing Right",$url),"debug"),
+        "/" ,
+        xdmp:set-response-code(404,$path)
+      )
   return (xdmp:log(("route:",$route),"finest"),$route)
 };

@@ -97,8 +97,8 @@ declare function dispatcher:view-exists($view-uri as xs:string) as xs:boolean
  :  @param $ex - Error XML response
  :)
 declare function dispatcher:error(
-$ex as element(error:error)
-){
+  $ex as element(error:error)
+) {
   let $error-map := map:map()
   let $request := if(request:request() instance of map:map) then request:request() else map:map()
   let $_:=
@@ -108,8 +108,8 @@ $ex as element(error:error)
      map:put($error-map,"response",response:response())
     )
   return (
-      xdmp:log(("Error::[",$ex,"]"),"debug"),
-      xdmp:invoke( config:error-handler(),(xs:QName("_ERROR"),$error-map))
+    xdmp:log(("Error::[",$ex,"]"),"debug"),
+    xdmp:invoke( config:error-handler(),(xs:QName("_ERROR"),$error-map))
   )
 };
 
@@ -137,44 +137,42 @@ declare %private function dispatcher:dump-request() {
  :)
 declare function dispatcher:invoke-controller()
 {
-   let $application as xs:string? := (request:application(),config:default-application())[1]
-   let $controller as xs:string   := (request:controller(),config:default-controller())[1]
-   let $action as xs:string       := (request:action())[1]
-   let $route  as xs:string?      := request:route()[1]
-   let $controller-location       := config:controller-location($application, $controller) (:fn:concat(config:get-application($application)/@uri,'/controller/', $controller,'-controller.xqy'):)
-   let $controller-uri            := config:controller-uri($application, $controller) (:fn:concat(config:get-application($application)/@namespace,'/controller/', $controller):)
-   let $_ := xdmp:log(
-  		text {
-  		  "dispatcher:invoke-controller()", "$application", $application, "$controller", $controller, "$action", $action,
-  		  "$route", $route, "$controller-location", $controller-location, "$controller-uri", $controller-uri
-  		},
-  		"debug"
-  	)
-   let $_ := dispatcher:dump-request()
-   (:The Result order is as  follows: controller, extension, base:)
-   let $results :=
-     if(dispatcher:controller-exists($controller-location) and
-        dispatcher:action-exists($controller-uri,$controller-location,$action)
-     ) then
-        let $controller-func := xdmp:function(fn:QName($controller-uri,$action),$controller-location)
-        return
-           $controller-func()
-     else if(dispatcher:extension-action-exists($action)) then
+  let $application as xs:string? := (request:application(),config:default-application())[1]
+  let $controller as xs:string   := (request:controller(),config:default-controller())[1]
+  let $action as xs:string       := (request:action())[1]
+  let $route  as xs:string?      := request:route()[1]
+  let $controller-location       := config:controller-location($application, $controller)
+  let $controller-uri            := config:controller-uri($application, $controller)
+  let $_ := xdmp:log(
+  	text {
+  	  "dispatcher:invoke-controller()", "$application", $application, "$controller", $controller, "$action", $action,
+  	  "$route", $route, "$controller-location", $controller-location, "$controller-uri", $controller-uri, "method", request:method()
+  	},
+  	"fine"
+  )
+  let $_ := dispatcher:dump-request()
+  (:The Result order is as  follows: controller, extension, base:)
+  let $results :=
+    if(dispatcher:controller-exists($controller-location) and
+      dispatcher:action-exists($controller-uri,$controller-location,$action)
+    ) then
+      let $controller-func := xdmp:function(fn:QName($controller-uri,$action),$controller-location)
+      return $controller-func()
+    else if(dispatcher:extension-action-exists($action)) then
       let $controller-location := dispatcher:extension-action($action)
-          let $extension-init   :=  xdmp:function(xs:QName("extension:initialize"),$controller-location)
-          let $extension-action :=  xdmp:function(xs:QName("extension:" || $action),$controller-location)
-          return (
-            $extension-init(request:request()),
-            $extension-action()
-          )
-     (:Check if controller exists and a controller is defined:)
-     else if(fn:function-available("base:" || $action )) then (
-          base:initialize(request:request()),
-          base:invoke($action)
-          )
-     else fn:error(xs:QName("ACTION-NOT-EXISTS"),"The action '" || $action || "' for controller '" || $controller || "' does not exist",($action,$controller))
-    return
-          $results
+      let $extension-init   :=  xdmp:function(xs:QName("extension:initialize"),$controller-location)
+      let $extension-action :=  xdmp:function(xs:QName("extension:" || $action),$controller-location)
+      return (
+        $extension-init(request:request()),
+        $extension-action()
+      )
+    (:Check if controller exists and a controller is defined:)
+    else if(fn:function-available("base:" || $action )) then (
+      base:initialize(request:request()),
+      base:invoke($action)
+    )
+    else fn:error(xs:QName("ACTION-NOT-EXISTS"),"The action '" || $action || "' for controller '" || $controller || "' does not exist",($action,$controller))
+  return $results
 };
 
 (:~

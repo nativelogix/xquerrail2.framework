@@ -10,9 +10,15 @@ import module namespace base = "http://xquerrail.com/controller/base" at "/main/
 
 declare function controller:info()
 {
-  (:<message><info>hello</info></message>:)
   <message><info>{
     processing-instruction {"test-processing-instruction"} {}
-    }</info></message>
+  }</info></message>
 
+};
+
+declare function controller:method()
+{
+  response:add-header("xq-method", request:method()),
+  response:set-body(<method>{ request:method() }</method>),
+  response:flush()
 };

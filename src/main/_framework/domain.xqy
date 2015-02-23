@@ -1241,7 +1241,13 @@ declare function domain:set-field-attributes(
 declare function domain:model-validation-enabled(
   $model as element(domain:model)
 ) as xs:boolean {
-  fn:false()
+  xs:boolean(
+    fn:head((
+      $model/@validation,
+      $model/ancestor::domain:domain/@validation,
+      fn:false()
+    ))
+  )
 };
 
 (:~
@@ -2308,16 +2314,35 @@ declare function domain:declared-namespaces(
     return domain:set-identity-cache($key,$value)
 };
 
-declare function domain:declared-namespaces-map($model) {
-   let $nses := domain:declared-namespaces($model)
-   let $map := map:map()
-   let $_ :=
-     (
-     $model/../domain:content-namespace ! map:put($map,./@prefix,./(@namespace|@namespace-uri)[1]),
-     $model/../domain:declare-namespace ! map:put($map,./@prefix,./(@namespace|@namespace-uri)[1])
-     )
-   return $map
+declare function domain:declared-namespaces-map(
+  $model as element()
+) {
+  let $nses := domain:declared-namespaces($model)
+  let $map := map:map()
+  let $_ := (
+    $model/../domain:content-namespace ! map:put($map,./@prefix,./(@namespace|@namespace-uri)[1]),
+    $model/../domain:declare-namespace ! map:put($map,./@prefix,./(@namespace|@namespace-uri)[1])
+  )
+  return $map
 };
+
+declare function domain:invoke-events(
+  $model as element(domain:model),
+  $events as element()*,
+  $context as item()*
+) {
+  if(fn:exists($events)) then
+    let $event := fn:head($events)
+    (:let $module := $event/@module:)
+    let $module-namespace := $event/@module-namespace
+    let $module-uri := $event/@module-uri
+    let $function := $event/@function
+    let $call := xdmp:function(fn:QName($module-namespace, $function), $module-uri)
+    let $context := xdmp:apply($call, $event, $context)
+    return domain:invoke-events($model, fn:tail($events), $context)
+  else $context
+};
+
 (:~
  : Fires an event and returns if event succeeded or failed
  : It is important to note that any event that is fired must return
@@ -2329,21 +2354,12 @@ declare function domain:declared-namespaces-map($model) {
  :                   the context is a map:map if it is for before-event
  :)
 declare function domain:fire-before-event(
-    $model as element(domain:model),
-    $event-name as xs:string,
-    $context as item()*
+  $model as element(domain:model),
+  $event-name as xs:string,
+  $context as item()*
 ) {
-   let $event := $model/domain:event[@name = $event-name and @mode= ("before","wrap")]
-   return
-        if($event) then
-        let $module := $event/@module
-        let $module-namespace := $event/@module-namespace
-        let $module-uri := $event/@module-uri
-        let $function := $event/@function
-        let $call := xdmp:function(fn:QName($module-namespace,$function),$module-uri)
-        return
-          xdmp:apply($call,$event,$context)
-        else $context
+  let $events := $model/domain:event[@name = $event-name and @mode = ("before","wrap")]
+  return domain:invoke-events($model, $events, $context)
 };
 
 (:~
@@ -2357,21 +2373,12 @@ declare function domain:fire-before-event(
  :                   the context is an instance of the given model.
  :)
 declare function domain:fire-after-event(
-    $model as element(domain:model),
-    $event-name as xs:string,
-    $context as item()*
+  $model as element(domain:model),
+  $event-name as xs:string,
+  $context as item()*
 ) {
-   let $event := $model/domain:event[@name = $event-name and @mode= ("after","wrap")]
-   return
-   if($event) then
-     let $module := $event/@module
-     let $module-namespace := $event/@module-namespace
-     let $module-uri := $event/@module-uri
-     let $function := $event/@function
-     let $call := xdmp:function(fn:QName($module-namespace,$function),$module-uri)
-     return
-       xdmp:apply($call,$event,$context)
-   else $context
+  let $events := $model/domain:event[@name = $event-name and @mode = ("after","wrap")]
+  return domain:invoke-events($model, $events, $context)
 };
 
 declare function domain:get-field-json-name(

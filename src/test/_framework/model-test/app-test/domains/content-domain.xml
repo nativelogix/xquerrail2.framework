@@ -36,6 +36,51 @@
     </element>
   </model>
 
+  <model name="model5" persistence="directory" label="Model #5" extends="base" key="uuid" keyLabel="id">
+    <event
+      name="create"
+      mode="before"
+      module-namespace="http://xquerrail.com/app-test/events"
+      function="events:before-create-1"
+      module-uri="/test/_framework/model-test/app-test/events/events.xqy"
+    />
+    <event
+      name="create"
+      mode="before"
+      module-namespace="http://xquerrail.com/app-test/events"
+      function="events:before-create-2"
+      module-uri="/test/_framework/model-test/app-test/events/events.xqy"
+    />
+    <directory>/test/model5/</directory>
+    <element name="id" type="string" label="Id"/>
+    <element name="name" type="string" label="Name"/>
+    <element name="firstName" type="string" />
+    <element name="lastName" type="string" />
+  </model>
+
+  <model name="model6" key="id" keyLabel="name" persistence="directory">
+    <event
+      name="create"
+      mode="before"
+      module-namespace="http://xquerrail.com/app-test/events"
+      function="events:validate-constraint"
+      module-uri="/test/_framework/model-test/app-test/events/events.xqy"
+    />
+    <event
+      name="update"
+      mode="before"
+      module-namespace="http://xquerrail.com/app-test/events"
+      function="events:validate-constraint"
+      module-uri="/test/_framework/model-test/app-test/events/events.xqy"
+    />
+    <directory>/test/model6/</directory>
+    <element name="id" type="identity" identity="true" />
+    <element name="name" type="string" />
+    <element name="comment" type="string">
+      <constraint unique="true" />
+    </element>
+  </model>
+
   <model name="program" persistence="directory" label="Program" key="id" keyLabel="id">
     <directory>/test/program/</directory>
     <options xmlns="http://marklogic.com/appservices/search">

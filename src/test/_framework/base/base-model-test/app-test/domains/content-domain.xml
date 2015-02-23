@@ -216,6 +216,16 @@
       <element name="name" type="string" />
       <element name="comment" type="string" default="default-comment" />
   </model>
+
+  <model name="model24" key="id" keyLabel="name" persistence="directory" validation="true">
+      <directory>/test/model24/</directory>
+      <element name="id" type="identity" identity="true" />
+      <element name="name" type="string" />
+      <element name="comment" type="string">
+        <constraint unique="true" />
+      </element>
+  </model>
+
 </domain>
 
 

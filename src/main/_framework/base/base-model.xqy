@@ -2386,9 +2386,11 @@ declare  function model:get-application-reference($field,$params){
 : @param $params the params to validate
 : @return return a set of validation errors if any occur.
  :)
-declare function model:validate-params($model as element(domain:model), $params as item()*,$mode as xs:string)
-as element(validationError)*
-{
+declare function model:validate-params(
+  $model as element(domain:model),
+  $params as item()*,
+  $mode as xs:string
+) as element(validationError)* {
   if (fn:not(domain:model-validation-enabled($model))) then ()
   else (
    let $unique-constraints := domain:get-model-unique-constraint-fields($model)
@@ -2401,7 +2403,7 @@ as element(validationError)*
         return
         <validationError>
             <type>Unique Constraint</type>
-            <error>Instance is not unique.Field:{fn:data($v/@name)} Value: {$param-value}</error>
+            <error>Instance is not unique.Field:{fn:data($v/@name)} Value:{$param-value}</error>
         </validationError>
       else (),
    let $uniqueKey-constraints := domain:get-model-uniqueKey-constraint-fields($model)
@@ -2529,18 +2531,22 @@ as element(validationError)*
 (:~
  :
  :)
-declare function model:put($model as element(domain:model), $body as item())
-{
-        model:create($model,$body)
+declare function model:put(
+  $model as element(domain:model),
+  $body as item()
+) {
+  model:create($model,$body)
 };
 
 (:~
  :
  :)
-declare function model:post($model as element(domain:model), $body as item())  {
-    let $params := model:build-params-map-from-body($model,$body)
-    return
-        model:update($model,$params)
+declare function model:post(
+  $model as element(domain:model),
+  $body as item()
+)  {
+  let $params := model:build-params-map-from-body($model,$body)
+  return model:update($model,$params)
 };
 
 (:~
@@ -2548,22 +2554,21 @@ declare function model:post($model as element(domain:model), $body as item())  {
  :  Does not handle nested content models
  :)
 declare function model:build-params-map-from-body(
-    $model as element(domain:model),
-    $body as node()
-) {
-    let $params := map:map()
-    let $body := if($body instance of document-node()) then $body/element() else $body
-    let $_ :=
-        for $xmlNode in $body/element()
-        return
-            map:put($params,fn:local-name($xmlNode),$xmlNode/node()/fn:data(.))
-    return $params
+  $model as element(domain:model),
+  $body as node()
+) as map:map {
+  let $params := map:map()
+  let $body := if($body instance of document-node()) then $body/element() else $body
+  let $_ :=
+    for $xmlNode in $body/element()
+    return map:put($params,fn:local-name($xmlNode),$xmlNode/node()/fn:data(.))
+  return $params
 };
 
 declare function model:convert-to-map(
-    $model as element(domain:model),
-    $current as item()
-) {
+  $model as element(domain:model),
+  $current as item()
+) as map:map? {
   typeswitch($current)
     case json:object
       return map:new((

@@ -16,22 +16,32 @@ return
   if($model) then
     <x>{
       js:object((
-        js:keyvalue("elapsed",$node/@elapsed cast as xs:string),
+        js:keyvalue("elapsed",fn:string($node/@elapsed)),
         js:keyvalue("processing",xdmp:elapsed-time()),
-        js:keyvalue("currentpage",$node/currentpage cast as xs:integer),
-        js:keyvalue("pagesize",$node/pagesize cast as xs:integer),
-        if (fn:exists($node/sort/field)) then
+        js:keyvalue("currentpage",xs:integer($node/currentpage)),
+        js:keyvalue("pagesize",xs:integer($node/pagesize)),
+        if (fn:exists($node/sort)) then
           js:entry(
             "sort",
-            js:object((
-              js:keyvalue("field",$node/sort/field cast as xs:string),
-              js:keyvalue("order",$node/sort/order cast as xs:string)
+            if (fn:count($node/sort/field) = 1) then
+              js:object((
+                js:keyvalue("field",fn:string($node/sort/field/@name)),
+                js:keyvalue("order",fn:string($node/sort/field/@order))
+              ))
+            else
+              js:array((
+                for $field in $node/sort/field
+                return
+                js:object((
+                  js:keyvalue("field",fn:string($field/@name)),
+                  js:keyvalue("order",fn:string($field/@order))
+                ))
               ))
           )
         else
           (),
-        js:keyvalue("totalpages",$node/totalpages cast as xs:integer),
-        js:keyvalue("totalrecords",$node/totalrecords cast as xs:integer),
+        js:keyvalue("totalpages",xs:integer($node/totalpages)),
+        js:keyvalue("totalrecords",xs:integer($node/totalrecords)),
         engine:render-array($model, $node)
       ))
     }</x>/*

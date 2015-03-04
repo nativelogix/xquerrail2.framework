@@ -204,6 +204,7 @@
 
   <model name="model22" key="id" keyLabel="id" persistence="directory">
       <directory>/test/model22/</directory>
+      <navigation sortField="id" sortOrder="-" />
       <attribute name="id" type="identity" identity="true" />
       <element name="content-type" jsonName="contentType"  type="string" />
       <element name="MyDescription" jsonName="description" type="string"/>
@@ -211,6 +212,7 @@
 
   <model name="model23" key="id" keyLabel="name" persistence="directory">
       <directory>/test/model23/</directory>
+      <navigation sortField="description" sortOrder="ascending" />
       <attribute name="id" type="identity" identity="true" />
       <attribute name="description" type="string" default="default-description" />
       <element name="name" type="string" />
@@ -219,11 +221,21 @@
 
   <model name="model24" key="id" keyLabel="name" persistence="directory" validation="true">
       <directory>/test/model24/</directory>
+      <navigation sortField="id,name" sortOrder="ascending,descending" />
       <element name="id" type="identity" identity="true" />
       <element name="name" type="string" />
       <element name="comment" type="string">
         <constraint unique="true" />
       </element>
+  </model>
+
+  <model name="model25" key="id" keyLabel="name" persistence="directory" validation="true">
+      <directory>/test/model25/</directory>
+      <navigation sortField="firstName,lastName" sortOrder="ascending,descending" />
+      <element name="id" type="identity" identity="true" />
+      <element name="name" type="string" />
+      <element name="firstName" type="string" />
+      <element name="lastName" type="string" />
   </model>
 
 </domain>

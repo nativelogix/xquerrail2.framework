@@ -981,9 +981,9 @@ declare function model:build-element(
   let $attributes :=
     for $attribute in $context/domain:attribute
     return (
-      if (domain:field-is-multivalue($context)) then
-        ()
-      else
+      (:if (domain:field-is-multivalue($context)) then:)
+        (:():)
+      (:else:)
         model:build-attribute($attribute,$current, $updates,$partial,fn:false())
     )
   return
@@ -1017,6 +1017,10 @@ declare function model:build-element(
           $attributes,
           model:build-value($context,$value, $current-value)
         }
+    else if (fn:not($update-field-exists) and fn:exists($attributes)) then
+          element {domain:get-field-qname($context)} {
+            $attributes
+          }
     else
       let $values :=
         if (fn:exists($current) and fn:exists($updates) and fn:not($update-field-exists)) then
@@ -1048,13 +1052,13 @@ declare function model:build-attribute(
 ) as attribute()? {
   let $type := fn:data($context/@type)
   let $current-value := domain:get-field-value($context,$current)
-  let $update-values := domain:get-field-value($context, $updates, $relative)
+  let $update-value := domain:get-field-value($context, $updates, $relative)
   let $default-value := fn:data($context/@default)
   let $qname := domain:get-field-qname($context)
   let $occurrence := (fn:data($context/@occurrence),"?")[1]
-  let $value := model:build-value($context, $update-values, $current-value)
+  let $value := model:build-value($context, $update-value, $current-value)
   return
-    if(fn:exists($update-values)) then
+    if(fn:exists($update-value)) then
       attribute {$qname} {
         $value
       }
@@ -1487,45 +1491,52 @@ declare function model:lookup(
 };
 
 (:~Recursively Removes elements based on @listable = true :)
-declare function model:filter-list-result($field as element(),$result,$params) {
-      if(domain:navigation($field)/@listable eq "false")
-      then ()
-      else
-          typeswitch($field)
-            case element(domain:model) return
-                element {domain:get-field-qname($field)} {
-                   for $field in $field/(domain:attribute)
-                   return model:filter-list-result($field,$result,$params),
-                   for $field in $field/(domain:element|domain:container)
-                   return model:filter-list-result($field,$result,$params)
-                }
-            case element(domain:element) return
-                   let $value := domain:get-field-value($field,$result)
-                   let $fieldtype := domain:get-base-type($field)
-                   for $val in $value
-                   return
-                     switch($fieldtype)
-                       case "complex" return $val
-                       default return
-                           element {domain:get-field-qname($field)} {
-                                for $field in $field/domain:attribute
-                                return model:filter-list-result($field,$val,$params),
-                                if($val instance of node())
-                                then $val/(@*|node())
-                                else $val
-                           }
-            case element(domain:container) return
-                  element {domain:get-field-qname($field)} {
-                     for $field in $field/domain:attribute
-                     return model:filter-list-result($field,$result,$params),
-                     for $field in $field/(domain:element|domain:container)
-                     return model:filter-list-result($field,$result,$params)
-                  }
-            case element(domain:attribute) return
-                attribute {fn:QName("",$field/@name)} {
-                  domain:get-field-value($field,$result)
-                }
-            default return ()
+declare function model:filter-list-result(
+  $field as element(),
+  $result,
+  $params as item()
+) {
+  if(domain:navigation($field)/@listable eq "false") then
+    ()
+  else
+    typeswitch($field)
+      case element(domain:model)
+        return
+          element {domain:get-field-qname($field)} {
+             for $field in $field/(domain:attribute)
+             return model:filter-list-result($field,$result,$params),
+             for $field in $field/(domain:element|domain:container)
+             return model:filter-list-result($field,$result,$params)
+          }
+      case element(domain:element)
+        return
+          let $value := domain:get-field-value-node($field,$result)
+          let $fieldtype := domain:get-base-type($field)
+          for $val in $value
+          return
+           switch($fieldtype)
+             case "complex" return $val
+             default return
+              element {domain:get-field-qname($field)} {
+                for $field in $field/domain:attribute
+                return model:filter-list-result($field,$val,$params),
+                if($val instance of node()) then $val/node()
+                else $val
+              }
+      case element(domain:container)
+        return
+          element {domain:get-field-qname($field)} {
+            for $field in $field/domain:attribute
+            return model:filter-list-result($field,$result,$params),
+            for $field in $field/(domain:element|domain:container)
+            return model:filter-list-result($field,$result,$params)
+          }
+      case element(domain:attribute)
+        return
+          attribute {domain:get-field-qname($field)} {
+            domain:get-field-value($field,$result,fn:true())
+          }
+      default return ()
 };
 
 (:~
@@ -1584,7 +1595,38 @@ declare function model:list(
         fn:collection(),
         cts:element-query(fn:QName($namespace,$name),cts:and-query(($search,$predicateExpr)))
       ))
-    let $sort-field := model:sort-field($model, $params, "sidx")
+
+
+
+
+    let $sorting := (model:sorting($model, $params, "field.name", "field.order"), model:sorting($model, $params, "sidx", "sord"))[1]
+    let $sort :=
+      fn:string-join(
+        (
+        for $field in $sorting/field
+        let $domain-sort-field := $model//(domain:element|domain:attribute)[(domain:get-field-name-key(.),@name) = ($field/@name)][1]
+        let $domain-sort-as :=
+          if(fn:exists($domain-sort-field)) then
+            fn:concat("[1] cast as ", domain:resolve-datatype($domain-sort-field), "?")
+          else
+            ()
+        return
+          if(fn:exists($domain-sort-field)) then
+            let $sortPath :=
+              if($persistence = 'document') then
+                fn:substring-after(domain:get-field-absolute-xpath($domain-sort-field), $model-qname)
+              else
+                domain:get-field-absolute-xpath($domain-sort-field)
+            return
+              if($field/@order = ("desc","descending")) then
+                fn:concat("($__context__",$sortPath,")",$domain-sort-as," descending")
+              else
+                fn:concat("($__context__",$sortPath,")",$domain-sort-as," ascending")
+          else ()
+        ),
+        ","
+      )
+(:    let $sort-field := model:sort-field($model, $params, "sidx")
     let $sort-order := model:sort-order($model, $params, "sord")
     let $sort :=
       let $domain-sort-field := $model//(domain:element|domain:attribute)[(domain:get-field-name-key(.),@name) = ($sort-field)][1]
@@ -1606,7 +1648,7 @@ declare function model:list(
             else
               fn:concat("($__context__",$sortPath,")",$domain-sort-as," ascending")
         else ()
-    (: 'start' is 1-based offset in records from 'page' which is 1-based offset in pages
+:)    (: 'start' is 1-based offset in records from 'page' which is 1-based offset in pages
      : which is defined by 'rows'. Perfectly fine to give just start and rows :)
     let $pageSize := model:page-size($model, $params, "rows")
     let $page     := xs:integer((domain:get-param-value($params, 'page'),1)[1])
@@ -1614,7 +1656,7 @@ declare function model:list(
     let $start    := $start + ($page - 1) * $pageSize
     let $last     :=  $start + $pageSize - 1
     let $end      := if ($total > $last) then $last else $total
-    let $all := domain:get-param-value($params,"all") = "true"
+    let $all := xs:boolean(domain:get-param-value($params,"all"))
     let $resultsExpr :=
       if($all) then
         if($sort ne "" and fn:exists($sort))
@@ -1635,16 +1677,13 @@ declare function model:list(
     return
       <list type="{$name}" elapsed="{xdmp:elapsed-time()}">
         { attribute xmlns { domain:get-field-namespace($model) } }
-        <sort>
-          <field>{$sort-field}</field>
-          <order>{$sort-order}</order>
-        </sort>
+        { $sorting }
         <currentpage>{$page}</currentpage>
         <pagesize>{$pageSize}</pagesize>
         <totalpages>{fn:ceiling($total div $pageSize)}</totalpages>
         <totalrecords>{$total}</totalrecords>
         {(:Add Additional Debug Arguments:)
-          if(domain:get-param-value($params,"debug") = "true") then (
+          if(xs:boolean(domain:get-param-value($params,"debug"))) then (
             <debugQuery>{xdmp:describe($predicateExpr,(),())}</debugQuery>,
             <searchString>{$search}</searchString>,
             <sortString>{$sort}</sortString>,
@@ -1744,6 +1783,97 @@ declare function model:sort-order(
   let $sort-order := domain:get-param-value($params,"sord")[1]
   let $model-order := (domain:navigation($model)/@sortOrder, "ascending")[1]
   return ($sort-order, $model-order)[1]
+};
+
+(: sorting function support dotted notation for $field-param-name and $order-param-name :)
+declare function model:sorting(
+  $model as element(domain:model),
+  $params,
+  $field-param-name as xs:string?,
+  $order-param-name as xs:string?
+) as element(sort)? {
+  let $validate-order := function ($order) {
+    if ($order = ("ascending", "descending")) then
+      $order
+    else if ($order = ("-", "desc")) then
+      "descending"
+    else if ($order = ("+", "asc")) then
+      "ascending"
+    else
+      ()
+  }
+  let $field-param-name :=
+    if (fn:exists($field-param-name)) then
+      $field-param-name
+    else
+      "sidx"
+  let $order-param-name :=
+    if (fn:exists($order-param-name)) then
+      $order-param-name
+    else
+      "sord"
+  let $field-values :=
+    if (fn:contains($field-param-name, '.') and fn:contains($order-param-name, '.')) then
+      let $field-names := fn:tokenize($field-param-name, '\.')
+      let $order-names := fn:tokenize($order-param-name, '\.')
+      return
+      switch(domain:get-value-type($params[1]))
+        case "xml"
+        return
+          let $field := xdmp:value(fn:concat("$params/*:", $field-names[1]))
+          let $order := xdmp:value(fn:concat("$params/*:", $order-names[1]))
+          return
+            for $value at $index in $field
+            let $value := domain:get-param-value($value, $field-names[2])
+            let $order := domain:get-param-value($order[$index], $order-names[2])
+            return
+              element field {
+                attribute name {$value},
+                attribute order {$validate-order($order)}
+              }
+        default
+        return
+          let $field := domain:get-param-value($params, $field-names[1])
+          let $order := domain:get-param-value($params, $order-names[1])
+          return
+            for $value at $index in $field
+            let $value := domain:get-param-value($value, $field-names[2])
+            let $order := domain:get-param-value($order[$index], $order-names[2])
+            return
+              element field {
+                attribute name {$value},
+                attribute order {$validate-order($order)}
+              }
+    else
+      let $field := domain:get-param-value($params, $field-param-name)
+      let $order := domain:get-param-value($params, $order-param-name)
+      return
+        for $value at $index in $field
+        return
+          element field {
+            attribute name {$value},
+            attribute order {$validate-order($order[$index])}
+          }
+  let $field-values :=
+    if (fn:exists($field-values)) then
+      $field-values
+    else
+      let $field := fn:tokenize(domain:navigation($model)/@sortField, ',')
+      let $order := fn:tokenize(domain:navigation($model)/@sortOrder, ',')
+      return
+        for $value at $index in $field
+        return
+          element field {
+            attribute name {$value},
+            attribute order {$validate-order($order[$index])}
+          }
+  return
+    if (fn:exists($field-values)) then
+      element sort {
+      $field-values
+    }
+    else
+      ()
 };
 
 (:~
@@ -2155,8 +2285,6 @@ as element(search:response)
    let $start := (($page - 1) * $page-size) + 1
    let $end := ($page * $page-size)
    let $final := fn:concat($query," ",$sort)
-   (:let $final := (if($query) then $query else "", $sort):)
-   (:let $_ := xdmp:log(text{"$final", $final, "$start", $start, "$page-size", $page-size}):)
    let $options := model:build-search-options($model,$params)
    let $results :=
      search:search($final,$options,$start,$page-size)
@@ -2654,8 +2782,7 @@ declare function model:find(
   let $name := $model/@name
   let $namespace := domain:get-field-namespace($model)
   let $model-qname := fn:QName($namespace,$name)
-  let $dir := cts:directory-query($model/domain:directory/text())
-  let $found  :=
+  return
     if ($persistence = 'document') then
       let $path := $model/domain:document/text()
       return
@@ -2664,14 +2791,13 @@ declare function model:find(
       cts:search(
         fn:collection(),
         cts:and-query((
-          $dir,
+          cts:directory-query($model/domain:directory/text()),
           cts:element-query($model-qname, $search)
         ))
       )
     else if($persistence = "abstract") then
       cts:search(fn:collection(),cts:or-query(domain:get-descendant-model-query($model)))
     else fn:error(xs:QName("INVALID-PERSISTENCE"),"Invalid Persistence", $persistence)
-  return $found
 };
 (:~
  :  "fieldname==" Equality

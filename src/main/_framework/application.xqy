@@ -99,7 +99,7 @@ declare %private function app:load-config(
 declare %private function app:load-domain(
   $application-name as xs:string,
   $domain as element(domain:domain)
-) as element(domain:domain) {
+) {
     let $app-path := config:application-directory($application-name)
     let $imports :=
         for $import in $domain/domain:import
@@ -110,7 +110,8 @@ declare %private function app:load-domain(
          namespace domain {"http://xquerrail.com/domain"},
          ($domain/namespace::*,$imports/namespace::*),
          $domain/@*,
-         $domain/(domain:name|domain:content-namespace|domain:application-namespace|domain:description|domain:author|domain:version|domain:declare-namespace|domain:default-collation|domain:permission|domain:language|domain:default-language|domain:navigation|domain:profiles),
+         attribute compiled {fn:true()},
+         $domain/(domain:name|domain:content-namespace|domain:application-namespace|domain:description|domain:author|domain:version|domain:declare-namespace|domain:default-collation|domain:permission|domain:language|domain:default-language|domain:navigation),
          ($domain/domain:model,$imports/domain:model),
          ($domain/domain:optionlist,$imports/domain:optionlist),
          ($domain/domain:controller,$imports/domain:controller),
@@ -121,12 +122,11 @@ declare %private function app:load-domain(
 declare %private function app:update-domain(
   $application-name as xs:string,
   $domain
-) as element(domain:domain) {
+) {
   element domain:domain {
     namespace domain {"http://xquerrail.com/domain"},
     $domain/namespace::*,
     $domain/@*,
-    attribute compiled {fn:true()},
     $domain/*[. except $domain/domain:model],
     $domain/domain:model ! (domain:compile-model($application-name, .))
   }
@@ -136,7 +136,7 @@ declare %private function app:get-base() as element(config:application) {
   let $base := (get-base-safe("/base.xqy"), get-base-safe("base.xqy"))[1]
   return
     if ($base) then $base
-    else fn:error(xs:QName("BASE-NOT-FOUND"), "Cannot find /base.xqy or base.xqy")
+    else fn:error(xs:QName("BASE-NOTFOUND"), "Cannot find /base.xqy or base.xqy")
 };
 
 declare %private function app:get-base-safe($path as xs:string) as element(config:application)? {

@@ -2171,7 +2171,10 @@ declare function domain:get-keylabel-query(
 declare function domain:get-base-query($model) {
      switch($model/@persistence)
        case "directory" return cts:and-query((
-        $model/domain:directory[. ne ""] !cts:directory-query(.,"infinity"),
+        $model/domain:directory[. ne ""] ! cts:directory-query(.,"infinity"),
+        (:if (fn:exists($model/domain:collection[. ne ""])) then
+          cts:collection-query($model/domain:collection)
+        else (),:)
         xdmp:plan(/*[fn:node-name(.)  eq domain:get-field-qname($model)])//*:key ! cts:term-query(.)
        ))
        case "document" return cts:document-query($model/domain:document)
@@ -2761,29 +2764,60 @@ declare function domain:get-param-value(
   $key as xs:string*,
   $default
 ) {
+  let $keys := fn:tokenize($key, "\.")
+  let $head := fn:head($keys)
   let $value :=
-    switch(domain:get-value-type($params))
+    switch(domain:get-value-type($params[1]))
       case "json" return
         let $value :=
           if($params instance of json:object) then
-            <x>{$params}</x>//json:entry[@key = $key]/json:value/node()
+            <x>{$params}</x>//json:entry[@key = $head]/json:value
           else
-            $params//json:entry[@key = $key]/json:value/node()
+            $params//json:entry[@key = $head]/json:value
         return
-          if ($value instance of element(json:array)) then
-            json:array-values(json:array($value))
+          if ($value/node() instance of element(json:array)) then
+            json:array-values(json:array($value/node()))
           else
-            $value
+            if ($value/node() instance of text()) then
+              $value/fn:data()
+            else
+              $value/node()
       case "param"
-        return map:get($params,$key)
+        return map:get($params,$head)
       case "xml"
-        return $params//*[fn:local-name(.) = $key]/node()
+        return $params/descendant-or-self::*[fn:local-name(.) = $head]/node()
       default return ()
   return
-    if (fn:exists($value)) then
-      $value
+    if (fn:count($keys) eq 1) then
+      if (fn:exists($value)) then
+        $value
+      else
+        $default
     else
-      $default
+      let $value :=
+        switch(domain:get-value-type($value[1]))
+        case "json"
+          return
+            if (fn:count($value) eq 1) then
+              $value
+            else
+              ()
+        case "param"
+          return
+            if (fn:count($value) eq 1) then
+              $value
+            else
+              ()
+        case "xml"
+          return <x>{$value}</x>
+        default
+          return ()
+      return
+        if (fn:exists($value)) then
+          domain:get-param-value($value, fn:substring-after($key, fn:concat($head, ".")), $default)
+        else
+          ()
+
 };
 (:~
  :

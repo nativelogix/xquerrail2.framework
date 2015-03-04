@@ -129,7 +129,6 @@ declare %test:case function extended-model-two-level-test() as item()* {
   let $field-name := domain:get-model-field($model, "name")
   let $field-label := domain:get-model-field($model, "label")
   let $field-caption := domain:get-model-field($model, "caption")
-  (:let $_ := xdmp:log(("$field-id", $field-id)):)
   return (
     assert:not-empty($model),
     assert:not-empty($field-id, "floating-abstract-model model must contains id field"),
@@ -281,4 +280,110 @@ declare %test:case function get-param-value-xml-multi-test() as item()*
     </fruits>
   return
     assert:equal(domain:get-param-value($xml, "fruit")/fn:string(), $values)
+};
+
+declare %test:case function get-param-value-map-dotted-notation-test() as item()*
+{
+  let $citrus := ("lemon", "orange")
+  let $berries := ("strawberry", "raspberry", "blueberry")
+  let $params := map:new((
+    map:entry(
+      "fruits",
+      map:new((
+        map:entry("citrus", $citrus),
+        map:entry("berry", $berries)
+      ))
+    )
+  ))
+  return (
+    assert:equal(domain:get-param-value($params, "fruits.citrus"), $citrus, "'fruits.citrus' must equal " || fn:string-join($citrus, ",")),
+    assert:equal(domain:get-param-value($params, "fruits.berry")[2], $berries[2], "'fruits.berry[2]' must equal " || $berries[2]),
+    assert:equal(domain:get-param-value($params, "fruits.apple", "pink lady"), "pink lady", "'fruits.apple' must equal 'pink lady'")
+  )
+};
+
+declare %test:case function get-param-value-map-array-dotted-notation-test() as item()*
+{
+  let $params := map:new((
+    map:entry(
+      "sort",
+      (
+        map:new((
+          map:entry("field", "field1"),
+          map:entry("order", "descending")
+        )),
+        map:new((
+          map:entry("field", "field2"),
+          map:entry("order", "ascending")
+        ))
+      )
+    )
+  ))
+  let $sort := domain:get-param-value($params, "sort")
+  let $field := domain:get-param-value($sort[1], "field")
+  return (
+    assert:equal($field, "field1","sort.field[1] msut equal 'field1")
+  )
+};
+
+declare %test:case function get-param-value-json-dotted-notation-test() as item()*
+{
+  let $citrus := ("lemon", "orange")
+  let $berries := ("strawberry", "raspberry", "blueberry")
+  let $params1 := xdmp:from-json('{"fruits": {"citrus": ["lemon", "orange"], "berry": ["strawberry", "raspberry", "blueberry"]}}')
+  return (
+    assert:equal(domain:get-param-value($params1, "fruits.citrus"), $citrus, "'fruits.citrus' must equal " || fn:string-join($citrus, ",")),
+    assert:equal(domain:get-param-value($params1, "fruits.berry")[2], $berries[2], "'fruits.berry[2]' must equal " || $berries[2]),
+    assert:equal(domain:get-param-value($params1, "fruits.apple", "pink lady"), "pink lady", "'fruits.apple' must equal 'pink lady'")
+  )
+};
+
+declare %test:case function get-param-value-json-array-dotted-notation-test() as item()*
+{
+  let $params2 := xdmp:from-json('{"sort": [{"field": "field1", "order": "descending"}, {"field": "field2", "order": "ascending"}]}')
+  let $sort := domain:get-param-value($params2, "sort")
+  let $field := domain:get-param-value($sort[1], "field")
+  return (
+    assert:equal($field, "field1","sort.field[1] msut equal 'field1")
+  )
+};
+
+declare %test:case function get-param-value-xml-dotted-notation-test() as item()*
+{
+  let $citrus := ("lemon", "orange")
+  let $berries := ("strawberry", "raspberry", "blueberry")
+  let $params1 :=
+    <fruits>
+    { $citrus ! (<citrus>{.}</citrus>) }
+    { $berries ! (<berry>{.}</berry>) }
+    </fruits>
+  let $params2 :=
+  <xml>
+    <fruits>
+    { $citrus ! (<citrus>{.}</citrus>) }
+    { $berries ! (<berry>{.}</berry>) }
+    </fruits>
+  </xml>
+  return (
+    assert:equal(domain:get-param-value($params1, "fruits.citrus") ! fn:string(.), $citrus, "'fruits.citrus' must equal " || fn:string-join($citrus, ",")),
+    assert:equal(fn:string(domain:get-param-value($params1, "fruits.berry")[2]), $berries[2], "'fruits.berry[2]' must equal " || $berries[2]),
+    assert:equal(domain:get-param-value($params1, "fruits.apple", "pink lady"), "pink lady", "'fruits.apple' must equal 'pink lady'"),
+    assert:equal(domain:get-param-value($params2, "fruits.citrus") ! fn:string(.), $citrus, "'fruits.citrus' must equal " || fn:string-join($citrus, ",")),
+    assert:equal(fn:string(domain:get-param-value($params2, "fruits.berry")[2]), $berries[2], "'fruits.berry[2]' must equal " || $berries[2]),
+    assert:equal(domain:get-param-value($params2, "fruits.apple", "pink lady"), "pink lady", "'fruits.apple' must equal 'pink lady'")
+  )
+};
+
+(: TODO tests for all exists functions :)
+declare %test:ignore function field-xml-exists-test() as item()* {
+  let $model := ()
+  let $exists := domain:field-xml-exists(
+    domain:get-model-field($model, "group"),
+    <model15 xmlns="http://xquerrail.com/app-test">
+      <groups>
+        <group seq="seq3" count="3" />
+      </groups>
+    </model15>
+  )
+  return ()
 };

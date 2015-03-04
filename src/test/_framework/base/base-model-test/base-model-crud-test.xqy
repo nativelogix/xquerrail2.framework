@@ -24,18 +24,19 @@ declare variable $TEST-APPLICATION :=
 </application>
 ;
 
-declare variable $INSTANCE1 := (
-<model1 xmlns="http://marklogic.com/model/model1">
-  <id>crud-model1-id</id>
-  <name>crud-model1-name</name>
-</model1>
+declare variable $INSTANCES1 := (
+  <model1 xmlns="http://marklogic.com/model/model1">
+    <id>crud-model1-id</id>
+    <name>crud-model1-name</name>
+  </model1>
 );
 
-declare variable $INSTANCE2 :=
-<model2 xmlns="http://marklogic.com/model/model2">
-  <id>model2-id</id>
-  <name>model2-name</name>
-</model2>
+declare variable $INSTANCES2 := (
+  <model2 xmlns="http://marklogic.com/model/model2">
+    <id>model2-id</id>
+    <name>model2-name</name>
+  </model2>
+)
 ;
 
 declare variable $INSTANCES4 := (
@@ -199,77 +200,16 @@ declare variable $CONFIG := ();
 
 declare %test:setup function setup() {
   let $_ := setup:setup($TEST-APPLICATION)
-  let $model1 := domain:get-model("model1")
-  let $_ := setup:invoke(
-      function() {
-        model:create($model1, $INSTANCE1, $TEST-COLLECTION)
-      }
-    )
+  let $_ := setup:create-instances("model1", $INSTANCES1, $TEST-COLLECTION)
   let $_ := setup:create-instances("model4", $INSTANCES4, $TEST-COLLECTION)
-  let $model5 := domain:get-model("model5")
-  let $_ := for $instance in $INSTANCES5 return (
-    setup:invoke(
-      function() {
-        model:create($model5, $instance, $TEST-COLLECTION)
-      }
-    )
-  )
-  let $model6 := domain:get-model("model6")
-  let $_ := for $instance in $INSTANCES6 return (
-    setup:invoke(
-      function() {
-        model:create($model6, $instance, $TEST-COLLECTION)
-      }
-    )
-  )
-  let $model15 := domain:get-model("model15")
-  let $_ := for $instance in $INSTANCES15 return (
-    setup:invoke(
-      function() {
-        model:create($model15, $instance, $TEST-COLLECTION)
-      }
-    )
-  )
-  let $model19 := domain:get-model("model19")
-  let $_ := for $instance in $INSTANCES19 return (
-    setup:invoke(
-      function() {
-        model:create($model19, $instance, $TEST-COLLECTION)
-      }
-    )
-  )
-  let $model23 := domain:get-model("model23")
-  let $_ := for $instance in $INSTANCES23 return (
-    setup:invoke(
-      function() {
-        model:create($model23, $instance, $TEST-COLLECTION)
-      }
-    )
-  )
-  let $model24 := domain:get-model("model24")
-  let $_ := for $instance in $INSTANCES24 return (
-    setup:invoke(
-      function() {
-        model:create($model24, $instance, $TEST-COLLECTION)
-      }
-    )
-  )
-  let $parent-model := domain:get-model("parent-model")
-  let $_ := for $instance in $PARENT-INSTANCES return (
-    setup:invoke(
-      function() {
-        model:create($parent-model, $instance, $TEST-COLLECTION)
-      }
-    )
-  )
-  let $child-model := domain:get-model("child-model")
-  let $_ := for $instance in $CHILD-INSTANCES return (
-    setup:invoke(
-      function() {
-        model:create($child-model, $instance, $TEST-COLLECTION)
-      }
-    )
-  )
+  let $_ := setup:create-instances("model5", $INSTANCES5, $TEST-COLLECTION)
+  let $_ := setup:create-instances("model6", $INSTANCES6, $TEST-COLLECTION)
+  let $_ := setup:create-instances("model15", $INSTANCES15, $TEST-COLLECTION)
+  let $_ := setup:create-instances("model19", $INSTANCES19, $TEST-COLLECTION)
+  let $_ := setup:create-instances("model23", $INSTANCES23, $TEST-COLLECTION)
+  let $_ := setup:create-instances("model24", $INSTANCES24, $TEST-COLLECTION)
+  let $_ := setup:create-instances("parent-model", $PARENT-INSTANCES, $TEST-COLLECTION)
+  let $_ := setup:create-instances("child-model", $CHILD-INSTANCES, $TEST-COLLECTION)
   return
     ()
 };
@@ -422,6 +362,53 @@ declare %test:case function model-document-new-create-keep-identity-test() as it
   return (
     assert:not-empty($instance1),
     assert:equal($identity-value, xs:string(domain:get-field-value(domain:get-model-identity-field($model1), $instance1)))
+  )
+};
+
+declare %test:case function model-new-container-multi-element-with-attribute-test() as item()*
+{
+  let $model := domain:get-model("model15")
+  let $instance := model:new(
+    $model,
+    <model15 xmlns="http://xquerrail.com/app-test">
+      <id>model-new-model15-id</id>
+      <groups>
+        <group>model15-group-1</group>
+        <group seq="seq1" count="2">model15-group-2</group>
+      </groups>
+    </model15>
+  )
+  let $value-id := domain:get-field-value(domain:get-model-field($model, "id"), $instance)
+  let $value-group := domain:get-field-value-node(domain:get-model-field($model, "group"), $instance)
+  return (
+    assert:not-empty($instance),
+    assert:equal("model-new-model15-id", xs:string(domain:get-field-value(domain:get-model-field($model, "id"), $instance)), "id field must equal 'model-new-model15-id'"),
+    assert:equal(fn:count($value-group), 2, "must have 2 group elements"),
+    assert:equal(fn:string($value-group[1]), "model15-group-1"),
+    assert:equal(fn:string($value-group[2]), "model15-group-2"),
+    assert:equal(fn:string($value-group[2]/@seq), "seq1"),
+    assert:equal(xs:integer($value-group[2]/@count), 2)
+  )
+};
+
+declare %test:case function model-new-container-empty-element-with-attribute-test() as item()*
+{
+  let $model := domain:get-model("model15")
+  let $instance := model:new(
+    $model,
+    <model15 xmlns="http://xquerrail.com/app-test">
+      <groups>
+        <group seq="seq3" count="3" />
+      </groups>
+    </model15>
+  )
+
+  let $value-id := domain:get-field-value(domain:get-model-field($model, "id"), $instance)
+  let $value-group := domain:get-field-value-node(domain:get-model-field($model, "group"), $instance)
+  return (
+    assert:not-empty($instance),
+    assert:equal(fn:string($value-group/@seq), "seq3"),
+    assert:equal(xs:integer($value-group/@count), 3)
   )
 };
 
@@ -1524,7 +1511,6 @@ declare %test:case function model-update-default-element-test() as item()*
   let $instance23-map := model:convert-to-map($model23, $instance23)
   let $_ := map:put($instance23-map, "comment", ())
   let $_ := map:put($instance23-map, "description", "updated-description")
-  let $_ := xdmp:log($instance23-map)
   let $update23 := setup:eval(
     function() {
       model:update(
@@ -1553,7 +1539,6 @@ declare %test:case function model-update-default-attribute-test() as item()*
   let $instance23-map := model:convert-to-map($model23, $instance23)
   let $_ := map:put($instance23-map, "comment", "updated-comment")
   let $_ := map:put($instance23-map, "description", ())
-  let $_ := xdmp:log($instance23-map)
   let $update23 := setup:eval(
     function() {
       model:update(
@@ -1601,7 +1586,6 @@ declare %test:case function model-unique-constraint-element-test() as item()*
       map:entry("name", "model24-name-unique-constraint-2"),
       map:entry("comment", fn:string($comment-value))
     ))
-  let $_ := xdmp:log($instance24-map)
   let $create-with-validation-error := setup:eval(
     function() {
       model:create(

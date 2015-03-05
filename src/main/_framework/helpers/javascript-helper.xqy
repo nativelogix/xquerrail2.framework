@@ -77,6 +77,41 @@ declare function helper:object(
   )
 };
 
+declare function helper:cast-value(
+  $value as item()*
+) {
+  typeswitch ($value)
+    case xs:boolean
+      return xs:boolean($value)
+    case xs:string
+    return
+      if($value cast as xs:string eq "true") then
+        fn:true()
+      else if($value cast as xs:string eq "false") then
+        fn:false()
+      else if ($value castable as xs:date) then
+        xs:date($value)
+      else if ($value castable as xs:dateTime) then
+        xs:dateTime($value)
+      else
+        xs:string($value)
+    case xs:integer
+      return xs:integer($value)
+    (: Try to guess the type based on the value :)
+    default
+      return
+        if($value castable as xs:string and $value cast as xs:string eq "true") then
+          fn:true()
+        else if($value castable as xs:string and $value cast as xs:string eq "false") then
+          fn:false()
+        else if($value castable as xs:integer) then
+          xs:integer($value)
+        else if ($value castable as xs:string) then
+          xs:string($value)
+        else
+          $value
+};
+
 (:~
 : Builds an array
  :)
@@ -86,19 +121,7 @@ declare function helper:array(
   let $array := json:array()
   return (
     for $value in $values
-    let $value :=
-      if($value castable as xs:string and $value cast as xs:string eq "true") then
-        fn:true()
-      else if( $value castable as xs:string and $value cast as xs:string eq "false") then
-        fn:false()
-      else if($value castable as xs:integer) then
-        xs:integer($value)
-      else if($value castable as xs:string) then
-        xs:string($value)
-      else
-        $value
-    return
-    json:array-push($array,$value),
+    return json:array-push($array, helper:cast-value($value)),
     $array
   )
 };
@@ -111,39 +134,8 @@ declare function helper:entry(
   $value as item()*
 ) {
   let $entry := json:object()
-  let $value :=
-    typeswitch ($value)
-      case xs:boolean
-        return xs:boolean($value)
-      case xs:string
-      return
-        if($value cast as xs:string eq "true") then
-          fn:true()
-        else if($value cast as xs:string eq "false") then
-          fn:false()
-        else if ($value castable as xs:date) then
-          xs:date($value)
-        else if ($value castable as xs:dateTime) then
-          xs:dateTime($value)
-        else
-          xs:string($value)
-      case xs:integer
-        return xs:integer($value)
-      (: Try to guess the type based on the value :)
-      default
-        return
-          if($value castable as xs:string and $value cast as xs:string eq "true") then
-            fn:true()
-          else if($value castable as xs:string and $value cast as xs:string eq "false") then
-            fn:false()
-          else if($value castable as xs:integer) then
-            xs:integer($value)
-          else if ($value castable as xs:string) then
-            xs:string($value)
-          else
-            $value
   return (
-    map:put($entry,$key,$value),
+    map:put($entry, $key, helper:cast-value($value)),
     $entry
   )
 };

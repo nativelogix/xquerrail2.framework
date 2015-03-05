@@ -46,3 +46,19 @@ declare %test:case function simple-js-array-test() {
     assert:equal(map:get($json[4], "date"), js:dt(xs:date("2015-01-23")))
   )
 };
+
+declare %test:case function string-js-array-test() {
+  let $array :=
+    <x>{
+      js:a((
+        "string",
+        "100"
+      ))
+      }</x>/*
+  let $json := xdmp:from-json(xdmp:to-json(json:array($array)))
+  return (
+    assert:not-empty($array),
+    assert:equal($json[1], "string"),
+    assert:equal($json[2], "100")
+  )
+};

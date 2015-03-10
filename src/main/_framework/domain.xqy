@@ -2592,17 +2592,14 @@ declare function domain:field-xml-exists(
   $field as element(),
   $value as item()*
 ) as xs:boolean {
-  (:if(domain:exists-field-function-cache($field,"xml")):)
-  (:then domain:get-field-function-cache($field,"xml")($value):)
-  (:else:)
-    let $type := domain:get-base-type($field)
-    let $path := domain:get-field-xpath($field, fn:false())
-    let $expr := fn:concat("$value", $path)
-    let $func :=
-      switch($type)
-        case "simple" return xdmp:with-namespaces(domain:declared-namespaces($field),xdmp:value(fn:concat("function($value){fn:exists(", $expr, ")}")))
-        default return xdmp:with-namespaces(domain:declared-namespaces($field),xdmp:value(fn:concat("function($value){fn:exists(", $expr, ")}")))
-    return domain:set-field-function-cache($field,"xml-exists",$func)($value)
+  let $type := domain:get-base-type($field)
+  let $path := domain:get-field-xpath($field, fn:false())
+  let $expr := fn:concat("$value", $path)
+  let $func :=
+    switch($type)
+      case "simple" return xdmp:with-namespaces(domain:declared-namespaces($field),xdmp:value(fn:concat("function($value){fn:exists(", $expr, ")}")))
+      default return xdmp:with-namespaces(domain:declared-namespaces($field),xdmp:value(fn:concat("function($value){fn:exists(", $expr, ")}")))
+  return domain:set-field-function-cache($field,"xml-exists",$func)($value)
 };
 
 (:~

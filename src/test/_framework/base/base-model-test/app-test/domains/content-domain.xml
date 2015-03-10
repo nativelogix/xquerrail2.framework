@@ -53,7 +53,7 @@
     <element name="name" type="string" label="Name"/>
   </model>
   <model name="abstract1" persistence="abstract" label="Abstract" extends="base" key="uuid" keyLabel="id">
-    <directory>/test/model7/</directory>
+    <directory>/test/abstract1/</directory>
     <attribute name="id" type="id"/>
     <attribute name="flag2" type="boolean" label="Flag #2"></attribute>
     <attribute name="score" type="integer" label="Score"></attribute>

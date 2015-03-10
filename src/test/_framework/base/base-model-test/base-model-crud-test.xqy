@@ -1220,6 +1220,38 @@ declare %test:case function model-new-xml-element-occurrence-question-mark-test(
   )
 };
 
+declare %test:case function model-new-xml-empty-element-occurrence-question-mark-test() as item()*
+{
+  let $model17 := domain:get-model("model17")
+  let $instance17 := model:new(
+    $model17,
+    <model17 id="model17-id" xmlns="http://xquerrail.com/app-test">
+      <element-question-mark/>
+    </model17>
+  )
+  let $element-question-mark-node := domain:get-field-value-node(domain:get-model-field($model17, "element-question-mark"), $instance17)
+  return (
+    assert:not-empty($instance17),
+    assert:empty($element-question-mark-node/text()),
+    assert:not-empty($instance17/*:element-question-mark, "element-question-mark should not exist")
+  )
+};
+
+declare %test:case function model-new-json-empty-element-occurrence-question-mark-test() as item()*
+{
+  let $model17 := domain:get-model("model17")
+  let $instance17 := model:new(
+    $model17,
+    xdmp:from-json('{"@id": "model17-id", "element-question-mark": null}')
+  )
+  let $element-question-mark-node := domain:get-field-value-node(domain:get-model-field($model17, "element-question-mark"), $instance17)
+  return (
+    assert:not-empty($instance17),
+    assert:empty($element-question-mark-node/text()),
+    assert:not-empty($instance17/*:element-question-mark, "element-question-mark should not exist")
+  )
+};
+
 declare %test:case function model-new-xml-element-occurrence-star-test() as item()*
 {
   let $model17 := domain:get-model("model17")

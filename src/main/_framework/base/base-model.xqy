@@ -1021,6 +1021,9 @@ declare function model:build-element(
           element {domain:get-field-qname($context)} {
             $attributes
           }
+    else if ($update-field-exists and fn:empty($attributes)) then
+          element {domain:get-field-qname($context)} {
+          }
     else
       let $values :=
         if (fn:exists($current) and fn:exists($updates) and fn:not($update-field-exists)) then
@@ -1602,7 +1605,6 @@ declare function model:list(
         (
         for $field in $sorting/field
         let $domain-sort-field := $model//(domain:element|domain:attribute)[(domain:get-field-name-key(.),@name) = ($field/@name)][1]
-        let $collation-sort-field := fn:concat(" collation '", domain:get-field-collation($domain-sort-field), "' ")
         let $domain-sort-as :=
           if(fn:exists($domain-sort-field)) then
             fn:concat("[1] cast as ", domain:resolve-datatype($domain-sort-field), "?")
@@ -1610,6 +1612,7 @@ declare function model:list(
             ()
         return
           if(fn:exists($domain-sort-field)) then
+            let $collation-sort-field := fn:concat(" collation '", domain:get-field-collation($domain-sort-field), "' ")
             let $sortPath :=
               if($persistence = 'document') then
                 fn:substring-after(domain:get-field-absolute-xpath($domain-sort-field), $model-qname)

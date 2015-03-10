@@ -142,6 +142,17 @@ declare %test:case function extended-model-two-level-test() as item()* {
   )
 };
 
+declare %test:case function model-inherit-application-namespace-test() as item()* {
+  let $model7 := domain:get-model("model7")
+  let $author-model := domain:get-model("author")
+  return (
+    assert:not-empty($author-model),
+    assert:equal(fn:string($author-model/@namespace), "http://xquerrail.com/app-test", "author-model/@namespace must equal to 'http://xquerrail.com/app-test'"),
+    assert:not-empty($model7),
+    assert:empty($model7/@namespace, "model7/@namespace must be empty")
+  )
+};
+
 declare %test:case function model-inheritance-default-value-test() as item()* {
   let $model5 := domain:get-model("model5")
   let $field-type := domain:get-model-field($model5, "type")
@@ -374,16 +385,92 @@ declare %test:case function get-param-value-xml-dotted-notation-test() as item()
   )
 };
 
-(: TODO tests for all exists functions :)
-declare %test:ignore function field-xml-exists-test() as item()* {
-  let $model := ()
-  let $exists := domain:field-xml-exists(
-    domain:get-model-field($model, "group"),
-    <model15 xmlns="http://xquerrail.com/app-test">
-      <groups>
-        <group seq="seq3" count="3" />
-      </groups>
-    </model15>
+declare %test:case function field-xml-exists-test() as item()* {
+  let $model := domain:get-model("model4")
+  let $instance :=
+    <model4 id="" xmlns="http://xquerrail.com/app-test">
+      <title>Title</title>
+      <content/>
+    </model4>
+
+  let $id-exists := domain:field-xml-exists(
+    domain:get-model-field($model, "id"),
+    $instance
   )
-  return ()
+  let $content-exists := domain:field-xml-exists(
+    domain:get-model-field($model, "content"),
+    $instance
+  )
+  let $title-exists := domain:field-xml-exists(
+    domain:get-model-field($model, "title"),
+    $instance
+  )
+  let $type-exists := domain:field-xml-exists(
+    domain:get-model-field($model, "type"),
+    $instance
+  )
+  return (
+    assert:true($id-exists),
+    assert:true($content-exists),
+    assert:true($title-exists),
+    assert:false($type-exists)
+  )
+};
+
+declare %test:case function field-json-exists-test() as item()* {
+  let $model := domain:get-model("model4")
+  let $instance := xdmp:from-json('{"@id": "", "title": "Title", "content": null}')
+  let $id-exists := domain:field-json-exists(
+    domain:get-model-field($model, "id"),
+    $instance
+  )
+  let $content-exists := domain:field-json-exists(
+    domain:get-model-field($model, "content"),
+    $instance
+  )
+  let $title-exists := domain:field-json-exists(
+    domain:get-model-field($model, "title"),
+    $instance
+  )
+  let $type-exists := domain:field-json-exists(
+    domain:get-model-field($model, "type"),
+    $instance
+  )
+  return (
+    assert:true($id-exists),
+    assert:true($content-exists),
+    assert:true($title-exists),
+    assert:false($type-exists)
+  )
+};
+
+declare %test:case function field-param-exists-test() as item()* {
+  let $model := domain:get-model("model4")
+  let $instance := map:new((
+    map:entry("id", ""),
+    map:entry("title", "Title"),
+    map:entry("content", "")
+  ))
+  let $id-exists := domain:field-param-exists(
+    domain:get-model-field($model, "id"),
+    $instance
+  )
+  let $content-exists := domain:field-param-exists(
+    domain:get-model-field($model, "content"),
+    $instance
+  )
+  let $title-exists := domain:field-param-exists(
+    domain:get-model-field($model, "title"),
+    $instance
+  )
+  let $type-exists := domain:field-param-exists(
+    domain:get-model-field($model, "type"),
+    $instance
+  )
+  return (
+    assert:true($id-exists),
+    assert:true($content-exists),
+    assert:true($title-exists),
+    assert:false($type-exists)
+  )
 };

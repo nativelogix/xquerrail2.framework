@@ -230,7 +230,7 @@ declare %test:case function model-list-equal-element-attribute-test() as item()*
   )
 };
 
-declare %test:ignore function model-list-equal-abstract-type-attribute-test() as item()*
+declare %test:ignore function model-list-equal-instance-type-field-test() as item()*
 {
   let $model := domain:get-model("model11")
   let $instances := model:list($model,

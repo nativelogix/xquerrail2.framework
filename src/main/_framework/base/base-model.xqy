@@ -1596,15 +1596,13 @@ declare function model:list(
         cts:element-query(fn:QName($namespace,$name),cts:and-query(($search,$predicateExpr)))
       ))
 
-
-
-
     let $sorting := (model:sorting($model, $params, "field.name", "field.order"), model:sorting($model, $params, "sidx", "sord"))[1]
     let $sort :=
       fn:string-join(
         (
         for $field in $sorting/field
         let $domain-sort-field := $model//(domain:element|domain:attribute)[(domain:get-field-name-key(.),@name) = ($field/@name)][1]
+        let $collation-sort-field := fn:concat(" collation '", domain:get-field-collation($domain-sort-field), "' ")
         let $domain-sort-as :=
           if(fn:exists($domain-sort-field)) then
             fn:concat("[1] cast as ", domain:resolve-datatype($domain-sort-field), "?")
@@ -1619,36 +1617,14 @@ declare function model:list(
                 domain:get-field-absolute-xpath($domain-sort-field)
             return
               if($field/@order = ("desc","descending")) then
-                fn:concat("($__context__",$sortPath,")",$domain-sort-as," descending")
+                fn:concat("($__context__",$sortPath,")",$domain-sort-as," descending", $collation-sort-field)
               else
-                fn:concat("($__context__",$sortPath,")",$domain-sort-as," ascending")
+                fn:concat("($__context__",$sortPath,")",$domain-sort-as," ascending", $collation-sort-field)
           else ()
         ),
         ","
       )
-(:    let $sort-field := model:sort-field($model, $params, "sidx")
-    let $sort-order := model:sort-order($model, $params, "sord")
-    let $sort :=
-      let $domain-sort-field := $model//(domain:element|domain:attribute)[(domain:get-field-name-key(.),@name) = ($sort-field)][1]
-      let $domain-sort-as :=
-        if(fn:exists($domain-sort-field)) then
-          fn:concat("[1] cast as ", domain:resolve-datatype($domain-sort-field), "?")
-        else
-          ()
-      return
-        if(fn:exists($domain-sort-field)) then
-          let $sortPath :=
-            if($persistence = 'document') then
-              fn:substring-after(domain:get-field-absolute-xpath($domain-sort-field), $model-qname)
-            else
-              domain:get-field-absolute-xpath($domain-sort-field)
-          return
-            if($sort-order = ("desc","descending")) then
-              fn:concat("($__context__",$sortPath,")",$domain-sort-as," descending")
-            else
-              fn:concat("($__context__",$sortPath,")",$domain-sort-as," ascending")
-        else ()
-:)    (: 'start' is 1-based offset in records from 'page' which is 1-based offset in pages
+    (: 'start' is 1-based offset in records from 'page' which is 1-based offset in pages
      : which is defined by 'rows'. Perfectly fine to give just start and rows :)
     let $pageSize := model:page-size($model, $params, "rows")
     let $page     := xs:integer((domain:get-param-value($params, 'page'),1)[1])

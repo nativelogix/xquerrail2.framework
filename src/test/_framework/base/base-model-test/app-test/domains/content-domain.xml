@@ -238,6 +238,13 @@
       <element name="lastName" type="string" />
   </model>
 
+  <model name="model26" key="id" keyLabel="name" persistence="directory" collation="http://marklogic.com/collation/en/S1/T00BB/AS">
+      <directory>/test/model26/</directory>
+      <navigation sortField="name" sortOrder="ascending" />
+      <element name="id" type="identity" identity="true" />
+      <element name="name" type="string" />
+  </model>
+
 </domain>
 
 

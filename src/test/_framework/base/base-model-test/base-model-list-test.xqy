@@ -126,6 +126,28 @@ declare variable $INSTANCES25 := (
   </model25>
 );
 
+declare variable $INSTANCES26 := (
+  <model26 xmlns="http://xquerrail.com/app-test">
+    <name>ABC</name>
+  </model26>
+  ,
+  <model26 xmlns="http://xquerrail.com/app-test">
+    <name>aabc</name>
+  </model26>
+  ,
+  <model26 xmlns="http://xquerrail.com/app-test">
+    <name>'aaabc'</name>
+  </model26>
+  ,
+  <model26 xmlns="http://xquerrail.com/app-test">
+    <name>"zzz"</name>
+  </model26>
+  ,
+  <model26 xmlns="http://xquerrail.com/app-test">
+    <name>ZZZa</name>
+  </model26>
+);
+
 declare %test:setup function setup() {
   let $_ := setup:setup($TEST-APPLICATION)
   let $_ := setup:create-instances("model1", $INSTANCES1, $TEST-COLLECTION)
@@ -133,6 +155,7 @@ declare %test:setup function setup() {
   let $_ := setup:create-instances("model11", $INSTANCES11, $TEST-COLLECTION)
   let $_ := setup:create-instances("model15", $INSTANCES15, $TEST-COLLECTION)
   let $_ := setup:create-instances("model25", $INSTANCES25, $TEST-COLLECTION)
+  let $_ := setup:create-instances("model26", $INSTANCES26, $TEST-COLLECTION)
   return
     ()
 };
@@ -140,8 +163,8 @@ declare %test:setup function setup() {
 declare %test:teardown function teardown() {
   xdmp:invoke-function(
     function() {
-      xdmp:collection-delete($TEST-COLLECTION)
-      , xdmp:commit()
+      xdmp:collection-delete($TEST-COLLECTION),
+      xdmp:commit()
     },
     <options xmlns="xdmp:eval">
       <transaction-mode>update</transaction-mode>
@@ -381,22 +404,7 @@ declare %test:case function model-list-sorting-descending-in-container-test() as
       map:entry("sord", "descending")
     ))
   )
-  (:let $_ := xdmp:log(("model-list-sorting-descending-in-container-test", $model, $list)):)
-  (:let $_ := xdmp:log(("model:find", model:find($model, map:new()))):)
-(:  let $xml :=
-  <model15 xmlns="http://xquerrail.com/app-test">
-    <groups>
-      <group seq="seq3" count="3"/>
-    </groups>
-  </model15>
-  let $_ := xdmp:log((
-    "model:new",
-    model:new(
-      $model,
-      $xml
-    )
-  ))
-:)  return (
+  return (
     assert:not-empty($list),
     assert:equal($list/app-test:model15[1]/app-test:groups/app-test:group/@seq, $INSTANCES15[3]/app-test:groups/app-test:group/@seq),
     assert:equal($list/app-test:model15[3]/app-test:groups/app-test:group/@seq, $INSTANCES15[1]/app-test:groups/app-test:group/@seq),
@@ -652,6 +660,38 @@ declare %test:case function model-sorted-list-from-params-test() as item()*
     for $instance at $pos in $sorted-list
     return
       if ($instance eq $list/app-test:model25[$pos]) then
+        ()
+      else
+        fn:false()
+  return (
+    assert:not-empty($list),
+    assert:empty($valid)
+  )
+};
+
+declare %test:case function model-sorted-list-custom-model-collation-test() as item()*
+{
+  let $model := domain:get-model("model26")
+  let $params := map:new((
+    map:entry(
+      "field",
+      (
+        map:new((
+          map:entry("name", "name"),
+          map:entry("order", "ascending")
+        ))
+      )
+    )
+  ))
+  let $list := model:list($model, $params)
+  let $sorted-list :=
+    for $instance in $list/app-test:model26
+    order by $instance/app-test:name ascending collation "http://marklogic.com/collation/en/S1/T00BB/AS"
+    return $instance
+  let $valid :=
+    for $instance at $pos in $sorted-list
+    return
+      if ($instance eq $list/app-test:model26[$pos]) then
         ()
       else
         fn:false()

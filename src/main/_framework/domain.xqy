@@ -2761,60 +2761,73 @@ declare function domain:get-param-value(
   $key as xs:string*,
   $default
 ) {
-  let $keys := fn:tokenize($key, "\.")
-  let $head := fn:head($keys)
+  let $type := domain:get-value-type($params[1])
   let $value :=
-    switch(domain:get-value-type($params[1]))
-      case "json" return
-        let $value :=
-          if($params instance of json:object) then
-            <x>{$params}</x>//json:entry[@key = $head]/json:value
-          else
-            $params//json:entry[@key = $head]/json:value
-        return
-          if ($value/node() instance of element(json:array)) then
-            json:array-values(json:array($value/node()))
-          else
-            if ($value/node() instance of text()) then
-              $value/fn:data()
-            else
-              $value/node()
-      case "param"
-        return map:get($params,$head)
-      case "xml"
-        return $params/descendant-or-self::*[fn:local-name(.) = $head]/node()
-      default return ()
-  return
-    if (fn:count($keys) eq 1) then
-      if (fn:exists($value)) then
-        $value
+  switch ($type)
+    case "param" return
+      if (map:contains($params, $key)) then
+        map:get($params, $key)
       else
-        $default
+        ()
+    default return
+      ()
+  return
+    if (fn:exists($value)) then
+      $value
     else
+      let $keys := fn:tokenize($key, "\.")
+      let $head := fn:head($keys)
       let $value :=
-        switch(domain:get-value-type($value[1]))
-        case "json"
-          return
-            if (fn:count($value) eq 1) then
-              $value
-            else
-              ()
-        case "param"
-          return
-            if (fn:count($value) eq 1) then
-              $value
-            else
-              ()
-        case "xml"
-          return <x>{$value}</x>
-        default
-          return ()
+        switch($type)
+          case "json" return
+            let $value :=
+              if($params instance of json:object) then
+                <x>{$params}</x>//json:entry[@key = $head]/json:value
+              else
+                $params//json:entry[@key = $head]/json:value
+            return
+              if ($value/node() instance of element(json:array)) then
+                json:array-values(json:array($value/node()))
+              else
+                if ($value/node() instance of text()) then
+                  $value/fn:data()
+                else
+                  $value/node()
+          case "param"
+            return map:get($params,$head)
+          case "xml"
+            return $params/descendant-or-self::*[fn:local-name(.) = $head]/node()
+          default return ()
       return
-        if (fn:exists($value)) then
-          domain:get-param-value($value, fn:substring-after($key, fn:concat($head, ".")), $default)
+        if (fn:count($keys) eq 1) then
+          if (fn:exists($value)) then
+            $value
+          else
+            $default
         else
-          ()
-
+          let $value :=
+            switch(domain:get-value-type($value[1]))
+            case "json"
+              return
+                if (fn:count($value) eq 1) then
+                  $value
+                else
+                  ()
+            case "param"
+              return
+                if (fn:count($value) eq 1) then
+                  $value
+                else
+                  ()
+            case "xml"
+              return <x>{$value}</x>
+            default
+              return ()
+          return
+            if (fn:exists($value)) then
+              domain:get-param-value($value, fn:substring-after($key, fn:concat($head, ".")), $default)
+            else
+              ()
 };
 (:~
  :

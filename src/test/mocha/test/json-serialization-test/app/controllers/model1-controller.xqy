@@ -18,6 +18,14 @@ declare function controller:find()
   </find>
 };
 
+declare function controller:find-empty()
+{
+  <find-empty>
+    { attribute array { fn:true() } }
+    { attribute type { base-controller:model()/@name } }
+  </find-empty>
+};
+
 declare function controller:multi-find()
 {
   let $instances1 := base-model:find(base-controller:model(), base-controller:get-params())

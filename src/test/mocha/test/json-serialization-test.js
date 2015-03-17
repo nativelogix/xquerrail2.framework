@@ -13,6 +13,10 @@ var find = function(model, data, callback) {
   xquerrailCommon.httpMethod('GET', model, 'find', undefined, data, callback);
 };
 
+var findEmpty = function(model, data, callback) {
+  xquerrailCommon.httpMethod('GET', model, 'find-empty', undefined, data, callback);
+};
+
 var multi = function(model, data, callback) {
   xquerrailCommon.httpMethod('GET', model, 'multi-find', undefined, data, callback);
 };
@@ -62,6 +66,18 @@ describe('Custom app1 features', function() {
         expect(entity._type).to.equal('model1');
         expect(entity).to.have.property('model1');
         expect(entity.model1).to.be.instanceof(Array);
+        done();
+      });
+    });
+
+    it('should create and get new entity', function(done) {
+      findEmpty('model1', {'name': 'model1-name'}, function(error, response, entity) {
+        expect(response.statusCode).to.equal(200);
+        expect(entity).to.have.property('_type');
+        expect(entity._type).to.equal('model1');
+        expect(entity).to.have.property('model1');
+        expect(entity.model1).to.be.instanceof(Array);
+        expect(entity.model1).to.be.empty;
         done();
       });
     });

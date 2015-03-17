@@ -101,7 +101,12 @@ declare function json-engine:render-json(
   let $is-array := xs:boolean(($node/@array, fn:false())[1])
   let $model :=
     if($is-array) then
-      domain:get-model-from-instance($node/element()[1])
+      (
+        domain:get-model-from-instance($node/element()[1]),
+        if(domain:model-exists($node/@type/fn:string())) then
+          domain:get-model($node/@type/fn:string())
+        else ()
+      )[1]
     else if(response:model()) then
       response:model()
     else if(domain:model-exists(fn:local-name($node))) then

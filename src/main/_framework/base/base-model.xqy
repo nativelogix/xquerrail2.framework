@@ -265,7 +265,11 @@ declare function model:new(
   $model as element(domain:model),
   $params as item()
 ) {
-  let $identity := model:generate-uuid()
+  let $identity := xs:string(domain:get-field-value(domain:get-model-identity-field($model), $params))
+  let $identity :=
+    if ($identity) then $identity
+    else model:generate-uuid()
+  (:let $identity := model:generate-uuid():)
   return model:recursive-create($model,$params)
 };
 
@@ -363,115 +367,104 @@ declare function model:create(
   $permissions as element(sec:permission)*
 ) as element()? {
   let $params := domain:fire-before-event($model,"create",$params)
-  let $id := () (:model:get-id-from-params($model,$params):)
   let $current := model:get($model,$params)
   return
-      (: Check if the document exists  first before trying to create it :)
-      if ($current) then
-          fn:error(xs:QName("DOCUMENT-EXISTS"), text{"The document already exists.", "model:", $model/@name, "- key:", domain:get-field-value(domain:get-model-keyLabel-field($model), $current)})
-      else
-        let $identity := xs:string(domain:get-field-value(domain:get-model-identity-field($model), $params))
-        let $identity :=
-          if ($identity) then $identity
-          else model:generate-uuid()
-        (: Validate the parameters before trying to build the document :)
-        let $validation := model:validate-params($model,$params,"create")
-        return
-         if(fn:count($validation) > 0)
-         then (:fn:error(xs:QName("VALIDATION-ERROR"), fn:concat("The document trying to be created contains validation errors"), $validation):)
-           <validationErrors> {$validation}</validationErrors>
-         else
-           let $name := $model/@name
-           let $persistence := $model/@persistence
-           let $update := model:recursive-create($model,$params)
-           let $computed-collections :=
-                model:build-collections(
-                  ($model/domain:collection),
-                   $model,
-                   $update
-                )
-           return (
-               (: Return the update node :)
-(:               model:create-reference-cache($model,$update),:)
-               switch($persistence)
-                 (: Creation for document persistence :)
-                 case "document" return
-                     let $path := $model/domain:document/text()
-                     let $field-id := domain:get-field-value(domain:get-model-identity-field($model),$update)
-                     let $doc := fn:doc($path)
-                     let $root-node := fn:data($model/domain:document/@root)
-                     let $root-namespace := domain:get-field-namespace($model)
-                     return (
-                         if ($doc) then
-                           let $root :=  model:get-root-node($model,$doc)
-                           return
-                             if($root) then
-                                (: create the instance of the model in the document :)
-                                 (xdmp:node-insert-child($root,$update),
-                                  xdmp:document-set-permissions(xdmp:node-uri($root),functx:distinct-deep((domain:get-permissions($model),$permissions)))
-                                 )
-                             else fn:error(xs:QName("ROOT-MISSING"),"Missing Root Node",$doc)
-                         else (
-                             xdmp:document-insert(
-                               $path,
-                               element { fn:QName($root-namespace,$root-node) } { $update },
-                               functx:distinct-deep((domain:get-permissions($model),$permissions)),
-                               fn:distinct-values(($computed-collections,$collections))
-                            )
-                        ),
-                        model:create-binary-dependencies($identity,$update)
+    (: Check if the document exists  first before trying to create it :)
+    if ($current) then
+      fn:error(xs:QName("DOCUMENT-EXISTS"), text{"The document already exists.", "model:", $model/@name, "- key:", domain:get-field-value(domain:get-model-keyLabel-field($model), $current)})
+    else
+      let $update := model:new($model,$params)
+      let $identity := xs:string(domain:get-field-value(domain:get-model-identity-field($model), $update))
+      let $computed-collections :=
+        model:build-collections(
+          ($model/domain:collection),
+          $model,
+          $update
+        )
+      let $collections := fn:distinct-values(($computed-collections,$collections))
+      let $computed-permissions := functx:distinct-deep((domain:get-permissions($model),$permissions))
+      let $name := $model/@name
+      let $persistence := $model/@persistence
+      return (
+        switch($persistence)
+          (: Creation for document persistence :)
+          case "document" return
+            let $path := $model/domain:document/text()
+            let $doc := fn:doc($path)
+            let $root-node := fn:data($model/domain:document/@root)
+            let $root-namespace := domain:get-field-namespace($model)
+            return (
+              if ($doc) then
+                let $root :=  model:get-root-node($model,$doc)
+                return
+                  if($root) then
+                  (: create the instance of the model in the document :)
+                    (
+                      xdmp:node-insert-child($root,$update),
+                      xdmp:document-set-permissions(xdmp:node-uri($root),$computed-permissions)
                     )
-                 (: Creation for directory persistence :)
-                 case 'directory' return
-                      let $field-id := domain:get-field-value(domain:get-model-identity-field($model),$update)
-                      let $computed-collections :=
-                            model:build-collections(($model/domain:collection,$collections),$model,$update)
-                      let $base-path := $model/domain:directory/text()
-                      let $sub-path := $model/domain:directory/@subpath
-                      let $ext-path :=
-                          if($sub-path)
-                          then model:generate-uri($sub-path,$model,$update)
-                          else ""
-                      let $path :=
-                          model:normalize-path(fn:concat(
-                              $base-path,
-                              $ext-path,
-                              "/",
-                              $field-id
-                          , ".xml"))
-                      return (
-                          xdmp:document-insert(
-                               $path,
-                               $update,
-                               functx:distinct-deep((domain:get-permissions($model),$permissions)),
-                               fn:distinct-values(($computed-collections,$collections))
-                          ),
-                          model:create-binary-dependencies($identity,$update)
-                      )
-                (:Singleton Persistence is good for configuration Files :)
-                 case 'singleton' return
-                     let $field-id := domain:get-field-value($model/(domain:element|domain:attribute)[@type eq "identity"],$update)
-                     let $path := $model/domain:document/text()
-                     let $doc := fn:doc($path)
-                     let $root-namespace := domain:get-field-namespace($model)
-                      let $computed-collections :=
-                            model:build-collections(($model/domain:collection,$collections),$model,$update)
-                     return (
-                         if ($doc) then
-                              (: create the instance of the model in the document :)
-                              xdmp:node-replace(model:get-root-node($model,$doc),$update)
-                         else
-                             xdmp:document-insert(
-                               $path,
-                               element { fn:QName($root-namespace,$model/@name) } { $update },
-                               $permissions,
-                              fn:distinct-values(($computed-collections,$collections))
-                            ),
-                         model:create-binary-dependencies($field-id,$update)
-                     )
-                 case "abstract" return fn:error(xs:QName("PERSISTENCE-ERROR"),"Cannot Persist Abstract Objects",$model/@name)
-                 default return fn:error(xs:QName("PERSISTENCE-ERROR"),"No document persistence defined for create",$model/@name),
-                 domain:fire-after-event($model,"create",$update)
+                  else fn:error(xs:QName("ROOT-MISSING"),"Missing Root Node",$doc)
+              else (
+                xdmp:document-insert(
+                  $path,
+                  element { fn:QName($root-namespace,$root-node) } { $update },
+                  $computed-permissions,
+                  $collections
+                )
+              ),
+              model:create-binary-dependencies($identity,$update)
+            )
+          (: Creation for directory persistence :)
+          case "directory" return
+            let $field-id := domain:get-field-value(domain:get-model-identity-field($model),$update)
+            let $base-path := $model/domain:directory/text()
+            let $sub-path := $model/domain:directory/@subpath
+            let $ext-path :=
+              if($sub-path) then
+                model:generate-uri($sub-path,$model,$update)
+              else ""
+            let $path := model:normalize-path(
+              fn:concat(
+                $base-path,
+                $ext-path,
+                "/",
+                $field-id,
+                ".xml"
+              )
+            )
+            return (
+              xdmp:document-insert(
+                $path,
+                $update,
+                $computed-permissions,
+                $collections
+              ),
+              model:create-binary-dependencies($identity,$update)
+            )
+          (:Singleton Persistence is good for configuration Files :)
+          case "singleton" return
+            let $field-id := domain:get-field-value($model/(domain:element|domain:attribute)[@type eq "identity"],$update)
+            let $path := $model/domain:document/text()
+            let $doc := fn:doc($path)
+            let $root-namespace := domain:get-field-namespace($model)
+            return (
+              if ($doc) then
+                (: create the instance of the model in the document :)
+                xdmp:node-replace(model:get-root-node($model,$doc),$update)
+              else
+                xdmp:document-insert(
+                  $path,
+                  element { fn:QName($root-namespace,$model/@name) } { $update },
+                  $permissions,
+                  $collections
+                ),
+                model:create-binary-dependencies($field-id,$update)
+            )
+          case "abstract"
+            return fn:error(xs:QName("PERSISTENCE-ERROR"),"Cannot Persist Abstract Objects",$model/@name)
+          default
+            return fn:error(xs:QName("PERSISTENCE-ERROR"),"No document persistence defined for create",$model/@name),
+          domain:fire-after-event($model,"create",$update)
        )
 };
 
@@ -731,18 +724,22 @@ declare function model:patch(
 (:~
  : Overloaded method to support existing controller functions for adding collections
  :)
-declare function model:update($model as element(domain:model),$params as item()) {
-   model:update($model,$params,xdmp:default-collections())
+declare function model:update(
+  $model as element(domain:model),
+  $params as item()
+) {
+  model:update($model,$params,xdmp:default-collections())
 };
 
 (:~
  : Overloaded method to support existing controller functions for adding collections and partial update
  :)
 declare function model:update(
-    $model as element(domain:model),
-    $params as item(),
-    $collections as xs:string*) {
-   model:update($model,$params,$collections,fn:false())
+  $model as element(domain:model),
+  $params as item(),
+  $collections as xs:string*
+) {
+  model:update($model,$params,$collections,fn:false())
 };
 
 
@@ -754,48 +751,48 @@ declare function model:update(
  : @param $partial - if the update should pull the values of the current-node if no params key is present
  :)
 declare function model:update(
-    $model as element(domain:model),
-    $params as item(),
-    $collections as xs:string*,
-    $partial as xs:boolean)
-{
-   let $params := domain:fire-before-event($model,"update",$params)
-   let $current := model:get($model,$params)
-   let $id := $model//(domain:container|domain:element|domain:attribute)[@identity eq "true"]/@name
-   let $identity-field := $model//(domain:element|domain:attribute)[@identity eq "true" or @type eq "identity"]
-   let $identity := (domain:get-field-value($identity-field,$current))[1]
-   let $persistence := fn:data($model/@persistence)
-   return
-     if($current) then
-        let $build := model:recursive-update($model,$current,$params,$partial)
-        let $validation := model:validate-params($model,$build,"update")
-        let $computed-collections :=
-            model:build-collections(
-              ( $model/domain:collection, domain:get-param-value($params,"_collection"),$collections ),
-                $model,
-            $build)
-        return
-            if(fn:count($validation) > 0) then
-                <error type="validation">
-                {$validation}
-                </error>
-            else (
-               if($persistence = "document") then
-                  xdmp:node-replace($current,$build)
-               else if($persistence = "directory") then
-                  xdmp:document-insert(
-                    xdmp:node-uri($current),
-                    $build,
-                    functx:distinct-deep((xdmp:document-get-permissions(xdmp:node-uri($current)),domain:get-permissions($model))),
-                    fn:distinct-values(($collections,$computed-collections,xdmp:document-get-collections(xdmp:node-uri($current))))
-                )
-             else fn:error(xs:QName("UPDATE-NOT-PERSISTABLE"),"Cannot Update Model with persistence: " || $persistence,$persistence),
-                model:create-binary-dependencies($identity,$current),
-                domain:fire-after-event($model,"update",$build)
-            )
-            (:Create delta map and save and logged:)
-     else
-       fn:error(xs:QName("UPDATE-NOT-EXISTS"), "Trying to update a document that does not exist.")
+  $model as element(domain:model),
+  $params as item(),
+  $collections as xs:string*,
+  $partial as xs:boolean
+) as element() {
+  let $params := domain:fire-before-event($model,"update",$params)
+  let $current := model:get($model,$params)
+  let $id := $model//(domain:container|domain:element|domain:attribute)[@identity eq "true"]/@name
+  let $identity-field := $model//(domain:element|domain:attribute)[@identity eq "true" or @type eq "identity"]
+  let $identity := (domain:get-field-value($identity-field,$current))[1]
+  let $persistence := fn:data($model/@persistence)
+  return
+    if($current) then
+      let $build := model:recursive-create($model,$current,$params,$partial)
+      let $computed-collections :=
+        model:build-collections(
+          ($model/domain:collection, domain:get-param-value($params,"_collection"),$collections),
+          $model,
+          $build
+        )
+      return (
+        (:if(fn:count($validation) > 0) then
+            <error type="validation">
+            {$validation}
+            </error>
+        else:)
+        if($persistence = "document") then
+          xdmp:node-replace($current,$build)
+        else if($persistence = "directory") then
+          xdmp:document-insert(
+            xdmp:node-uri($current),
+            $build,
+            functx:distinct-deep((xdmp:document-get-permissions(xdmp:node-uri($current)),domain:get-permissions($model))),
+            fn:distinct-values(($collections,$computed-collections,xdmp:document-get-collections(xdmp:node-uri($current))))
+          )
+        else
+          fn:error(xs:QName("UPDATE-NOT-PERSISTABLE"),"Cannot Update Model with persistence: " || $persistence,$persistence),
+        model:create-binary-dependencies($identity,$current),
+        domain:fire-after-event($model,"update",$build)
+      )
+    else
+      fn:error(xs:QName("UPDATE-NOT-EXISTS"), "Trying to update a document that does not exist.")
 };
 
 declare function model:create-or-update(
@@ -830,6 +827,7 @@ declare function model:recursive-update-partial(
   $current as node()?,
   $updates as map:map
 ) {
+  fn:error(xs:QName("DEPRECATED"),"Function is deprecated"),
   let $current := ()
   return $current
 };
@@ -838,12 +836,24 @@ declare function model:recursive-update-partial(
  :  Entry for recursive updates
  :)
 declare function model:recursive-create(
-  $context as node(),
+  $model as element(domain:model),
   $updates as item()?
 ) {
-  model:recursive-build($context, (), $updates)
+  model:recursive-create($model, (), $updates, fn:false())
 };
 
+declare function model:recursive-create(
+  $model as element(domain:model),
+  $current as node()?,
+  $updates as item()?,
+  $partial as xs:boolean
+) {
+  let $mode := if (fn:exists($updates)) then "update" else "create"
+  return (
+    model:recursive-build($model, $current, $updates, $partial),
+    model:validate-params($model, $updates, $mode)
+  )
+};
 
 (:~
  :
@@ -853,9 +863,9 @@ declare function model:recursive-update(
   $current as node(),
   $updates as item()?,
   $partial as xs:boolean
-)
-{
-  model:recursive-build( $context, $current, $updates,$partial)
+) {
+  fn:error(xs:QName("DEPRECATED"),"Function is deprecated. Use model:recursive-create"),
+  model:recursive-build($context, $current, $updates, $partial)
 };
 
 (:~
@@ -866,6 +876,7 @@ declare function model:recursive-update(
   $current as node()?,
   $updates as item()?
 ) {
+  fn:error(xs:QName("DEPRECATED"),"Function is deprecated. Use model:recursive-create"),
   model:recursive-build( $context, $current, $updates)
 };
 
@@ -1578,7 +1589,9 @@ declare function model:list(
         cts:element-query(fn:QName($namespace,$name),cts:and-query(($search,$predicateExpr)))
       ))
 
-    let $sorting := (model:sorting($model, $params, "field.name", "field.order"), model:sorting($model, $params, "sidx", "sord"))[1]
+    let $sorting := model:sorting($model, $params, ("sort", "sort.name", "sidx"), ("", "sort.order", "sord"))
+      (:, model:sorting($model, $params, "sort.name", "sort.order"), model:sorting($model, $params, "sidx", "sord"), model:default-sorting($model))[1]:)
+    let $_ := xdmp:log(("$sorting", $sorting))
     let $sort :=
       fn:string-join(
         (
@@ -1747,8 +1760,8 @@ declare function model:sort-order(
 declare function model:sorting(
   $model as element(domain:model),
   $params,
-  $field-param-name as xs:string?,
-  $order-param-name as xs:string?
+  $field-param-name as xs:string*,
+  $order-param-name as xs:string*
 ) as element(sort)? {
   let $validate-order := function ($order) {
     if ($order = ("ascending", "descending")) then
@@ -1760,65 +1773,94 @@ declare function model:sorting(
     else
       ()
   }
-  let $field-param-name :=
+  let $field-param-names :=
     if (fn:exists($field-param-name)) then
       $field-param-name
     else
       "sidx"
-  let $order-param-name :=
+  let $order-param-names :=
     if (fn:exists($order-param-name)) then
       $order-param-name
     else
       "sord"
-  let $field-values :=
-    if (fn:contains($field-param-name, '.') and fn:contains($order-param-name, '.')) then
-      let $field-names := fn:tokenize($field-param-name, '\.')
-      let $order-names := fn:tokenize($order-param-name, '\.')
-      return
-      switch(domain:get-value-type($params[1]))
-        case "xml"
+  let $sort-fields :=
+    for $field-param-name at $index in $field-param-names
+    let $order-param-name := $order-param-names[$index]
+    let $field-values :=
+      if (fn:contains($field-param-name, '.') and fn:contains($order-param-name, '.')) then
+        let $field-names := fn:tokenize($field-param-name, '\.')
+        let $order-names := fn:tokenize($order-param-name, '\.')
         return
-          let $field := xdmp:value(fn:concat("$params/*:", $field-names[1]))
-          let $order := xdmp:value(fn:concat("$params/*:", $order-names[1]))
+        switch(domain:get-value-type($params[1]))
+          case "xml"
           return
-            for $value at $index in $field
-            let $value := domain:get-param-value($value, $field-names[2])
-            let $order := domain:get-param-value($order[$index], $order-names[2])
+            let $field := xdmp:value(fn:concat("$params/*:", $field-names[1]))
+            let $order := xdmp:value(fn:concat("$params/*:", $order-names[1]))
             return
-              element field {
-                attribute name {$value},
-                attribute order {$validate-order($order)}
-              }
-        default
-        return
-          let $field := domain:get-param-value($params, $field-names[1])
-          let $order := domain:get-param-value($params, $order-names[1])
+              for $value at $index in $field
+              let $value := domain:get-param-value($value, $field-names[2])
+              let $order := domain:get-param-value($order[$index], $order-names[2])
+              return
+                element field {
+                  attribute name {$value},
+                  attribute order {$validate-order($order)}
+                }
+          default
           return
-            for $value at $index in $field
-            let $value := domain:get-param-value($value, $field-names[2])
-            let $order := domain:get-param-value($order[$index], $order-names[2])
+            let $field := domain:get-param-value($params, $field-names[1])
+            let $order := domain:get-param-value($params, $order-names[1])
             return
-              element field {
-                attribute name {$value},
-                attribute order {$validate-order($order)}
-              }
-    else
-      let $field := domain:get-param-value($params, $field-param-name)
-      let $order := domain:get-param-value($params, $order-param-name)
-      return
-        for $value at $index in $field
+              for $value at $index in $field
+              let $value := domain:get-param-value($value, $field-names[2])
+              let $order := domain:get-param-value($order[$index], $order-names[2])
+              return
+                element field {
+                  attribute name {$value},
+                  attribute order {$validate-order($order)}
+                }
+      (: Add support for shorter notation: +field1,-field2 :)
+      else if ($order-param-name eq "") then
+        let $field := domain:get-param-value($params, $field-param-name)
         return
-          element field {
-            attribute name {$value},
-            attribute order {$validate-order($order[$index])}
-          }
-  let $field-values :=
-    if (fn:exists($field-values)) then
-      $field-values
+          if ($field castable as xs:string) then
+            let $field := fn:tokenize(domain:get-param-value($params, $field-param-name), ',')
+            return
+              for $value at $index in $field
+              let $order := fn:substring($value, 1, 1)
+              let $value := fn:substring($value, 2)
+              return
+                element field {
+                  attribute name {$value},
+                  attribute order {$validate-order($order)}
+                }
+          else
+            ()
+      else
+        let $field := domain:get-param-value($params, $field-param-name)
+        let $order := domain:get-param-value($params, $order-param-name)
+        return
+          for $value at $index in $field
+          return
+            element field {
+              attribute name {$value},
+              attribute order {$validate-order($order[$index])}
+            }
+    return
+      if (fn:exists($field-values)) then
+        element sort {
+          $field-values
+        }
+      else
+        ()
+
+  let $sort-fields := $sort-fields[1]
+  return
+    if (fn:exists($sort-fields)) then
+      $sort-fields
     else
       let $field := fn:tokenize(domain:navigation($model)/@sortField, ',')
       let $order := fn:tokenize(domain:navigation($model)/@sortOrder, ',')
-      return
+      let $field-values :=
         for $value at $index in $field
         return
           element field {
@@ -2476,11 +2518,23 @@ declare function model:validate-params(
   $model as element(domain:model),
   $params as item()*,
   $mode as xs:string
-) as element(validationError)* {
+) as empty-sequence() {
   if (fn:not(domain:model-validation-enabled($model))) then ()
   else
     let $validation-errors :=
     (
+      let $custom-validators := domain:validators($model)
+      return
+        for $custom-validator in $custom-validators
+        return
+          let $function-name := fn:string($custom-validator/@function)
+          let $validator-function := domain:get-model-function((), $model/@name, $function-name, 3, fn:false())
+          return
+            if (fn:exists($validator-function)) then
+              $validator-function($model, $params, $mode)
+            else
+              (),
+
       let $unique-constraints := domain:get-model-unique-constraint-fields($model)
       let $unique-search := domain:get-model-unique-constraint-query($model,$params,$mode)
       return
@@ -2490,8 +2544,9 @@ declare function model:validate-params(
           let $param-value := if($param-value) then $param-value else $v/@default
           return
           <validationError>
-              <type>Unique Constraint</type>
-              <error>Instance is not unique.Field:{fn:data($v/@name)} Value: {$param-value}</error>
+            <element>{fn:data($v/@name)}</element>
+            <type>unique</type>
+            <error>Instance is not unique.Field:{fn:data($v/@name)} Value: {$param-value}</error>
           </validationError>
         else (),
       let $uniqueKey-constraints := domain:get-model-uniqueKey-constraint-fields($model)
@@ -2499,8 +2554,9 @@ declare function model:validate-params(
       return
         if($uniqueKey-search) then
           <validationError>
-              <type>UniqueKey Constraint</type>
-              <error>Instance is not unique. Keys:{fn:string-join($uniqueKey-constraints/fn:data(@name),", ")}</error>
+            <element>{$uniqueKey-constraints/fn:data(@name)}</element>
+            <type>uniqueKey</type>
+            <error>Instance is not unique. Keys:{fn:string-join($uniqueKey-constraints/fn:data(@name),", ")}</error>
           </validationError>
         else (),
       for $element in $model//(domain:attribute | domain:element)
@@ -2613,6 +2669,15 @@ declare function model:validate-params(
                   <error>The value of {$name} must match the regular expression {fn:data($attribute)}.</error>
                 </validationError>
                else ()
+            case attribute(validator) return
+              let $function-name := fn:string($attribute)
+              let $validator-function := domain:get-model-function((), $model/@name, $function-name, 3, fn:false())
+              (:let $validator-function := model:get-function-cache($validator-function):)
+              return
+                if (fn:exists($validator-function)) then
+                  $validator-function($element, $params, $mode)
+                else
+                  ()
             default return ()
       )
     )
@@ -2625,6 +2690,15 @@ declare function model:validate-params(
           text{"Validation failed for model", $model/@name, "mode", $mode},
           map:entry("validation-errors", <validationErrors>{$validation-errors}</validationErrors>)
         )
+};
+
+declare function model:validation-errors(
+  $error as element(error:error)
+) as element (validationErrors)? {
+  if (fn:starts-with($error/error:data/error:datum, "map:map(") and fn:ends-with($error/error:data/error:datum, ")")) then
+    map:get(xdmp:value($error/error:data/error:datum/text()), "validation-errors")
+  else
+    ()
 };
 
 (:~

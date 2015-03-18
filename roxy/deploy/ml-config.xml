@@ -276,7 +276,7 @@
         <range-element-attribute-index>
           <scalar-type>string</scalar-type>
           <parent-namespace-uri>http://xquerrail.com/app-test</parent-namespace-uri>
-          <parent-localname>model6 model7 model10 model23 program</parent-localname>
+          <parent-localname>model6 model7 model10 model23 program validate-model validate-model2</parent-localname>
           <namespace-uri/>
           <localname>id</localname>
           <collation>http://marklogic.com/collation/codepoint</collation>

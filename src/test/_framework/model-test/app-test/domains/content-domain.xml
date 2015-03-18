@@ -119,4 +119,64 @@
     </element>
   </model>
 
+  <model name="validate-model" persistence="directory" validation="true" key="id" keyLabel="id" >
+    <directory>/test/model/validation/</directory>
+    <collection>base-model-validation-test</collection>
+
+    <attribute name="id" type="identity" identity="true"/>
+
+    <attribute name="condition" type="string" description="Test Condition"/>
+
+    <element name="requiredString" type="string" label="Scalar String" >
+      <constraint required="true" unique="true" minLength="5" maxLength="10" pattern="ay$"/>
+    </element>
+
+    <element name="plusInteger" occurrence="+" type="integer" label="Plus Integer" >
+      <constraint minValue="1" maxValue="99"/>
+    </element>
+
+    <element name="optionalOption" occurrence="?" default="tall" type="string" label="One Option">
+      <constraint inList="latteSize"/>
+    </element>
+
+    <element name="defaultValue" occurrence="1" default="Default" type="string" label="Default Value" />
+
+    <optionlist name="latteSize" type="string">
+      <option label="Tall">tall</option>
+      <option label="Grande">grande</option>
+      <option label="Venti">venti</option>
+    </optionlist>
+  </model>
+
+  <model name="validate-model2" persistence="directory" validation="true" uniqueKey="firstName lastName" key="id" keyLabel="id" >
+    <directory>/test/model2/validation/</directory>
+    <attribute name="id" type="identity" identity="true"/>
+    <element name="firstName" type="string" />
+    <element name="lastName" type="string" />
+    <element name="birthDate" type="string">
+      <constraint validator="custom-validator"/>
+    </element>
+  </model>
+
+  <model name="validate-model3" persistence="directory" validation="true" key="id" keyLabel="id" >
+    <validator name="model-validator" function="model-validator" />
+    <directory>/test/model3/validation/</directory>
+    <attribute name="id" type="identity" identity="true"/>
+    <element name="firstName" type="string" />
+    <element name="lastName" type="string" />
+  </model>
+
+  <model name="base-validate-model" persistence="abstract" key="uuid" keyLabel="uuid" >
+    <validator name="base-model-validator" function="base-model-validator" />
+    <element name="uuid" type="identity" identity="true" label="Globally Unique Identifier" />
+    <element name="age" type="integer" />
+  </model>
+
+  <model name="validate-model4" persistence="directory" extends="base-validate-model" validation="true" key="uuid" keyLabel="uuid" >
+    <validator name="model-validator" function="model-validator" />
+    <directory>/test/model4/validation/</directory>
+    <element name="firstName" type="string" />
+    <element name="lastName" type="string" />
+  </model>
+
 </domain>

@@ -850,11 +850,11 @@ declare %private function domain:is-ns-override(
   $model as element(domain:model)
 ) as xs:boolean {
   fn:head((
-      $model/@override-ns,
-      $domain/@override-ns,
-      config:get-application($application-name)/@override-ns,
-      fn:false()
-    ))
+    $model/@override-ns,
+    $domain/@override-ns,
+    config:get-application($application-name)/@override-ns,
+    fn:false()
+  ))
 };
 
 (:~
@@ -889,6 +889,10 @@ declare %private function domain:extend-model(
                 (),
             (: inherit certain attributes if not specified :)
             $base-model/@*[fn:name(.) = $MODEL-INHERIT-ATTRIBUTES][fn:not(fn:name(.) = $model/@*/fn:name(.))]
+        )
+        let $model-validators := (
+          $base-model/domain:validator,
+          $domain/domain:validator
         )
         return element { fn:node-name($model) } {
           $model/namespace::*,
@@ -935,6 +939,7 @@ declare %private function domain:extend-model(
                   (: Now copy field children :)
                   $field/node()
                 },
+          $model-validators,
           $model/node()
         }
   else $model
@@ -980,6 +985,12 @@ declare function domain:navigation(
   $field as element()
 ) as element(domain:navigation)? {
   $field/domain:navigation
+};
+
+declare function domain:validators(
+  $model as element(domain:model)
+) as element(domain:validator)* {
+  $model/domain:validator
 };
 
 declare %private function domain:find-profile(
@@ -1967,14 +1978,15 @@ if($model/@uniqueKey and $model/@uniqueKey ne "")
  : Returns a unique constraint query
  :)
 declare function domain:get-model-uniqueKey-constraint-query(
-    $model as element(domain:model),
-    $params as item(),
-    $mode as xs:string
+  $model as element(domain:model),
+  $params as item(),
+  $mode as xs:string
 ) {
-   if(domain:get-model-uniqueKey-constraint-fields($model)) then
-       let $id-field := domain:get-model-identity-field($model)
+  if(domain:get-model-uniqueKey-constraint-fields($model)) then
+   (: It should not include id field value in the query :)
+       (:let $id-field := domain:get-model-identity-field($model)
        let $id-field-key := domain:get-field-id($id-field)
-       let $id-value := domain:get-field-param-value($id-field,$params)
+       let $id-value := domain:get-field-value($id-field,$params)
        let $id-query :=
           if($mode = ("create","new")) then
                if($id-value) then
@@ -1991,33 +2003,33 @@ declare function domain:get-model-uniqueKey-constraint-query(
                     cts:element-range-query(fn:QName(domain:get-field-namespace($id-field),$id-field/@name),"!=",$id-value,("collation="  || domain:get-field-collation($id-field)))
                   case element(domain:attribute) return
                        cts:element-attribute-range-query(fn:QName(domain:get-field-namespace($model),$model/@name),xs:QName($id-field/@name),"!=",$id-value,("collation=" || domain:get-field-collation($id-field)))
-                  default return ()
-     let $unique-fields := domain:get-model-uniqueKey-constraint-fields($model)
-     let $constraint-query :=
-          for $field in $unique-fields
-          let $field-value := domain:get-field-param-value($field,$params)
-          let $field-ns := domain:get-field-namespace($field)
-          return
-           typeswitch($field)
-           case element(domain:attribute) return
-              let $parent := domain:get-parent-field-attribute($field)
-              let $parent-ns := domain:get-field-namespace($parent)
-              return
-               cts:element-attribute-value-query(fn:QName($parent-ns,$parent/@name),xs:QName($field/@name),$field-value)
-           case element(domain:element) return
-              switch($field/@type)
-                 case "reference" return
-                   cts:or-query((
-                       cts:element-attribute-value-query(fn:QName($field-ns,$field/@name),xs:QName("ref-id"),$field-value),
-                       cts:element-value-query(fn:QName($field-ns,$field/@name),$field-value)
-                   ))
-                 default return
-                   cts:element-value-query(fn:QName($field-ns,$field/@name),$field-value)
-           default return ()
-     let $search-expression := domain:get-model-search-expression($model,cts:and-query(($id-query,$constraint-query)))
-     return
-        xdmp:eval($search-expression)
-   else ()
+                  default return ():)
+    let $id-query := ()
+    let $unique-fields := domain:get-model-uniqueKey-constraint-fields($model)
+    let $constraint-query :=
+      for $field in $unique-fields
+      (:let $field-value := domain:get-field-param-value($field,$params):)
+      let $field-value := domain:get-field-value($field,$params)
+      let $field-ns := domain:get-field-namespace($field)
+      return
+        typeswitch($field)
+          case element(domain:attribute) return
+            let $parent := domain:get-parent-field-attribute($field)
+            let $parent-ns := domain:get-field-namespace($parent)
+            return cts:element-attribute-value-query(fn:QName($parent-ns,$parent/@name),xs:QName($field/@name),$field-value)
+          case element(domain:element) return
+            switch($field/@type)
+              case "reference" return
+              cts:or-query((
+                cts:element-attribute-value-query(fn:QName($field-ns,$field/@name),xs:QName("ref-id"),$field-value),
+                cts:element-value-query(fn:QName($field-ns,$field/@name),$field-value)
+              ))
+              default return
+                cts:element-value-query(fn:QName($field-ns,$field/@name),$field-value)
+          default return ()
+    let $search-expression := domain:get-model-search-expression($model,cts:and-query(($id-query,$constraint-query)))
+    return xdmp:eval($search-expression)
+  else ()
 };
 (:~
  : Returns the value of a query matching a unique constraint. A unique constraint at a field level is defined
@@ -2029,54 +2041,55 @@ declare function domain:get-model-uniqueKey-constraint-query(
                     removes the document under update to ensure it does not assume it is part of the query.
  :)
 declare function domain:get-model-unique-constraint-query(
-    $model as element(domain:model),
-    $params as item(),
-    $mode as xs:string) {
-   if(domain:get-model-unique-constraint-fields($model)) then
-     let $id-field := domain:get-model-identity-field($model)
-     let $id-field-key := domain:get-field-id($id-field)
-     let $id-value := domain:get-field-value($id-field,$params)
-     let $id-query :=
-        if($mode = "create") then
-          if($id-value) then
-              typeswitch($id-field)
-                case element(domain:element) return
-                  cts:element-range-query(fn:QName(domain:get-field-namespace($id-field),$id-field/@name),"=",$id-value,("collation=" || domain:get-field-collation($id-field)))
-                case element(domain:attribute) return
-                     cts:element-attribute-range-query(fn:QName(domain:get-field-namespace($model),$model/@name),xs:QName($id-field/@name),"=",$id-value,("collation=" || domain:get-field-collation($id-field)))
-                default return ()
-              else ()
-          else if($id-value) then
-              typeswitch($id-field)
-                case element(domain:element) return
-                  cts:element-range-query(fn:QName(domain:get-field-namespace($id-field),$id-field/@name),"!=",$id-value,("collation=" || domain:get-field-collation($id-field)))
-                case element(domain:attribute) return
-                     cts:element-attribute-range-query(fn:QName(domain:get-field-namespace($model),$model/@name),xs:QName($id-field/@name),"!=",$id-value,("collation=" || domain:get-field-collation($id-field)))
-                default return ()
-              else ()
-     let $unique-fields := domain:get-model-unique-constraint-fields($model)
-     let $constraint-query :=
-        for $field in $unique-fields
-        let $field-value := domain:get-field-value($field,$params)
-        let $field-ns := domain:get-field-namespace($field)
-        return
-         typeswitch($field)
-         case element(domain:attribute) return
+  $model as element(domain:model),
+  $params as item(),
+  $mode as xs:string
+) {
+  if(domain:get-model-unique-constraint-fields($model)) then
+    (:let $id-field := domain:get-model-identity-field($model)
+    let $id-field-key := domain:get-field-id($id-field)
+    let $id-value := domain:get-field-value($id-field,$params)
+    let $id-query :=
+      if($mode = "create") then
+        if($id-value) then
+          typeswitch($id-field)
+            case element(domain:element) return
+              cts:element-range-query(fn:QName(domain:get-field-namespace($id-field),$id-field/@name),"=",$id-value,("collation=" || domain:get-field-collation($id-field)))
+            case element(domain:attribute) return
+              cts:element-attribute-range-query(fn:QName(domain:get-field-namespace($model),$model/@name),xs:QName($id-field/@name),"=",$id-value,("collation=" || domain:get-field-collation($id-field)))
+            default return ()
+        else ()
+      else if($id-value) then
+        typeswitch($id-field)
+          case element(domain:element) return
+            cts:element-range-query(fn:QName(domain:get-field-namespace($id-field),$id-field/@name),"!=",$id-value,("collation=" || domain:get-field-collation($id-field)))
+          case element(domain:attribute) return
+            cts:element-attribute-range-query(fn:QName(domain:get-field-namespace($model),$model/@name),xs:QName($id-field/@name),"!=",$id-value,("collation=" || domain:get-field-collation($id-field)))
+          default return ()
+      else ():)
+    let $id-query := ()
+    let $unique-fields := domain:get-model-unique-constraint-fields($model)
+    let $constraint-query :=
+      for $field in $unique-fields
+      let $field-value := domain:get-field-value($field,$params)
+      let $field-ns := domain:get-field-namespace($field)
+      return
+        typeswitch($field)
+          case element(domain:attribute) return
             let $parent := domain:get-parent-field-attribute($field)
             let $parent-ns := domain:get-field-namespace($parent)
             return
-             cts:element-attribute-value-query(fn:QName($parent-ns,$parent/@name),xs:QName($field/@name),$field-value)
-         case element(domain:element) return
+              cts:element-attribute-value-query(fn:QName($parent-ns,$parent/@name),xs:QName($field/@name),$field-value)
+          case element(domain:element) return
             switch($field/@type)
-               case "reference" return
-                  cts:element-attribute-value-query(fn:QName($field-ns,$field/@name),xs:QName("ref-id"),$field-value)
-               default return
-                 cts:element-value-query(fn:QName($field-ns,$field/@name),$field-value)
-         default return ()
-     let $search-expression := domain:get-model-search-expression($model,cts:and-query(($id-query,cts:or-query($constraint-query))))
-     return
-          xdmp:eval($search-expression)
- else ()
+              case "reference" return
+                cts:element-attribute-value-query(fn:QName($field-ns,$field/@name),xs:QName("ref-id"),$field-value)
+              default return
+                cts:element-value-query(fn:QName($field-ns,$field/@name),$field-value)
+          default return ()
+    let $search-expression := domain:get-model-search-expression($model,cts:and-query(($id-query,cts:or-query($constraint-query))))
+    return xdmp:eval($search-expression)
+  else ()
 };
 
 (:~

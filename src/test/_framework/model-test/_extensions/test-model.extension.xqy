@@ -34,3 +34,24 @@ declare function model:in-extension-reference-test(
       attribute reference-test { $name }
     }
 };
+
+declare function model:domain-model-validator(
+  $model as element(domain:model),
+  $params as item()*,
+  $mode as xs:string
+) as element(validationError)* {
+  if ($model/@name = "validate-model4") then
+    let $first-name-value := domain:get-field-value(domain:get-model-field($model, "firstName"), $params)
+    return
+      if ($first-name-value eq "JOHN") then
+        ()
+      else
+        <validationError>
+          <element>firstName</element>
+          <type>domain-model-validator</type>
+          <typeValue>{fn:data($first-name-value)}</typeValue>
+          <error>firstName must be JOHN</error>
+        </validationError>
+  else
+    ()
+};

@@ -8,6 +8,7 @@
   <declare-namespace prefix="model3" namespace-uri="http://marklogic.com/model/model3"/>
   <application-namespace prefix="xquerrail" namespace-uri="http://xquerrail.com/app-test"/>
   <default-collation>http://marklogic.com/collation/codepoint</default-collation>
+  <validator name="domain-model-validator" function="domain-model-validator" />
   <import id="content" resource="content-domain.xml"/>
   <!--Implement a base class to inherit metadata-->
   <model name="base" description="Base Extension Class" persistence="abstract">

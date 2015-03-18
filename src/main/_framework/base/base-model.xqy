@@ -615,43 +615,22 @@ declare function model:reference-by-keylabel(
         $exprValue
         )
 };
+
 declare function model:update-partial(
-    $model as element(domain:model),
-    $params as item()
+  $model as element(domain:model),
+  $params as item()
 ) {
-    model:update-partial($model,$params,())
+  model:update-partial($model,$params,xdmp:default-collections())
 };
 (:~
  : Creates an partial update statement for a given model.
  :)
 declare function model:update-partial(
-    $model as element(domain:model),
-    $params as item(),
-    $collections as xs:string*
-){
-   let $current := model:get($model,$params)
-   let $id := $model//(domain:container|domain:element|domain:attribute)[@identity eq "true"]/@name
-   let $identity-field := $model//(domain:element|domain:attribute)[@identity eq "true" or @type eq "identity"]
-   let $identity := domain:get-field-value($identity-field,$current)
-   return
-     if($current) then
-        let $build := model:recursive-build($model,$current,$params,fn:true())
-        let $validation := model:validate-params($model,$params,"update")
-        let $computed-collections := model:build-collections(($model/domain:collection,$collections),$model,$build)
-        return
-            if(fn:count($validation) > 0) then
-                fn:error(xs:QName("VALIDATION-ERROR"), fn:concat("The document trying to be updated contains validation errors"), $validation)
-            else (
-                xdmp:document-insert(
-                    xdmp:node-uri($current),
-                    $build,
-                    functx:distinct-deep((xdmp:document-get-permissions(xdmp:node-uri($current)),domain:get-permissions($model))),
-                    fn:distinct-values(($collections,$computed-collections,xdmp:document-get-collections(xdmp:node-uri($current))))
-                ),
-                model:create-binary-dependencies($identity,$current)
-            )
-     else
-       fn:error(xs:QName("ERROR"), "Trying to update a document that does not exist.")
+  $model as element(domain:model),
+  $params as item(),
+  $collections as xs:string*
+) {
+  model:update($model,$params,$collections,fn:true())
 };
 
 declare function model:parse-patch-path(
@@ -2499,140 +2478,153 @@ declare function model:validate-params(
   $mode as xs:string
 ) as element(validationError)* {
   if (fn:not(domain:model-validation-enabled($model))) then ()
-  else (
-   let $unique-constraints := domain:get-model-unique-constraint-fields($model)
-   let $unique-search := domain:get-model-unique-constraint-query($model,$params,$mode)
-   return
-      if($unique-search) then
-        for $v in $unique-constraints
-        let $param-value := domain:get-field-value($v,$params)
-        let $param-value := if($param-value) then $param-value else $v/@default
-        return
-        <validationError>
-            <type>Unique Constraint</type>
-            <error>Instance is not unique.Field:{fn:data($v/@name)} Value:{$param-value}</error>
-        </validationError>
-      else (),
-   let $uniqueKey-constraints := domain:get-model-uniqueKey-constraint-fields($model)
-   let $uniqueKey-search := domain:get-model-uniqueKey-constraint-query($model,$params,$mode)
-   return
-      if($uniqueKey-search) then
-        <validationError>
-            <type>UniqueKey Constraint</type>
-            <error>Instance is not unique. Keys:{fn:string-join($uniqueKey-constraints/fn:data(@name),", ")}</error>
-        </validationError>
-      else (),
-   for $element in $model//(domain:attribute | domain:element)
-   let $name := fn:data($element/@name)
-   let $key := domain:get-field-id($element)
-   let $type := domain:resolve-datatype($element)
-   let $value := domain:get-field-value($element,$params)
-   let $value := if(fn:exists($value)) then $value else $element/@default
-   let $occurence := $element/@occurrence
-   return
-        (
+  else
+    let $validation-errors :=
+    (
+      let $unique-constraints := domain:get-model-unique-constraint-fields($model)
+      let $unique-search := domain:get-model-unique-constraint-query($model,$params,$mode)
+      return
+        if($unique-search) then
+          for $v in $unique-constraints
+          let $param-value := domain:get-field-value($v,$params)
+          let $param-value := if($param-value) then $param-value else $v/@default
+          return
+          <validationError>
+              <type>Unique Constraint</type>
+              <error>Instance is not unique.Field:{fn:data($v/@name)} Value: {$param-value}</error>
+          </validationError>
+        else (),
+      let $uniqueKey-constraints := domain:get-model-uniqueKey-constraint-fields($model)
+      let $uniqueKey-search := domain:get-model-uniqueKey-constraint-query($model,$params,$mode)
+      return
+        if($uniqueKey-search) then
+          <validationError>
+              <type>UniqueKey Constraint</type>
+              <error>Instance is not unique. Keys:{fn:string-join($uniqueKey-constraints/fn:data(@name),", ")}</error>
+          </validationError>
+        else (),
+      for $element in $model//(domain:attribute | domain:element)
+      let $name := fn:data($element/@name)
+      let $key := domain:get-field-id($element)
+      let $type := domain:resolve-datatype($element)
+      let $value := domain:get-field-value($element,$params)
+      let $value := if(fn:exists($value)) then $value else $element/@default
+      let $occurence := $element/@occurrence
+     return
+      (
         if( fn:data($occurence) eq "?" and fn:not(fn:count($value) <= 1) )  then
-            <validationError>
-                <element>{$name}</element>
-                <type>{fn:local-name($occurence)}</type>
-                <typeValue>{fn:data($occurence)}</typeValue>
-                <error>The value of {$name} must have zero or one value.</error>
-            </validationError>
-        else if( fn:data($occurence) eq "+" and fn:not(fn:count($value) = 1) ) then
-             <validationError>
-                <element>{$name}</element>
-                <type>{fn:local-name($occurence)}</type>
-                <typeValue>{fn:data($occurence)}</typeValue>
-                <error>The value of {$name} must contain exactly one.</error>
-            </validationError>
+          <validationError>
+            <element>{$name}</element>
+            <type>{fn:local-name($occurence)}</type>
+            <typeValue>{fn:data($occurence)}</typeValue>
+            <error>The value of {$name} must have zero or one value.</error>
+          </validationError>
+        else if( fn:data($occurence) eq "+" and fn:not(fn:count($value) >= 1) ) then
+          <validationError>
+            <element>{$name}</element>
+            <type>{fn:local-name($occurence)}</type>
+            <typeValue>{fn:data($occurence)}</typeValue>
+            <error>The value of {$name} must contain at least one item.</error>
+          </validationError>
+        else if( fn:data($occurence) eq "1" and fn:not(fn:count($value) = 1) ) then
+          <validationError>
+            <element>{$name}</element>
+            <type>{fn:local-name($occurence)}</type>
+            <typeValue>{fn:data($occurence)}</typeValue>
+            <error>The value of {$name} must contain exactly one item.</error>
+          </validationError>
         else (),
 
         for $attribute in $element/domain:constraint/@*
         return
-            typeswitch($attribute)
+          typeswitch($attribute)
             case attribute(required) return
-                if(fn:data($attribute) = "true" and fn:not(fn:exists($value))) then
-                    <validationError>
-                        <element>{$name}</element>
-                        <type>{fn:local-name($attribute)}</type>
-                        <typeValue>{fn:data($attribute)}</typeValue>
-                        <error>The value of {$name} can not be empty.</error>
-                    </validationError>
-                else ()
+              if(fn:data($attribute) = "true" and fn:not(fn:exists($value))) then
+                <validationError>
+                  <element>{$name}</element>
+                  <type>{fn:local-name($attribute)}</type>
+                  <typeValue>{fn:data($attribute)}</typeValue>
+                  <error>The value of {$name} can not be empty.</error>
+                </validationError>
+              else ()
             case attribute(minLength) return
-              if(fn:not($element/@required = "true")) then ()
-              else
-                if(xs:integer(fn:data($attribute)) > fn:string-length($value)) then
-                        <validationError>
-                            <element>{$name}</element>
-                            <type>{fn:local-name($attribute)}</type>
-                            <typeValue>{fn:data($attribute)}</typeValue>
-                            <error>The length of {$name} must be longer than {fn:data($attribute)}.</error>
-                        </validationError>
-                    else ()
-
+              let $minLength := xs:integer(fn:data($attribute))
+              return
+                if(some $item in $value satisfies fn:string-length($item) lt $minLength ) then
+                  <validationError>
+                    <element>{$name}</element>
+                    <type>{fn:local-name($attribute)}</type>
+                    <typeValue>{fn:data($attribute)}</typeValue>
+                    <error>The length of {$name} must be longer than {fn:data($attribute)}.</error>
+                  </validationError>
+                else ()
             case attribute(maxLength) return
-              if(fn:not($element/@required = "true")) then ()
-              else
-                if(xs:integer(fn:data($attribute)) < fn:string-length($value)) then
-                    <validationError>
-                        <element>{$name}</element>
-                        <type>{fn:local-name($attribute)}</type>
-                        <typeValue>{fn:data($attribute)}</typeValue>
-                        <error>The length of {$name} must be shorter than {fn:data($attribute)}.</error>
-                    </validationError>
+              let $maxLength := xs:integer(fn:data($attribute))
+              return
+                if(some $item in $value satisfies fn:string-length($item) gt $maxLength ) then
+                  <validationError>
+                    <element>{$name}</element>
+                    <type>{fn:local-name($attribute)}</type>
+                    <typeValue>{fn:data($attribute)}</typeValue>
+                    <error>The length of {$name} must be shorter than {fn:data($attribute)}.</error>
+                  </validationError>
                 else ()
             case attribute(minValue) return
-              if(fn:not($element/@required = "true")) then ()
-              else
-              let $attributeValue := xdmp:value(fn:concat("fn:data($attribute) cast as ", $type))
-               let $value := xdmp:value(fn:concat("$value cast as ", $type))
-               return
-                   if($attributeValue > $value) then
-                        <validationError>
-                             <element>{$name}</element>
-                             <type>{fn:local-name($attribute)}</type>
-                             <typeValue>{fn:data($attribute)}</typeValue>
-                             <error>The value of {$name} must be greater than {$attributeValue}.</error>
-                         </validationError>
-                    else ()
+              let $minValue := xdmp:value(fn:concat("fn:data($attribute) cast as ", $type))
+              let $value := xdmp:value(fn:concat("for $v in $value return $v cast as ", $type))
+              return
+                if(some $item in $value satisfies $item lt $minValue) then
+                  <validationError>
+                    <element>{$name}</element>
+                    <type>{fn:local-name($attribute)}</type>
+                    <typeValue>{fn:data($attribute)}</typeValue>
+                    <error>The value of {$name} must be at least {$minValue}.</error>
+                  </validationError>
+                else ()
             case attribute(maxValue) return
-              if(fn:not($element/@required = "true")) then ()
-              else
-               let $attributeValue := xdmp:value(fn:concat("fn:data($attribute) cast as ", $type))
-               let $value := xdmp:value(fn:concat("$value cast as ", $type))
-               return
-                   if($attributeValue < $value) then
-                        <validationError>
-                             <element>{$name}</element>
-                             <type>{fn:local-name($attribute)}</type>
-                             <typeValue>{fn:data($attribute)}</typeValue>
-                             <error>The value of {$name} must be less than {$attributeValue}.</error>
-                         </validationError>
-                    else ()
-             case attribute(inList) return
-                let $options := domain:get-field-optionlist($element)
-                return
-                    if(fn:not($options/domain:option = $value)) then
-                        <validationError>
-                            <element>{$name}</element>
-                            <type>{fn:local-name($attribute)}</type>
-                            <typeValue>{fn:data($attribute)}</typeValue>
-                            <error>The value of {$name} must be one of the following values [{fn:string-join($options,", ")}].</error>
-                        </validationError>
-                     else ()
+              let $maxValue := xdmp:value(fn:concat("fn:data($attribute) cast as ", $type))
+              let $value := xdmp:value(fn:concat("for $v in $value return $v cast as ", $type))
+              return
+                if(some $item in $value satisfies $item gt $maxValue) then
+                  <validationError>
+                    <element>{$name}</element>
+                    <type>{fn:local-name($attribute)}</type>
+                    <typeValue>{fn:data($attribute)}</typeValue>
+                    <error>The value of {$name} must be no more than {$maxValue}.</error>
+                  </validationError>
+                else ()
+            case attribute(inList) return
+              let $options := domain:get-field-optionlist($element)
+              return
+                if(some $item in $value satisfies fn:not($item = $options/domain:option)) then
+                  <validationError>
+                    <element>{$name}</element>
+                    <type>{fn:local-name($attribute)}</type>
+                    <typeValue>{fn:data($attribute)}</typeValue>
+                    <error>The value of {$name} must be one of the following values [{fn:string-join($options,", ")}].</error>
+                  </validationError>
+                 else ()
             case attribute(pattern) return
-                    if(fn:not(fn:matches($value,fn:data($attribute)))) then
-                        <validationError>
-                            <element>{$name}</element>
-                            <type>{fn:local-name($attribute)}</type>
-                            <typeValue>{fn:data($attribute)}</typeValue>
-                            <error>The value of {$name} must match the regular expression {fn:data($attribute)}.</error>
-                        </validationError>
-                     else ()
+              if(some $item in $value satisfies fn:not(fn:matches($item,fn:data($attribute)))) then
+                <validationError>
+                  <element>{$name}</element>
+                  <type>{fn:local-name($attribute)}</type>
+                  <typeValue>{fn:data($attribute)}</typeValue>
+                  <error>The value of {$name} must match the regular expression {fn:data($attribute)}.</error>
+                </validationError>
+               else ()
             default return ()
-            )
-  )
+      )
+    )
+    return
+      if (fn:empty($validation-errors)) then
+        ()
+      else
+        fn:error(
+          xs:QName("MODEL-VALIDATION-FAILED"),
+          text{"Validation failed for model", $model/@name, "mode", $mode},
+          map:entry("validation-errors", <validationErrors>{$validation-errors}</validationErrors>)
+        )
 };
 
 (:~

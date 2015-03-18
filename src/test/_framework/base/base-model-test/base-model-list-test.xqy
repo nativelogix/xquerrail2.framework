@@ -638,7 +638,7 @@ declare %test:case function model-sorted-list-from-params-test() as item()*
   let $params := map:new((
     map:entry("debug", fn:true()),
     map:entry(
-      "field",
+      "sort",
       (
         map:new((
           map:entry("name", "lastName"),
@@ -650,6 +650,31 @@ declare %test:case function model-sorted-list-from-params-test() as item()*
         ))
       )
     )
+  ))
+  let $list := model:list($model, $params)
+  let $sorted-list :=
+    for $instance in $list/app-test:model25
+    order by $instance/app-test:lastName ascending, $instance/app-test:firstName descending
+    return $instance
+  let $valid :=
+    for $instance at $pos in $sorted-list
+    return
+      if ($instance eq $list/app-test:model25[$pos]) then
+        ()
+      else
+        fn:false()
+  return (
+    assert:not-empty($list),
+    assert:empty($valid)
+  )
+};
+
+declare %test:case function model-sorted-list-from-shorter-syntax-test() as item()*
+{
+  let $model := domain:get-model("model25")
+  let $params := map:new((
+    map:entry("debug", fn:true()),
+    map:entry("sort", "+lastName,-firstName")
   ))
   let $list := model:list($model, $params)
   let $sorted-list :=

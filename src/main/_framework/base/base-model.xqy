@@ -1590,8 +1590,6 @@ declare function model:list(
       ))
 
     let $sorting := model:sorting($model, $params, ("sort", "sort.name", "sidx"), ("", "sort.order", "sord"))
-      (:, model:sorting($model, $params, "sort.name", "sort.order"), model:sorting($model, $params, "sidx", "sord"), model:default-sorting($model))[1]:)
-    let $_ := xdmp:log(("$sorting", $sorting))
     let $sort :=
       fn:string-join(
         (

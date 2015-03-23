@@ -668,7 +668,7 @@ declare function domain:get-controller-actions(
     let $controller := domain:get-controller($application-name,$controller-name)
     let $base-uri := config:application-directory($application-name)
     let $base-ns  := config:application-namespace($application-name)
-    let $controller-ns := fn:concat($base-ns,"/controller/",$controller-name)
+    let $controller-ns := config:controller-uri($application-name, $controller-name)(:fn:concat($base-ns,"/controllers/",$controller-name):)
     let $stmt := fn:concat(
         "import module namespace controller = 'http://xquerrail.com/controller/base' at '../base/base-controller.xqy'; ",
         "&#xA;xdmp:functions()[fn:namespace-uri-from-QName(fn:function-name(.)) = 'http://xquerrail.com/controller/base']"

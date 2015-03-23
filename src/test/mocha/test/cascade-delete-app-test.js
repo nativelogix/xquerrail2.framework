@@ -40,39 +40,6 @@ var children = [
   }
 ];
 
-// declare variable $CHILD-INSTANCES := (
-// <child-model xmlns="http://xquerrail.com/app-test">
-//   <name>child-model-1</name>
-//   <parent>parent-model-1</parent>
-// </child-model>
-// ,
-// <child-model xmlns="http://xquerrail.com/app-test">
-//   <name>child-model-2</name>
-//   <parent>parent-model-1</parent>
-//   <parent>parent-model-2</parent>
-// </child-model>
-// ,
-// <child-model xmlns="http://xquerrail.com/app-test">
-//   <name>child-model-3</name>
-//   <parent>parent-model-2</parent>
-//   <parent>parent-model-3</parent>
-// </child-model>
-// );
-
-// declare variable $PARENT-INSTANCES := (
-// <parent-model xmlns="http://xquerrail.com/app-test">
-//   <name>parent-model-1</name>
-// </parent-model>
-// ,
-// <parent-model xmlns="http://xquerrail.com/app-test">
-//   <name>parent-model-2</name>
-// </parent-model>
-// ,
-// <parent-model xmlns="http://xquerrail.com/app-test">
-//   <name>parent-model-3</name>
-// </parent-model>
-// );
-
 function httpGet(model, action, data, callback) {
   var options = {
     json: true,

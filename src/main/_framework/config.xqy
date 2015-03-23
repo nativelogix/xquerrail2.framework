@@ -396,6 +396,15 @@ declare function config:get-base-model-location(
     else fn:concat(config:framework-path(), "/base/base", $model-suffix, ".xqy")
 };
 
+(:~
+ : Returns the base-model location as defined in the config.xml
+ : @param $model-name - Returns the location of the model if defined in the calling application.
+ :)
+declare function config:get-base-controller-location(
+) as xs:string {
+  fn:concat(config:framework-path(), "/base/base-controller.xqy")
+};
+
 declare function config:default-view-directory() {
   fn:concat(config:framework-path(), "/base/views")
 };

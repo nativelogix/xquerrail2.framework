@@ -23,6 +23,7 @@ declare namespace extension      = "http://xquerrail.com/controller/extension";
 declare namespace controller     = "http://xquerrail.com/controller";
 declare namespace html           = "http://www.w3.org/1999/xhtml";
 declare namespace error          = "http://marklogic.com/xdmp/error";
+declare namespace eval           = "xdmp:eval";
 
 (:~ convert error into html page or as simple element :)
 
@@ -31,6 +32,11 @@ declare option xdmp:output "indent=yes";
 declare option xdmp:output "method=xml";
 declare option xdmp:output "indent-untyped=yes";
 declare option xdmp:ouput "omit-xml-declaration=yes";
+declare option xdmp:update "false";
+(:declare option xdmp:transaction-mode "query";:)
+
+declare variable $CONTROLLER-EXTENSION-NAMESPACE := "http://xquerrail.com/controller/extension";
+declare variable $BASE-CONTROLLER-NAMESPACE := "http://xquerrail.com/controller/base";
 
 (:~
  : Returns whether the controller exists or not.
@@ -67,19 +73,44 @@ declare function dispatcher:action-exists(
 declare function dispatcher:extension-action(
   $action as xs:string
 ) as xs:string? {
-  let $controller-extension-namespace := "http://xquerrail.com/controller/extension"
+  (:let $controller-extension-namespace := "http://xquerrail.com/controller/extension":)
   let $controller-locations := config:controller-extension-location()
   return fn:head(
     for $controller-location in $controller-locations
     return
       if (
-        dispatcher:action-exists($controller-extension-namespace, $controller-location, "initialize") and
-        dispatcher:action-exists($controller-extension-namespace, $controller-location, $action)
+        dispatcher:action-exists($CONTROLLER-EXTENSION-NAMESPACE, $controller-location, "initialize") and
+        dispatcher:action-exists($CONTROLLER-EXTENSION-NAMESPACE, $controller-location, $action)
       ) then
         $controller-location
       else
         ()
   )
+};
+
+(:
+ : get a model function, either from model-module or base-module
+:)
+declare function dispatcher:get-controller-action(
+  $application as xs:string,
+  $controller as xs:string,
+  $action as xs:string
+) as xdmp:function? {
+  let $controller-uri := config:controller-uri($application, $controller)
+  let $controller-location := config:controller-location($application, $controller)
+  return
+    if (dispatcher:action-exists($controller-uri, $controller-location, $action)) then
+      xdmp:function(fn:QName($controller-uri, $action), $controller-location)
+    else
+      let $controller-location := dispatcher:extension-action($action)
+      return
+        if (fn:exists($controller-location)) then
+          xdmp:function(fn:QName($CONTROLLER-EXTENSION-NAMESPACE, $action), $controller-location)
+        else
+          if (dispatcher:action-exists($BASE-CONTROLLER-NAMESPACE, config:get-base-controller-location(), $action)) then
+            xdmp:function(xs:QName("base:" || $action), config:get-base-controller-location())
+          else
+            ()
 };
 
 (:~
@@ -151,8 +182,60 @@ declare function dispatcher:invoke-controller()
   	"fine"
   )
   let $_ := dispatcher:dump-request()
-  (:The Result order is as  follows: controller, extension, base:)
-  let $results :=
+  let $request := request:request()
+  let $controller-action := dispatcher:get-controller-action($application, $controller, $action)
+  let $base-invoke :=  xdmp:function(xs:QName("base:invoke"), config:get-base-controller-location())
+  let $eval-options := dispatcher:get-eval-options($action, $controller-action, $route)
+  let $_ := xdmp:log(text{"action", $action, $route, xdmp:describe($eval-options)})
+  (:let $_ := xdmp:log(text{"$controller-action", xdmp:describe($controller-action)}):)
+
+  return
+    if (fn:exists($controller-action)) then
+    (
+      let $controller-location := xdmp:function-module($controller-action)
+      let $controller-uri := fn:namespace-uri-from-QName(fn:function-name($controller-action))
+      let $controller-initialize :=
+        if (dispatcher:action-exists($controller-uri, $controller-location, "initialize")) then
+          xdmp:function(fn:QName($controller-uri,"initialize"),$controller-location)
+        else
+          ()
+      return
+      if (fn:empty($eval-options)) then (
+        if (fn:exists($controller-initialize)) then $controller-initialize($request) else (),
+        if ($controller-location eq config:get-base-controller-location()) then $base-invoke($action) else $controller-action()
+      )
+      else
+        xdmp:invoke-function(
+          function() {
+            try {
+              xdmp:log(text{"invoke action", $action, xdmp:transaction(), xdmp:get-transaction-mode()}),
+              if (fn:exists($controller-initialize)) then $controller-initialize($request) else (),
+              if ($controller-location eq config:get-base-controller-location()) then $base-invoke($action) else $controller-action(),
+              if ($eval-options/eval:isolation eq "different-transaction" or $eval-options/eval:transaction-mode eq "update") then
+              (
+                xdmp:log((text{"About to commit", xdmp:transaction(), xdmp:get-transaction-mode()})),
+                xdmp:commit()
+              )
+              else
+                ()
+            } catch ($ex) {
+              if ($eval-options/eval:isolation eq "different-transaction" or $eval-options/eval:transaction-mode eq "update") then
+              (
+                xdmp:log((text{"About to roolback", xdmp:transaction(), xdmp:get-transaction-mode()})),
+                xdmp:rollback()
+              )
+              else (),
+              xdmp:rethrow()
+            }
+          },
+          $eval-options
+        )
+    )
+    else
+      fn:error(xs:QName("ACTION-NOT-EXISTS"),"The action '" || $action || "' for controller '" || $controller || "' does not exist",($action,$controller))
+
+
+(:  let $results :=
     if(dispatcher:controller-exists($controller-location) and
       dispatcher:action-exists($controller-uri,$controller-location,$action)
     ) then
@@ -166,13 +249,60 @@ declare function dispatcher:invoke-controller()
         $extension-init(request:request()),
         $extension-action()
       )
-    (:Check if controller exists and a controller is defined:)
     else if(fn:function-available("base:" || $action )) then (
-      base:initialize(request:request()),
-      base:invoke($action)
+      let $base-init   :=  xdmp:function(xs:QName("base:initialize"),"../base/base-controller.xqy")
+      let $base-invoke :=  xdmp:function(xs:QName("base:invoke"),"../base/base-controller.xqy")
+      return
+      if (fn:empty($eval-options)) then (
+        $base-init(request:request()),
+        $base-invoke($action)
+      )
+      else
+        xdmp:invoke-function(
+          function() {
+            try {
+              $base-init($request),
+              $base-invoke($action),
+              if ($eval-options/eval:isolation eq "different-transaction") then
+              (
+                xdmp:log((text{"About to commit", xdmp:transaction(), xdmp:get-transaction-mode()})),
+                xdmp:commit()
+              )
+              else
+                ()
+            } catch ($ex) {
+              xdmp:rethrow(),
+              if ($eval-options/eval:isolation eq "different-transaction") then
+              (
+                xdmp:log((text{"About to roolback", xdmp:transaction(), xdmp:get-transaction-mode()})),
+                xdmp:rollback()
+              )
+              else ()
+            }
+          },
+          $eval-options
+        )
     )
     else fn:error(xs:QName("ACTION-NOT-EXISTS"),"The action '" || $action || "' for controller '" || $controller || "' does not exist",($action,$controller))
   return $results
+:)};
+
+declare function dispatcher:get-eval-options(
+  $action as xs:string,
+  $controller-action,
+  $route
+) as element(eval:options)? {
+  if (("delete", "create", "login", "logout", "update", "remove", "patch", "save") = $action) then
+    <options xmlns="xdmp:eval">
+      <transaction-mode>update</transaction-mode>
+    </options>
+(:  else if (("get", "search", "list") = $action) then
+    <options xmlns="xdmp:eval">
+      <isolation>same-statement</isolation>
+      <transaction-mode>query</transaction-mode>
+    </options>
+:)  else
+    ()
 };
 
 (:~
@@ -216,10 +346,12 @@ declare function dispatcher:invoke-response(
   )
 };
 
+xdmp:log(text{"dispatcher.web", xdmp:transaction(), xdmp:get-transaction-mode(), if (fn:exists(xdmp:request-timestamp())) then "query" else "update"}),
+(:xdmp:set-transaction-mode("auto"),:)
 try {
   (:Initialize Interceptors:)
   let $init := interceptor:before-request()
-  return
+  return (
     if(fn:normalize-space(request:redirect()) ne "" and fn:exists(request:redirect())) then  (
       xdmp:redirect-response(request:redirect()),
       xdmp:log(xdmp:log(string-join(("dispatcher::after-request::[",request:redirect(),"]"),""),"debug"))
@@ -272,6 +404,21 @@ try {
                     $response
                 )
           return  $response
+    (:xdmp:log((text{"About to commit", xdmp:transaction(), xdmp:get-transaction-mode()})),:)
+    (:,:)
+    (:xdmp:commit():)
+  )
 } catch($ex) {
+  (:xdmp:log($ex, "error"),:)
   dispatcher:error($ex)
+  (:,:)
+  (:xdmp:commit():)
 }
+(:,
+(
+  xdmp:log((text{"About to commit", xdmp:transaction(), xdmp:get-transaction-mode()})),
+  xdmp:commit()
+)
+
+
+:)

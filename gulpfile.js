@@ -76,10 +76,14 @@ gulp.task('xray', function (cb) {
   xray(options, cb);
 });
 
-gulp.task('mocha', function () {
-  var mochaOptions = {reporter: 'dot'};
+gulp.task('mocha', function (cb) {
+  var mochaOptions = {
+    timeout: 15000,
+    reporter: 'spec'
+  };
   gulp.src('src/test/mocha/test/*.js')
-    .pipe(mocha(mochaOptions));
+    .pipe(mocha(mochaOptions))
+    .on('end', cb);
 });
 
 gulp.task('clean', function () {

@@ -86,7 +86,7 @@ var createAll = function(model, items, callback) {
 
 describe('Cascade delete features', function() {
 
-  this.timeout(0);
+  // this.timeout(0);
 
   before(function(done) {
     xquerrailCommon.initialize(function(error, response, body) {

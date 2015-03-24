@@ -21,7 +21,7 @@ var invokeMethod = function(method, action, transactionMode, callback) {
 
 describe('Override transaction mode features', function() {
 
-  this.timeout(10000);
+  // this.timeout(10000);
 
   before(function(done) {
     xquerrailCommon.initialize(function(error, response, body) {

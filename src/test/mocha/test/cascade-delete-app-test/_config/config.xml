@@ -7,6 +7,8 @@
     <routes-config resource="routes.xml"/>
     <routes-module resource="routing.xqy"/>
 
+    <controller-extension resource="/test/mocha/test/cascade-delete-app-test/app/extensions/default.controller.extension.xqy"/>
+
     <anonymous-user value="xquerrail2-anonymous-user"/>
 
     <default-application value="app-test"/>

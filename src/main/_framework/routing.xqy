@@ -10,6 +10,11 @@ import module namespace config = "http://xquerrail.com/config" at "config.xqy";
 
 declare variable $routes := config:get-routes();
 
+declare function get-route-by-id($id as xs:string
+) as element(routing:route)? {
+  fn:exactly-one($routes//routing:route[@id eq $id])
+};
+
 (:~
  : Function returns if a given route is valid according to schema definition
  :)

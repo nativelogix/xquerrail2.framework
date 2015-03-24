@@ -7,14 +7,12 @@
     <routes-config resource="routes.xml"/>
     <routes-module resource="routing.xqy"/>
 
-    <controller-extension resource="/test/mocha/test/default-app-test/app/extensions/default.controller.extension.xqy"/>
-
     <anonymous-user value="xquerrail2-anonymous-user"/>
 
     <default-application value="app-test"/>
 
     <!--Register Your Application(s) Here-->
-    <application name="app-test" namespace="http://xquerrail.com/app-test" uri="/test/mocha/test/default-app-test/app">
+    <application name="app-test" namespace="http://xquerrail.com/app-test" uri="/test/mocha/test/transaction-mode-test/app">
       <domain resource="domains/application-domain.xml" />
       <script-directory resource="resources/js/"/>
       <stylesheet-directory resource="resources/css/"/>

@@ -121,7 +121,6 @@ var xquerrailCommon = (function(){
       body = response.body;
     }
     if (response.statusCode === 500) {
-      console.dir(body)
       error = parseError(body);
     }
     if (callback !== undefined) {
@@ -146,6 +145,7 @@ var xquerrailCommon = (function(){
 
   function parseError(body) {
     return {
+      name: body.error.name,
       code: body.error.code,
       message: body.error.message,
       description: body.error['format_string'],
@@ -186,11 +186,16 @@ var xquerrailCommon = (function(){
     httpMethod('GET', model, 'search', undefined, data, callback);
   };
 
+  var removeAll = function(model, callback) {
+    httpMethod('DELETE', model, 'delete-all', undefined, undefined, callback);
+  };
+
   var model = {
     create: create,
     update: update,
     get: get,
     remove: remove,
+    removeAll: removeAll,
     list: list,
     lookup: lookup,
     suggest: suggest,

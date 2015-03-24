@@ -1601,37 +1601,3 @@ declare %test:case function model-create-xml-no-default-test() as item()*
     assert:equal("no-default", xs:string($description-value))
   )
 };
-
-(:
-<model24 xmlns="http://xquerrail.com/app-test">
-  <name>model24-name-unique-constraint</name>
-  <comment>unique-comment</comment>
-</model24>
-:)
-declare %test:case function model-unique-constraint-element-test() as item()*
-{
-  let $model24 := domain:get-model("model24")
-  let $instance24 := model:get($model24, "model24-name-unique-constraint")
-  let $comment-value := domain:get-field-value(domain:get-model-field($model24, "comment"), $instance24)
-  let $instance24-map :=
-    map:new((
-      map:entry("name", "model24-name-unique-constraint-2"),
-      map:entry("comment", fn:string($comment-value))
-    ))
-  let $create-with-validation-error := setup:eval(
-    function() {
-      model:create(
-        $model24,
-        $instance24-map,
-        $TEST-COLLECTION
-      )
-    }
-  )
-  return (
-    assert:equal($create-with-validation-error/fn:local-name(), "validationErrors"),
-    assert:not-empty($create-with-validation-error/validationError[./type eq "Unique Constraint"]/error),
-    assert:true(fn:contains($create-with-validation-error/validationError[./type eq "Unique Constraint"]/error, "Field:comment")),
-    assert:true(fn:contains($create-with-validation-error/validationError[./type eq "Unique Constraint"]/error, fn:concat("Value:", fn:string($comment-value))))
-  )
-};
-

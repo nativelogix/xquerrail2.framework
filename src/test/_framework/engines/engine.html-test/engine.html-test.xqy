@@ -24,17 +24,11 @@ declare variable $TEST-APPLICATION-2 :=
 </application>
 ;
 
-declare variable $CONFIG := ();
-
 declare %test:teardown function teardown() as empty-sequence()
 {
   setup:teardown()
 };
 
-(:declare %test:before-each function before-test() {
-  xdmp:set($CONFIG, app:bootstrap($TEST-APPLICATION))
-};
-:)
 declare %test:case function test-ignore-missing-resource-true() as item()*
 {
   let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION))

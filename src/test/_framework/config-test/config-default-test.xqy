@@ -16,11 +16,9 @@ declare variable $TEST-APPLICATION :=
 </application>
 ;
 
-declare variable $CONFIG := ();
-
 declare %test:setup function setup() as empty-sequence()
 {
-  ()
+  setup:setup($TEST-APPLICATION)
 };
 
 declare %test:teardown function teardown() as empty-sequence()
@@ -28,27 +26,16 @@ declare %test:teardown function teardown() as empty-sequence()
   setup:teardown()
 };
 
-declare %test:before-each function before-test() {
-  (
-    app:reset(),
-    app:bootstrap($TEST-APPLICATION),
-    xdmp:set($CONFIG, config:get-config())
-  )
-};
-
-(:declare %test:after-each function after-test() {
-};
-:)
 declare %test:case function test-anonymous-user() as item()*
 {
-  assert:equal(config:anonymous-user($CONFIG), "xquerrail2-anonymous-user")
+  assert:equal(config:anonymous-user(config:get-config()), "xquerrail2-anonymous-user")
 };
 
 declare %test:case function test-anonymous-user-by-application() as item()*
 {
   let $application := config:default-application()
   return
-  assert:empty(config:anonymous-user($CONFIG, $application))
+  assert:empty(config:anonymous-user(config:get-config(), $application))
 };
 
 declare %test:case function application-directory-test() as item()*
@@ -91,7 +78,7 @@ declare %test:case function test-base-view-directory() as item()*
 
 declare %test:case function test-cache-location() as item()*
 {
-  assert:equal(config:cache-location($CONFIG), "database")
+  assert:equal(config:cache-location(config:get-config()), "database")
 };
 
 declare %test:case function test-controller-base-path() as item()*

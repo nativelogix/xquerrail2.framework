@@ -21,22 +21,14 @@ declare variable $TEST-APPLICATION :=
 </application>
 ;
 
-declare variable $CONFIG := ();
-
 declare %test:setup function setup() {
   setup:setup($TEST-APPLICATION)
-  (:,:)
-  (:(app:reset(), app:bootstrap($TEST-APPLICATION))[0]:)
 };
 
 declare %test:teardown function teardown() {
   setup:teardown($TEST-COLLECTION)
 };
 
-(:declare %test:before-each function before-test() {
-  (app:reset(), app:bootstrap($TEST-APPLICATION))
-};
-:)
 declare %test:case function model-xml-instance-test() as item()*
 {
   let $model8 := domain:get-model("model8")

@@ -12,7 +12,7 @@ declare variable $routes := config:get-routes();
 
 declare function get-route-by-id($id as xs:string
 ) as element(routing:route)? {
-  fn:exactly-one($routes//routing:route[@id eq $id])
+  fn:zero-or-one($routes//routing:route[@id eq $id])
 };
 
 (:~

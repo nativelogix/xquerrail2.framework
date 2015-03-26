@@ -186,8 +186,8 @@ declare function dispatcher:invoke-controller()
   let $request := request:request()
   let $controller-action := dispatcher:get-controller-action($application, $controller, $action)
   let $base-invoke :=  xdmp:function(xs:QName("base:invoke"), config:get-base-controller-location())
-  let $eval-options := dispatcher:get-eval-options($request, $controller-action)
-  let $_ := xdmp:log(text{"action", $action, $route, xdmp:describe($eval-options)}, "finest")
+  let $eval-options := ()(:dispatcher:get-eval-options($request, $controller-action):)
+  (:let $_ := xdmp:log(text{"action", $action, $route, xdmp:describe($eval-options)}, "finest"):)
 
   return
     if (fn:exists($controller-action)) then
@@ -227,24 +227,26 @@ declare function dispatcher:invoke-controller()
 };
 
 declare function dispatcher:get-eval-options(
-  $request as map:map,
-  $controller-action
+  $route as xs:string,
+  $action as xs:string,
+  $method as xs:string
 ) as element(eval:options)? {
-  let $_ := xdmp:log((text{"dispatcher:get-eval-options", request:action(), xdmp:describe($controller-action), request:route()}), "debug")
-  let $route := routing:get-route-by-id(request:route())
+  let $route := routing:get-route-by-id($route)
   return
-    if (request:action() = ("login", "logout")) then
+    if ($action = ("login", "logout")) then
       <options xmlns="xdmp:eval">
         <transaction-mode>update</transaction-mode>
       </options>
     else if (fn:exists($route/eval:options)) then
       $route/eval:options
-    else if ($route/@transaction-mode = ("update", "query")) then
+    else if ($route/@transaction-mode = ("update")) then
       <options xmlns="xdmp:eval">
         <transaction-mode>{fn:data($route/@transaction-mode)}</transaction-mode>
       </options>
+    else if ($route/@transaction-mode = ("query")) then
+      ()
     else
-      let $method := fn:upper-case(request:method())
+      let $method := fn:upper-case($method)
       return
         if ($method = ("DELETE", "PATCH", "POST", "PUT")) then
           <options xmlns="xdmp:eval">
@@ -295,19 +297,20 @@ declare function dispatcher:invoke-response(
   )
 };
 
-xdmp:log(text{"dispatcher.web", xdmp:transaction(), xdmp:get-transaction-mode(), if (fn:exists(xdmp:request-timestamp())) then "query" else "update"}, "debug"),
-(:xdmp:set-transaction-mode("auto"),:)
-try {
-  (:Initialize Interceptors:)
-  let $init := interceptor:before-request()
-  return (
-    if(fn:normalize-space(request:redirect()) ne "" and fn:exists(request:redirect())) then  (
-      xdmp:redirect-response(request:redirect()),
-      xdmp:log(xdmp:log(string-join(("dispatcher::after-request::[",request:redirect(),"]"),""),"debug"))
+declare function dispatcher:process-request() {
+  let $route := xdmp:get-request-field("_route","")
+  let $action := xdmp:get-request-field("_action","")
+  let $eval-options :=
+    dispatcher:get-eval-options(
+      $route,
+      $action,
+      fn:upper-case(xdmp:get-request-method())
     )
-    else
+  let $process := function() {
+    try {
+      let $init := interceptor:before-request()
       let $request := request:parse($init, xdmp:function(xs:QName("engine:set-format")))
-      let $request  := interceptor:after-request(request:request())
+      let $request := interceptor:after-request(request:request())
       return
         if (response:has-error()) then
           fn:error(xs:QName("RESPONSE-HAS-ERROR"))
@@ -353,21 +356,38 @@ try {
                     $response
                 )
           return  $response
-    (:xdmp:log((text{"About to commit", xdmp:transaction(), xdmp:get-transaction-mode()})),:)
-    (:,:)
-    (:xdmp:commit():)
+    } catch($ex) {
+      dispatcher:error($ex)
+    }
+  }
+  let $_ := xdmp:log(text{"action", $action, $route, xdmp:describe($eval-options)}, "finest")
+  return
+    if (fn:empty($eval-options)) then (
+      $process()
+    )
+    else
+      xdmp:invoke-function(
+        function() {
+          xdmp:log(text{"invoke action", $action, xdmp:transaction(), xdmp:get-transaction-mode(), if (fn:exists(xdmp:request-timestamp())) then "query" else "update"}, "finest"),
+          $process(),
+          xdmp:log((text{"About to commit", xdmp:transaction()}), "finest"),
+          xdmp:commit()
+        },
+        $eval-options
+      )
+
+};
+
+xdmp:log(text{"dispatcher.web", xdmp:transaction(), xdmp:get-transaction-mode(), if (fn:exists(xdmp:request-timestamp())) then "query" else "update"}, "finest"),
+if (fn:exists(xdmp:request-timestamp())) then
+  ()
+else xdmp:log("dispatcher.web is running in 'update' transaction type", "error"),
+(:Initialize Interceptors:)
+let $_ := interceptor:before-request()
+return
+  if(fn:normalize-space(request:redirect()) ne "" and fn:exists(request:redirect())) then  (
+    xdmp:redirect-response(request:redirect()),
+    xdmp:log(xdmp:log(string-join(("dispatcher::after-request::[",request:redirect(),"]"),""),"debug"))
   )
-} catch($ex) {
-  (:xdmp:log($ex, "error"),:)
-  dispatcher:error($ex)
-  (:,:)
-  (:xdmp:commit():)
-}
-(:,
-(
-  xdmp:log((text{"About to commit", xdmp:transaction(), xdmp:get-transaction-mode()})),
-  xdmp:commit()
-)
-
-
-:)
+  else
+    dispatcher:process-request()

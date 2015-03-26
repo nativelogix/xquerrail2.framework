@@ -9,9 +9,6 @@ var xml2js = require('xml2js');
 
 var parser = new xml2js.Parser({explicitArray: false});
 
-var configurationPath = '/test/mocha/test/interceptor-compressor-app-test/_config';
-var configuration = '<application xmlns="http://xquerrail.com/config"><base>/main</base><config>'+configurationPath+'</config></application>';
-
 function random(prefix) {
   return ((prefix)? prefix + '-': '') + Math.floor((Math.random() * 1000000) + 1)
 };

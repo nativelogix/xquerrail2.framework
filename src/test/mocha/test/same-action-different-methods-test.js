@@ -4,7 +4,6 @@ var xquerrailCommon = require('./xquerrailCommon');
 var _ = require('lodash');
 var assert = require('chai').assert;
 var expect = require('chai').expect;
-var request = require('request').defaults({jar: true});
 var xml2js = require('xml2js');
 
 var parser = new xml2js.Parser({explicitArray: false});
@@ -25,7 +24,7 @@ var invokeMethod = function(method, format, callback) {
   }, format);
 };
 
-describe('Custom app1 features', function() {
+describe('Same action different methods', function() {
 
   // this.timeout(10000);
   before(function(done) {
@@ -44,23 +43,35 @@ describe('Custom app1 features', function() {
     });
 
     it('should invoke HTTP methods for xml format', function(done) {
-      invokeMethod('GET', 'xml');
-      invokeMethod('POST', 'xml');
-      invokeMethod('PUT', 'xml');
-      invokeMethod('PATCH', 'xml');
-      invokeMethod('HEAD', 'xml');
-      invokeMethod('OPTIONS', 'xml');
-      invokeMethod('DELETE', 'xml', done);
+      invokeMethod('GET', 'xml', function() {
+        invokeMethod('POST', 'xml', function() {
+          invokeMethod('PUT', 'xml', function() {
+            invokeMethod('PATCH', 'xml', function() {
+              invokeMethod('HEAD', 'xml', function() {
+                invokeMethod('OPTIONS', 'xml', function() {
+                invokeMethod('DELETE', 'xml', done);
+                });
+              });
+            });
+          });
+        });
+      });
     });
 
     it('should invoke HTTP methods for json format', function(done) {
-      invokeMethod('GET', 'json');
-      invokeMethod('POST', 'json');
-      invokeMethod('PUT', 'json');
-      invokeMethod('PATCH', 'json');
-      invokeMethod('HEAD', 'json');
-      invokeMethod('OPTIONS', 'json');
-      invokeMethod('DELETE', 'json', done);
+      invokeMethod('GET', 'json', function() {
+        invokeMethod('POST', 'json', function() {
+          invokeMethod('PUT', 'json', function() {
+            invokeMethod('PATCH', 'json', function() {
+              invokeMethod('HEAD', 'json', function() {
+                invokeMethod('OPTIONS', 'json', function() {
+                invokeMethod('DELETE', 'json', done);
+                });
+              });
+            });
+          });
+        });
+      });
     });
 
   });

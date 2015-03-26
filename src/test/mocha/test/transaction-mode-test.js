@@ -26,7 +26,7 @@ describe('Override transaction mode features', function() {
   before(function(done) {
     xquerrailCommon.initialize(function(error, response, body) {
       expect(response.statusCode).to.equal(200);
-      xquerrailCommon.login(function(error, response, body) {
+      xquerrailCommon.login(function() {
         done();
       });
     }, module.filename);

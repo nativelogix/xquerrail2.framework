@@ -15,7 +15,8 @@ declare option xdmp:mapping "false";
 declare function extension:initialize(
   $request as map:map?
 ) as empty-sequence() {
-  base:initialize($request)
+  ()
+  (:base:initialize($request):)
 };
 
 (:~
@@ -25,7 +26,11 @@ declare function extension:delete-all() {
   let $model := base:model()
   return
     if ($model/@persistence eq "directory") then
-      xdmp:directory-delete($model/domain:directory)
+    (
+      xdmp:directory-delete($model/domain:directory),
+      response:set-response-code(204, "No Content"),
+      response:flush()
+    )
     else
-      ()
+      fn:error(xs:QName("DELETE-ALL-ERROR"), text{"Cannot delete", $model, "with persistence", $model/@persistence})
 };

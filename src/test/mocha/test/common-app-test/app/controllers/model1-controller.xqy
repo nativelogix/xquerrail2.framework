@@ -8,12 +8,6 @@ import module namespace request = "http://xquerrail.com/request" at "/main/_fram
 import module namespace response = "http://xquerrail.com/response" at "/main/_framework/response.xqy";
 import module namespace base = "http://xquerrail.com/controller/base" at "/main/_framework/base/base-controller.xqy";
 
-declare function controller:initialize(
-  $request as map:map?
-) as empty-sequence() {
-  base:initialize($request)
-};
-
 declare function controller:info()
 {
   <message><info>{

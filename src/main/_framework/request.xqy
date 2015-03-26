@@ -135,7 +135,7 @@ declare function request:parse($parameters, $set-format) as map:map {
         map:put($request, $APPLICATION,xdmp:get-request-field("_application",config:default-application())),
         map:put($request, $CONTROLLER, xdmp:get-request-field("_controller",config:default-controller())),
         map:put($request, $ACTION,     xdmp:get-request-field("_action",config:default-action())),
-        map:put($request, $FORMAT,     xdmp:get-request-field("_format"(:,config:default-format():))),
+        map:put($request, $FORMAT,     xdmp:get-request-field("_format")),
         map:put($request, $VIEW,       xdmp:get-request-field("_view",request:action())),
         map:put($request, $ORIGIN,     xdmp:get-request-field("_url",xdmp:get-request-field("_url"))),
         map:put($request, $ROUTE,      xdmp:get-request-field("_route","")),
@@ -194,11 +194,11 @@ declare function request:parse($parameters, $set-format) as map:map {
         else ()
     let $_ :=
          if ($_content-type = "application/json" or fn:contains($_content-type,"application/json"))
-         then if(xdmp:get-request-method() = ("PUT","POST") and xdmp:get-request-body())
-              then map:put($request, $BODY, xdmp:from-json(xdmp:get-request-body())[1])
-              else if(xdmp:get-request-method() = "PATCH" and xdmp:get-request-body())
-              then map:put($request, $BODY, xdmp:from-json(xdmp:get-request-body()))
-              else ()
+         then
+          if(xdmp:get-request-method() = ("PUT","POST","PATCH") and fn:exists(xdmp:get-request-body()) and xdmp:get-request-body() ne "") then
+            map:put($request, $BODY, xdmp:from-json(xdmp:get-request-body())[1])
+          else
+            map:put($request, $BODY, map:new())
          else if($_content-type  = ("application/xml","text/xml"))
          then map:put($request, $BODY, xdmp:get-request-body("xml"))
          else map:put($request, $BODY, xdmp:get-request-body($accept-types))

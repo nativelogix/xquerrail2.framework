@@ -1,3 +1,0 @@
-[submodule "src/xray"]
-	path = src/xray
-	url = https://github.com/rlouapre/xray.git

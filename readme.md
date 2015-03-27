@@ -3,8 +3,11 @@ XQuerrail Framework
 
 Is the XQuerrail Framework as a standalone library.
 
+MarkLogic supported versions:  
+- 7.0-4.3, 7.0-5  
+
 Install XQuerrail Framework using npm (from src/main) run:
-- ```npm install https://github.com/nativelogix/xquerrail2.framework/tarball/v0.0.8 --save```
+- ```npm install https://github.com/nativelogix/xquerrail2.framework/tarball/v0.0.9 --save```
 - src/main/base.xqy should look like:
 ```xml
 <application xmlns="http://xquerrail.com/config">

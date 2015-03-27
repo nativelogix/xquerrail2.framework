@@ -6,4 +6,4 @@ xquerrail2.framework.xpr
 *.sublime-project
 *.sublime-workspace
 /src/xray/
-/dist
+# /dist

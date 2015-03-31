@@ -1,10 +1,9 @@
 var gulp = require('gulp');
 var gutil = require('gulp-util');
 
+var del = require('del');
 var fs = require('fs');
 var pkg = require('./package.json');
-var rename = require('gulp-rename');
-var clean = require('gulp-clean');
 var bump = require('gulp-bump');
 var template = require('gulp-template');
 var git = require('gulp-git');
@@ -69,7 +68,7 @@ gulp.task('xray', function (cb) {
       password: ml.password,
       sendImmediately: false
     },
-    url: 'http://' + ml.host + ':' + ml.port + '/xray',//'/main/_framework/lib/xray',
+    url: 'http://' + ml.host + ':' + ml.port + '/xray',
     testDir: 'test',
     files: ['test/**/*.xqy']
   };
@@ -86,9 +85,8 @@ gulp.task('mocha', function (cb) {
     .on('end', cb);
 });
 
-gulp.task('clean', function () {
-  return gulp.src('./dist', { read: false })
-    .pipe(clean());
+gulp.task('clean', function (cb) {
+  del(['./dist'], cb);
 });
 
 gulp.task('tag', ['build'], function (/*cb*/) {
@@ -121,19 +119,8 @@ gulp.task('watch-update-xqy', function()  {
     .pipe(gulp.dest('./dist'));
 });
 
-// gulp.task('npm', function (done) {
-//   require('child_process').spawn('npm', ['publish'], { stdio: 'inherit' })
-//     .on('close', done);
-// });
-
 gulp.task('build', ['update-xqy'], function (cb) {
   cb();
-  // return gulp.src('./src/contra.js')
-  //   .pipe(gulp.dest('./dist'))
-  //   .pipe(rename('contra.min.js'))
-  //   .pipe(uglify())
-  //   // .pipe(size())
-  //   .pipe(gulp.dest('./dist'));
 });
 
 gulp.task('release', ['build'], function () {
@@ -146,8 +133,7 @@ gulp.task('test', function(cb) {
         cb();
     });
 });
-// gulp.task('test', ['coverage', 'lint', 'mocha', 'xray']);
-// gulp.task('default', ['test', 'clean', 'build']);
+
 gulp.task('default', function() {
     runSequence('test', 'clean', 'build', function() {
         console.log('Build completed.');

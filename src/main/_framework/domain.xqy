@@ -2964,7 +2964,14 @@ declare function domain:get-module-function(
           domain:module-exists( $module-location ) and
           domain:module-function-exists( $module-namespace, $module-location, $function-name, $function-arity )
         ) then
-          xdmp:function( fn:QName( $module-namespace, $function-name ), $module-location )
+          if (fn:exists($function-arity)) then
+            let $eval :=
+              <node>import module namespace func = '{$module-namespace}' at '{$module-location}';
+                <call>xdmp:functions()[fn:namespace-uri-from-QName(fn:function-name(.)) = '{$module-namespace}' and fn:local-name-from-QName(fn:function-name(.)) = '{$function-name}' and fn:function-arity(.) = {$function-arity}]</call>
+              </node>
+            return xdmp:eval( $eval )
+          else
+            xdmp:function( fn:QName( $module-namespace, $function-name ), $module-location )
         else ()
      return domain:set-field-function-cache($key,"module-function",$funct)
 };
@@ -3158,4 +3165,97 @@ declare function domain:get-model-from-instance(
       domain:get-domain-model($model-name)
     else
       ()
+};
+
+declare function domain:find-field-in-model(
+  $model as element(domain:model),
+  $key as xs:string
+) as element()* {
+  let $cache-key := ($model/@name || ":find-field-in-model:" || $key)
+  let $cache := domain:get-identity-cache($cache-key)
+  return
+    if(fn:exists($cache)) then $cache
+    else
+      let $value := (
+        domain:get-model-field($model, $key),
+        for $field in $model//(domain:element)
+        where domain:get-base-type($field) = "instance"
+        return domain:find-field-in-model(domain:get-model($field/@type), $key)
+      )
+      return domain:set-identity-cache($cache-key, $value)
+};
+
+declare function domain:build-field-xpath-from-model(
+  $model as element(domain:model),
+  $fields as element()*
+) as xs:string* {
+  let $cache-key := fn:concat(
+    $model/@name,
+    ":build-field-xpath-in-model:",
+    fn:string-join(for $field in $fields
+        return domain:get-field-key($field))
+  )
+  let $cache := domain:get-identity-cache($cache-key)
+  return
+    if(fn:exists($cache)) then $cache
+    else
+      let $value :=
+        if (fn:exists(domain:get-model-field($model, domain:get-field-key($fields[1]), fn:true()))) then
+          (:let $_ := xdmp:log(("About to build xpath from", $accumulator)):)
+          (:return:)
+          fn:string-join((
+            for $f at $index in $fields[fn:not(. instance of element(domain:container))]
+            (:where fn:not($f instance of element(domain:container)):)
+            return
+              if ($index eq 1) then
+                domain:get-field-absolute-xpath($f)
+              else
+                domain:get-field-xpath($f)
+            (:,
+            if (fn:exists($accumulator)) then
+              domain:get-field-xpath($field)
+            else
+              domain:get-field-absolute-xpath($field):)
+          ),
+          "")
+        else
+        (
+          (:for $f in $model//(domain:element)
+          where domain:get-base-type($f) eq "instance"
+          return domain:build-field-xpath-from-model(domain:get-model($f/@type), $field, ($accumulator, $f)):)
+        )
+      return domain:set-identity-cache($cache-key, $value)
+};
+
+declare function domain:find-field-from-path-model(
+  $model as element(domain:model),
+  $key as xs:string
+) as element()* {
+  domain:find-field-from-path-model($model, $key, ())
+};
+
+declare function domain:find-field-from-path-model(
+  $model as element(domain:model),
+  $key as xs:string,
+  $accumulator as element()*
+) as element()* {
+  if (fn:contains($key, "/")) then
+    let $path := fn:substring-before($key, "/")
+    let $key := fn:substring-after($key, "/")
+    let $field := domain:get-model-field($model, $path, fn:true())
+    return
+      if (fn:exists($field)) then
+        if (domain:get-base-type($field) eq "instance") then
+          domain:find-field-from-path-model(domain:get-model($field/@type), $key, ($accumulator, $field))
+        else
+          domain:find-field-from-path-model($model, $key, ($accumulator, $field))
+      else
+        fn:error(xs:QName("FIND-FIELD-ERROR"), text{"Cannot find field", $path, "in model", $model/@name})
+  else
+    let $field := domain:get-model-field($model, $key)
+    return
+      if (fn:exists($field)) then
+        ($accumulator, $field)
+      else
+        ()
 };

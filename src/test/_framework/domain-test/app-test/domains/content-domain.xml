@@ -56,6 +56,26 @@
     <element name="name" type="string" />
   </model>
 
+  <model name="model8" persistence="directory" label="model #8" key="uuid" keyLabel="name">
+    <directory>/test/model8/</directory>
+    <element name="uuid" type="identity" identity="true"/>
+    <element name="name" type="string"/>
+    <element name="nested9" type="model9" />
+    <container name="models9">
+      <element name="nested9-in-container" type="model9" />
+    </container>
+  </model>
+
+  <model name="model9" persistence="abstract" label="model #9" key="id">
+    <element name="id" type="id" identity="true"/>
+    <element name="nested10" type="model10" />
+  </model>
+
+  <model name="model10" persistence="abstract" label="model #10" key="id">
+    <element name="id" type="id" identity="true"/>
+    <element name="model10-name" type="string" />
+  </model>
+
   <model name="author" persistence="document" label="Author" extends="base" key="uuid" keyLabel="name">
     <document root="authors">/test/author.xml</document>
     <element name="name" type="string" label="Name"/>

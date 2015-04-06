@@ -474,3 +474,95 @@ declare %test:case function field-param-exists-test() as item()* {
     assert:false($type-exists)
   )
 };
+
+declare %test:case function find-field-in-model-test() as item()* {
+  let $model := domain:get-model("model8")
+  let $field := domain:find-field-in-model($model, "model10-name")
+  let $model10-name-field := domain:get-model-field(domain:get-model("model10"), "model10-name")
+  return (
+    assert:not-empty($field),
+    assert:not-empty($model10-name-field),
+    assert:equal($field, ($model10-name-field, $model10-name-field))
+  )
+};
+
+declare %test:case function build-field-xpath-from-model-test() as item()* {
+  let $model := domain:get-model("model8")
+  let $model8-nested9-field := domain:get-model-field(domain:get-model("model8"), "nested9")
+  let $model9-nested10-field := domain:get-model-field(domain:get-model("model9"), "nested10")
+  let $model10-name-field := domain:get-model-field(domain:get-model("model10"), "model10-name")
+  let $field-path := (
+    $model8-nested9-field,
+    $model9-nested10-field,
+    $model10-name-field
+  )
+  let $xpath := domain:build-field-xpath-from-model($model, $field-path)
+  let $expected :=
+    fn:string-join((
+      domain:get-field-absolute-xpath($model8-nested9-field),
+      domain:get-field-xpath($model9-nested10-field),
+      domain:get-field-xpath($model10-name-field)
+    ))
+  return (
+    assert:not-empty($model10-name-field),
+    assert:not-empty($xpath),
+    assert:equal($xpath, $expected)
+  )
+};
+
+declare %test:case function build-field-xpath-from-model-with-container-test() as item()* {
+  let $model := domain:get-model("model8")
+  let $model8-models9-field := domain:get-model-field(domain:get-model("model8"), "models9", fn:true())
+  let $model8-nested9-in-container-field := domain:get-model-field(domain:get-model("model8"), "nested9-in-container")
+  let $model9-nested10-field := domain:get-model-field(domain:get-model("model9"), "nested10")
+  let $model10-name-field := domain:get-model-field(domain:get-model("model10"), "model10-name")
+  let $field-path := (
+    $model8-models9-field,
+    $model8-nested9-in-container-field,
+    $model9-nested10-field,
+    $model10-name-field
+  )
+  let $xpath := domain:build-field-xpath-from-model($model, $field-path)
+  let $expected :=
+    fn:string-join((
+      (:domain:get-field-absolute-xpath($model8-models9-field),:)
+      domain:get-field-absolute-xpath($model8-nested9-in-container-field),
+      domain:get-field-xpath($model9-nested10-field),
+      domain:get-field-xpath($model10-name-field)
+    ))
+  let $_ := xdmp:log($expected)
+  return (
+    assert:not-empty($model10-name-field),
+    assert:not-empty($xpath),
+    assert:equal($xpath, $expected)
+  )
+};
+
+declare %test:case function find-field-from-path-model-test() as item()* {
+  let $model := domain:get-model("model8")
+  let $model10-name-field := domain:find-field-from-path-model($model, "nested9/nested10/model10-name")
+  let $expected := (
+    domain:get-model-field(domain:get-model("model8"), "nested9"),
+    domain:get-model-field(domain:get-model("model9"), "nested10"),
+    domain:get-model-field(domain:get-model("model10"), "model10-name")
+  )
+  return (
+    assert:not-empty($model10-name-field),
+    assert:equal($model10-name-field, $expected)
+  )
+};
+
+declare %test:case function find-field-from-path-model-with-container-test() as item()* {
+  let $model := domain:get-model("model8")
+  let $model10-name-field := domain:find-field-from-path-model($model, "models9/nested9-in-container/nested10/model10-name")
+  let $expected := (
+    domain:get-model-field(domain:get-model("model8"), "models9", fn:true()),
+    domain:get-model-field(domain:get-model("model8"), "nested9-in-container"),
+    domain:get-model-field(domain:get-model("model9"), "nested10"),
+    domain:get-model-field(domain:get-model("model10"), "model10-name")
+  )
+  return (
+    assert:not-empty($model10-name-field),
+    assert:equal($model10-name-field, $expected)
+  )
+};

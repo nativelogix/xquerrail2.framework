@@ -27,14 +27,14 @@ declare variable $INSTANCE1 :=
 ;
 
 declare variable $INSTANCE10 :=
-<model1 id="convert-to-map-model10-id" xmlns="http://xquerrail.com/app-test">
+<model10 id="convert-to-map-model10-id" xmlns="http://xquerrail.com/app-test">
   <versions>
     <version id="n100000">
       <version>1</version>
       <action>new</action>
     </version>
   </versions>
-</model1>
+</model10>
 ;
 
 declare variable $INSTANCE2 := map:new((

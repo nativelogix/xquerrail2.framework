@@ -1601,3 +1601,44 @@ declare %test:case function model-create-xml-no-default-test() as item()*
     assert:equal("no-default", xs:string($description-value))
   )
 };
+
+declare %test:case function model-document-new-xml-schema-element-test() as item()*
+{
+  let $model := domain:get-model("model27")
+  let $instance :=
+    model:new(
+      $model,
+      <model27 xmlns="http://xquerrail.com/app-test">
+        <name>doc1</name>
+        <html><p>my title</p></html>
+      </model27>
+    )
+  let $value-html := domain:get-field-value(domain:get-model-field($model, "html"), $instance)
+  return (
+    assert:not-empty($instance),
+    assert:equal($value-html, $instance/app-test:html)
+  )
+};
+
+declare %test:case function model-document-new-map-schema-element-test() as item()*
+{
+  let $model := domain:get-model("model27")
+  let $map := map:new((
+    map:entry("name", "doc2"),
+    map:entry("html", <html xmlns="http://xquerrail.com/app-test"><p xmlns="http://www.w3.org/1999/xhtml">my title</p></html>)
+  ))
+  let $instance :=
+    model:new(
+      $model,
+      $map
+    )
+  let $value-html := domain:get-field-value(domain:get-model-field($model, "html"), $instance)
+  let $instance-map := model:convert-to-map($model, $instance)
+  let $value-html-from-map := domain:get-field-value(domain:get-model-field($model, "html"), $instance-map)
+  return (
+    assert:not-empty($instance),
+    assert:equal($value-html, map:get($map, "html"), text{"html field value must be", xdmp:quote(<p>my title</p>)}),
+    assert:equal($value-html-from-map, map:get($map, "html"), text{"html field value must be", xdmp:quote(<p>my title</p>)})
+  )
+};
+

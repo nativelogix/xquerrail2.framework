@@ -807,16 +807,15 @@ declare function model:create-or-update(
  :  Returns all namespaces from domain:model and inherited from domain
  :)
 declare function model:get-namespaces($model as element(domain:model)) {
-   let $ns-map := map:map()
-   let $nses :=
-      for $kv in (
-        fn:root($model)/(domain:content-namespace|domain:declare-namespace),
-        $model/domain:declare-namespace
-     )
-      return map:put($ns-map, ($kv/@prefix),fn:data($kv/@namespace-uri))
-   for $ns in map:keys($ns-map)
-   return
-     <ns prefix="{$ns}" namespace-uri="{domain:get-param-value($ns-map,$ns)}"/>
+  let $ns-map := map:map()
+  let $nses :=
+    for $kv in (
+      fn:root($model)/(domain:content-namespace|domain:declare-namespace),
+      $model/domain:declare-namespace
+    )
+    return map:put($ns-map, ($kv/@prefix), fn:data($kv/@namespace-uri))
+  for $ns in map:keys($ns-map)
+  return <ns prefix="{$ns}" namespace-uri="{domain:get-param-value($ns-map,$ns)}"/>
 };
 
 (:~
@@ -892,39 +891,35 @@ declare function model:recursive-build(
  :  Recurses the field structure and builds up a document
  :)
 declare function model:recursive-build(
-   $context as node(),
-   $current as node()?,
-   $updates as item()?,
-   $partial as xs:boolean
+  $context as node(),
+  $current as node()?,
+  $updates as item()?,
+  $partial as xs:boolean
 ) {
-   let $type := fn:data($context/@type)
-   let $key  := domain:get-field-id($context)
-   let $current-value := domain:get-field-value($context,$current)
-   let $default-value := fn:data($context/@default)
-   let $update-value := domain:get-field-value($context, $updates)
-   return
+  let $type := fn:data($context/@type)
+  let $key  := domain:get-field-id($context)
+  let $current-value := domain:get-field-value($context,$current)
+  let $default-value := fn:data($context/@default)
+  let $update-value := domain:get-field-value($context, $updates)
+  return
     typeswitch($context)
     case element(domain:model) return
-         let $attributes :=
-         (
-           attribute xsi:type {domain:get-field-qname($context)},
-             for $a in $context/domain:attribute
-             return
-                (:model:recursive-build($a, $current,$updates):)
-                model:build-attribute($a,$current,$updates,$partial,fn:false())
-         )
-         let $ns := domain:get-field-namespace($context)
-         let $nses := model:get-namespaces($context)
-         return
-             element {domain:get-field-qname($context)} {
-                 for $nsi in $nses
-                 return
-                   namespace {$nsi/@prefix}{$nsi/@namespace-uri},
-                 $attributes,
-                 for $n in $context/(domain:element|domain:container)
-                 return
-                     model:recursive-build($n,$current,$updates,$partial)
-             }
+      let $attributes :=
+      (
+        attribute xsi:type {domain:get-field-qname($context)},
+        for $a in $context/domain:attribute
+        return model:build-attribute($a,$current,$updates,$partial,fn:false())
+      )
+      let $ns := domain:get-field-namespace($context)
+      let $nses := model:get-namespaces($context)
+      return
+        element {domain:get-field-qname($context)} {
+          for $nsi in $nses
+          return namespace {$nsi/@prefix}{$nsi/@namespace-uri},
+          $attributes,
+          for $n in $context/(domain:element|domain:container)
+          return model:recursive-build($n,$current,$updates,$partial)
+        }
       (: Build out any domain Elements :)
       case element(domain:element) return
         (:Process Complex Types:)
@@ -965,6 +960,7 @@ declare function model:build-element(
   let $occurrence := (fn:data($context/@occurrence),"?")[1]
   let $default-value  := fn:data($context/@default)
   let $current-value := domain:get-field-value($context,$current)
+  (:let $current-field-exists := domain:field-value-exists($context, $current):)
   let $update-field-exists := domain:field-value-exists($context, $updates)
   (:let $update-field-value-node := domain:get-field-value-node($context, $updates):)
   let $update-value := domain:get-field-value($context, $updates)
@@ -1014,6 +1010,9 @@ declare function model:build-element(
     else if ($update-field-exists and fn:empty($attributes)) then
           element {domain:get-field-qname($context)} {
           }
+    (:else if ($current-field-exists and fn:empty($attributes)) then
+          element {domain:get-field-qname($context)} {
+          }:)
     else
       let $values :=
         if (fn:exists($current) and fn:exists($updates) and fn:not($update-field-exists)) then
@@ -1101,22 +1100,24 @@ declare function model:build-reference(
 };
 
 declare function model:build-schema-element(
-   $context as node(),
-   $current as node()?,
-   $updates as item()*,
-   $partial as xs:boolean
-) {
-   let $type := fn:data($context/@type)
-   let $key  := domain:get-field-id($context)
-   let $current-value := domain:get-field-value($context,$current)
-   let $default-value := fn:data($context/@default)
-   let $map-values := domain:get-field-value($context, $updates)
-   let $value := if($map-values) then $map-values else if($default-value) then $default-value else ()
-   let $ns := domain:get-field-namespace($context)
-   let $name := $context/@name
-   return
-     element {domain:get-field-qname($context)} {
-      if($value instance of element()) then $value/node()
+  $context as node(),
+  $current as node()?,
+  $updates as item()*,
+  $partial as xs:boolean
+) as element() {
+  let $type := fn:data($context/@type)
+  let $key  := domain:get-field-id($context)
+  let $current-value := domain:get-field-value($context,$current)
+  let $default-value := fn:data($context/@default)
+  let $update-value := domain:get-field-value($context, $updates)
+  let $value := if($update-value) then $update-value else if($default-value) then $default-value else ()
+  let $ns := domain:get-field-namespace($context)
+  let $name := $context/@name
+  return
+    element {domain:get-field-qname($context)} {
+      (:if ($updates instance of map:map and fn:exists($update-value)) then
+        $value
+      else:) if($value instance of element()) then $value/node()
       else if($value instance of text()) then $value
       else if($partial and $current) then
         $current-value/node()
@@ -1651,7 +1652,7 @@ declare function model:render-list(
       ),
       ","
     )
-  let $_ := xdmp:log(("$sort", $sort), "debug")
+  (:let $_ := xdmp:log(("$sort", $sort), "debug"):)
 
   (:let $list := fn:concat("cts:search(fn:collection(),", $list, ")"):)
   (: 'start' is 1-based offset in records from 'page' which is 1-based offset in pages
@@ -2786,21 +2787,29 @@ declare function model:convert-to-map(
   $model as element(domain:model),
   $current as item()
 ) as map:map? {
-  typeswitch($current)
+  let $to-map := function() {
+    map:new((
+      for $field in $model//(domain:element|domain:attribute)
+        let $value := domain:get-field-value($field, $current)
+        return
+          if (fn:exists($value)) then
+            map:entry(domain:get-field-name-key($field), $value)
+          else if (fn:exists(domain:field-value-exists($field, $value)) and $field/@type eq "string") then
+            map:entry(domain:get-field-name-key($field), "")
+          else
+            ()
+        (:return map:entry(domain:get-field-name-key($field), $value):)
+    ))
+  }
+  return typeswitch($current)
     case json:object
-      return map:new((
-        for $field in $model//(domain:element|domain:attribute)
-          return map:entry(domain:get-field-name-key($field), domain:get-field-value($field, $current))
-      ))
+      return $to-map()
     case element()
-      return map:new((
-        for $field in $model//(domain:element|domain:attribute)
-          return map:entry(domain:get-field-name-key($field), domain:get-field-value($field, $current))
-      ))
+      return $to-map()
     case map:map
       return $current
     default
-      return ()
+      return fn:error(xs:QName("CONVERT-TO-MAP-ERROR"), text{"$current type not supported"}, $current)
 };
 
 (:~

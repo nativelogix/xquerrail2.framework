@@ -256,6 +256,13 @@
       <element name="name" type="string" />
   </model>
 
+  <model name="model27" key="id" keyLabel="name" persistence="directory">
+      <directory>/test/model27/</directory>
+      <element name="id" type="identity" identity="true" />
+      <element name="name" type="string" />
+      <element name="html" type="schema-element" />
+  </model>
+
 </domain>
 
 

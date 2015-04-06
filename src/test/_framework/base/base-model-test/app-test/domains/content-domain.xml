@@ -75,6 +75,12 @@
     <element name="version" type="integer" label="Version"/>
     <element name="action" type="string" label="Action"/>
   </model>
+  <model name="version2" persistence="abstract" label="Version #2">
+    <attribute name="id" type="id"/>
+    <attribute name="order2" type="integer" label="Order"/>
+    <element name="order1" type="integer" label="Order"/>
+    <element name="action" type="string" label="Action"/>
+  </model>
   <model name="model10" persistence="directory" label="Model #10" extends="base" key="uuid" keyLabel="id">
     <directory>/test/model10/</directory>
     <attribute name="id" type="string" label="Id"></attribute>
@@ -83,6 +89,7 @@
       <element name="version" type="version" label="Version" occurrence="*">
         <navigation listable="false" searchable="true" editable="true" />
       </element>
+      <element name="version2" type="version2" label="Version" occurrence="*"/>
     </container>
   </model>
   <model name="abstract2" persistence="abstract" label="Abstract" key="id" keyLabel="name">

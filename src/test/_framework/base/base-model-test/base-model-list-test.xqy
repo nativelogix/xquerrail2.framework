@@ -56,6 +56,47 @@ declare variable $INSTANCES7 := (
   </model7>
 );
 
+declare variable $INSTANCES10 := (
+  <model10 xmlns="http://xquerrail.com/app-test" id="list-model10-id1">
+    <versions>
+      <version id="n110000">
+        <version>20</version>
+        <action>copy</action>
+      </version>
+      <version2 id="n100000" order2="1">
+        <order1>3</order1>
+        <action>copy</action>
+      </version2>
+    </versions>
+  </model10>
+  ,
+  <model10 xmlns="http://xquerrail.com/app-test" id="list-model10-id2">
+    <versions>
+      <version id="n110002">
+        <version>1</version>
+        <action>cut</action>
+      </version>
+      <version2 id="n100002" order2="3">
+        <order1>4</order1>
+        <action>cut</action>
+      </version2>
+    </versions>
+  </model10>
+  ,
+  <model10 xmlns="http://xquerrail.com/app-test" id="list-model10-id3">
+      <version id="n110003">
+        <version>10</version>
+        <action>paste</action>
+      </version>
+    <versions>
+      <version2 id="n100003" order2="2">
+        <order1>2</order1>
+        <action>paste</action>
+      </version2>
+    </versions>
+  </model10>
+);
+
 declare variable $INSTANCES11 := (
   <model11 xmlns="http://xquerrail.com/app-test">
     <id>list-model11-id1</id>
@@ -152,6 +193,7 @@ declare %test:setup function setup() {
   let $_ := setup:setup($TEST-APPLICATION)
   let $_ := setup:create-instances("model1", $INSTANCES1, $TEST-COLLECTION)
   let $_ := setup:create-instances("model7", $INSTANCES7, $TEST-COLLECTION)
+  let $_ := setup:create-instances("model10", $INSTANCES10, $TEST-COLLECTION)
   let $_ := setup:create-instances("model11", $INSTANCES11, $TEST-COLLECTION)
   let $_ := setup:create-instances("model15", $INSTANCES15, $TEST-COLLECTION)
   let $_ := setup:create-instances("model25", $INSTANCES25, $TEST-COLLECTION)
@@ -717,6 +759,140 @@ declare %test:case function model-sorted-list-custom-model-collation-test() as i
     for $instance at $pos in $sorted-list
     return
       if ($instance eq $list/app-test:model26[$pos]) then
+        ()
+      else
+        fn:false()
+  return (
+    assert:not-empty($list),
+    assert:empty($valid)
+  )
+};
+
+declare %test:ignore function model-sorted-list-in-nested-object-element-test() as item()*
+{
+  let $model := domain:get-model("model10")
+  let $params := map:new((
+    map:entry("debug", fn:true()),
+    map:entry("sort", "+order1")
+  ))
+  let $list := model:list($model, $params)
+  let $_ := xdmp:log($list)
+  let $sorted-list :=
+    for $instance in $list/app-test:model10
+    order by $instance/app-test:versions/app-test:version2/app-test:order1 ascending
+    return $instance
+  let $valid :=
+    for $instance at $pos in $sorted-list
+    return
+      if ($instance eq $list/app-test:model10[$pos]) then
+        ()
+      else
+        fn:false()
+  return (
+    assert:not-empty($list),
+    assert:empty($valid)
+  )
+};
+
+declare %test:ignore function model-sorted-list-in-nested-object-attribute-test() as item()*
+{
+  let $model := domain:get-model("model10")
+  let $params := map:new((
+    map:entry("debug", fn:true()),
+    map:entry("sort", "-order2")
+  ))
+  let $_ := xdmp:log(("domain:find-field-in-model($model, 'order2')", xdmp:describe(domain:find-field-in-model($model, 'order2'))))
+  let $_ := xdmp:log(("domain:build-field-xpath-from-model($model, domain:find-field-from-path-model($model, 'order2'))", xdmp:describe(domain:build-field-xpath-from-model($model, domain:find-field-from-path-model($model, 'order2')))))
+  let $list := model:list($model, $params)
+  let $_ := xdmp:log($list)
+  let $sorted-list :=
+    for $instance in $list/app-test:model10
+    order by $instance/app-test:versions/app-test:version2/@order2 descending
+    return $instance
+  let $valid :=
+    for $instance at $pos in $sorted-list
+    return
+      if ($instance eq $list/app-test:model10[$pos]) then
+        ()
+      else
+        fn:false()
+  return (
+    assert:not-empty($list),
+    assert:empty($valid)
+  )
+};
+
+declare %test:case function model-sorted-list-in-nested-object-element-from-path-test() as item()*
+{
+  let $model := domain:get-model("model10")
+  let $params := map:new((
+    map:entry("debug", fn:true()),
+    map:entry("sort", "-versions/version/version")
+  ))
+  let $list := model:list($model, $params)
+  let $_ := xdmp:log($list)
+  let $sorted-list :=
+    for $instance in $list/app-test:model10
+    order by $instance/app-test:versions/app-test:version/app-test:version descending
+    return $instance
+  let $valid :=
+    for $instance at $pos in $sorted-list
+    return
+      if ($instance eq $list/app-test:model10[$pos]) then
+        ()
+      else
+        fn:false()
+  return (
+    assert:not-empty($list),
+    assert:empty($valid)
+  )
+};
+
+declare %test:case function model-sorted-list-in-nested-object-element-from-path2-test() as item()*
+{
+  let $model := domain:get-model("model10")
+  let $params := map:new((
+    map:entry("debug", fn:true()),
+    map:entry("sort", "+versions/version2/order1")
+  ))
+  let $path := domain:find-field-from-path-model($model, 'versions/version2/order1')
+  let $_ := xdmp:log(("domain:find-field-from-path-model($model, 'versions/version2/order1')", xdmp:describe($path)))
+  let $_ := xdmp:log(("domain:build-field-xpath-from-model($model, $path)", xdmp:describe(domain:build-field-xpath-from-model($model, $path))))
+  let $list := model:list($model, $params)
+  let $_ := xdmp:log($list)
+  let $sorted-list :=
+    for $instance in $list/app-test:model10
+    order by $instance/app-test:versions/app-test:version2/app-test:order1 ascending
+    return $instance
+  let $valid :=
+    for $instance at $pos in $sorted-list
+    return
+      if ($instance eq $list/app-test:model10[$pos]) then
+        ()
+      else
+        fn:false()
+  return (
+    assert:not-empty($list),
+    assert:empty($valid)
+  )
+};
+
+declare %test:case function model-sorted-list-in-nested-object-attribute-from-path-test() as item()*
+{
+  let $model := domain:get-model("model10")
+  let $params := map:new((
+    map:entry("debug", fn:true()),
+    map:entry("sort", "-versions/version2/order2")
+  ))
+  let $list := model:list($model, $params)
+  let $sorted-list :=
+    for $instance in $list/app-test:model10
+    order by $instance/app-test:versions/app-test:version2/@order2 descending
+    return $instance
+  let $valid :=
+    for $instance at $pos in $sorted-list
+    return
+      if ($instance eq $list/app-test:model10[$pos]) then
         ()
       else
         fn:false()

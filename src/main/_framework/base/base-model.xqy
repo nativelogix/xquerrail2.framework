@@ -1540,6 +1540,14 @@ declare function model:list(
   $model as element(domain:model),
   $params as item()
 ) as element(list)? {
+  model:list($model, $params, ())
+};
+
+declare function model:list(
+  $model as element(domain:model),
+  $params as item(),
+  $filter-function as function(*)?
+) as element(list)? {
   let $listable := fn:not(domain:navigation($model)/@listable eq "false")
   return
   if(fn:not($listable))
@@ -1562,7 +1570,7 @@ declare function model:list(
         let $path := $model/domain:document/fn:string()
         let $root := fn:data($model/domain:document/@root)
         return
-          "fn:doc('" || $path || "')/"|| $model-prefix ||":" || $root || $model-qname ||  "[cts:contains(.,cts:and-query(($search,$additional-query)))]"
+          "fn:doc('" || $path || "')/"|| $model-prefix ||":" || $root || $model-qname ||  "[cts:contains(.," || cts:and-query(($search,$additional-query)) || ")]"
       else
         let $dir := cts:directory-query($model/domain:directory/text())
         let $predicate :=
@@ -1581,134 +1589,174 @@ declare function model:list(
         (
           fn:concat("cts:search(fn:collection(),", $predicate, ")")
         )
-    let $total :=
-      if($persistence = 'document')
-      then xdmp:with-namespaces(domain:declared-namespaces($model), xdmp:value(fn:concat("fn:count(", $list, ")")))
-      else xdmp:estimate(cts:search(
-        fn:collection(),
-        cts:element-query(fn:QName($namespace,$name),cts:and-query(($search,$predicateExpr)))
-      ))
+    return model:render-list($model, $list, $params, $filter-function)
+};
 
-    let $sorting := model:sorting($model, $params, ("sort", "sort.name", "sidx"), ("", "sort.order", "sord"))
-    let $sort :=
-      fn:string-join(
-        (
-        for $field in $sorting/field
-        let $domain-sort-field := $model//(domain:element|domain:attribute)[(domain:get-field-name-key(.),@name) = ($field/@name)][1]
-        let $domain-sort-as :=
-          if(fn:exists($domain-sort-field)) then
-            fn:concat("[1] cast as ", domain:resolve-datatype($domain-sort-field), "?")
-          else
-            ()
-        return
-          if(fn:exists($domain-sort-field)) then
-            let $collation-sort-field := fn:concat(" collation '", domain:get-field-collation($domain-sort-field), "' ")
+declare function model:render-list(
+  $model as element(domain:model),
+  $list as xs:string,
+  $params as item()*
+) as element() {
+  model:render-list($model, $list, $params, ())
+};
+
+(: Function responsible to render a list :)
+declare function model:render-list(
+  $model as element(domain:model),
+  $list as xs:string,
+  $params as item()*,
+  $filter-function as function(*)?
+) as element() {
+  let $name := $model/@name
+  let $persistence := $model/@persistence
+  let $search := model:list-params($model,$params)
+  let $namespace := domain:get-field-namespace($model)
+  let $model-prefix := domain:get-field-prefix($model)
+  let $model-qname := fn:concat("/",$model-prefix,":",$model/@name)
+  let $total := xdmp:with-namespaces(domain:declared-namespaces($model), xdmp:value(fn:concat("fn:count(", $list, ")")))
+  let $sorting := model:sorting($model, $params, ("sort", "sort.name", "sidx"), ("", "sort.order", "sord"))
+  let $sort :=
+    if (fn:exists($filter-function)) then
+     ()
+    else
+    fn:string-join(
+      (
+      for $field in $sorting/field
+      let $domain-path-sort-field :=
+        if (fn:contains($field/@name, "/")) then
+          domain:find-field-from-path-model($model, $field/@name)
+        else
+          domain:find-field-in-model($model, $field/@name)[1]
+      let $domain-sort-field := $domain-path-sort-field[fn:last()]
+      let $domain-sort-as :=
+        if(fn:exists($domain-sort-field)) then
+          fn:concat("[1] cast as ", domain:resolve-datatype($domain-sort-field), "?")
+        else
+          ()
+      return
+        if(fn:exists($domain-sort-field)) then
+          let $collation-sort-field := fn:concat(" collation '", domain:get-field-collation($domain-sort-field), "' ")
             let $sortPath :=
               if($persistence = 'document') then
                 fn:substring-after(domain:get-field-absolute-xpath($domain-sort-field), $model-qname)
               else
-                domain:get-field-absolute-xpath($domain-sort-field)
-            return
-              if($field/@order = ("desc","descending")) then
-                fn:concat("($__context__",$sortPath,")",$domain-sort-as," descending", $collation-sort-field)
-              else
-                fn:concat("($__context__",$sortPath,")",$domain-sort-as," ascending", $collation-sort-field)
-          else ()
-        ),
-        ","
-      )
-    (: 'start' is 1-based offset in records from 'page' which is 1-based offset in pages
-     : which is defined by 'rows'. Perfectly fine to give just start and rows :)
-    let $pageSize := model:page-size($model, $params, "rows")
-    let $page     := xs:integer((domain:get-param-value($params, 'page'),1)[1])
-    let $start   := xs:integer((domain:get-param-value($params, 'start'),1)[1])
-    let $start    := $start + ($page - 1) * $pageSize
-    let $last     :=  $start + $pageSize - 1
-    let $end      := if ($total > $last) then $last else $total
-    let $all := xs:boolean(domain:get-param-value($params,"all"))
-    let $resultsExpr :=
-      if($all) then
-        if($sort ne "" and fn:exists($sort))
-        then fn:concat("(for $__context__ in ", $list, " order by ",$sort, " return $__context__)")
-        else $list
-      else
-        if($sort ne "" and fn:exists($sort))
-        then fn:concat("(for $__context__ in ", $list, " order by ",$sort, " return $__context__)[",$start, " to ",$end,"]")
-        else fn:concat("(", $list, ")[$start to $end]")
-    let $results := xdmp:with-namespaces(domain:declared-namespaces($model), xdmp:value($resultsExpr))
-    let $results :=
-      if($persistence = "directory")
-      then
-        for $result in $results
-        return
-         model:filter-list-result($model,$result/node(),$params)
-      else $results
-    return
-      <list type="{$name}" elapsed="{xdmp:elapsed-time()}">
-        { attribute xmlns { domain:get-field-namespace($model) } }
-        { $sorting }
-        <currentpage>{$page}</currentpage>
-        <pagesize>{$pageSize}</pagesize>
-        <totalpages>{fn:ceiling($total div $pageSize)}</totalpages>
-        <totalrecords>{$total}</totalrecords>
-        {(:Add Additional Debug Arguments:)
-          if(xs:boolean(domain:get-param-value($params,"debug"))) then (
-            <debugQuery>{xdmp:describe($predicateExpr,(),())}</debugQuery>,
-            <searchString>{$search}</searchString>,
-            <sortString>{$sort}</sortString>,
-            <expr>{$resultsExpr}</expr>,
-            <params>{$params}</params>
-          ) else ()
-        }
-        {$results}
-      </list>
+                fn:exactly-one(domain:build-field-xpath-from-model($model, $domain-path-sort-field))
+          (:let $_ := xdmp:log(("$sortPath", $sortPath, "$persistence", $persistence, fn:string($field/@name), xdmp:describe($domain-sort-field), xdmp:describe($BIBLIO-SORT-PATH/field/jsonPath[. = fn:string($field/@name)]))):)
+          return
+            if($field/@order = ("desc","descending")) then
+              fn:concat("($__context__",$sortPath,")",$domain-sort-as," descending", $collation-sort-field)
+            else
+              fn:concat("($__context__",$sortPath,")",$domain-sort-as," ascending", $collation-sort-field)
+        else ()
+      ),
+      ","
+    )
+  let $_ := xdmp:log(("$sort", $sort), "debug")
+
+  (:let $list := fn:concat("cts:search(fn:collection(),", $list, ")"):)
+  (: 'start' is 1-based offset in records from 'page' which is 1-based offset in pages
+   : which is defined by 'rows'. Perfectly fine to give just start and rows :)
+  let $pageSize := model:page-size($model, $params, "rows")
+  let $page     := xs:integer((domain:get-param-value($params, 'page'),1)[1])
+  let $start   := xs:integer((domain:get-param-value($params, 'start'),1)[1])
+  let $start    := $start + ($page - 1) * $pageSize
+  let $last     :=  $start + $pageSize - 1
+  let $end      := if ($total > $last) then $last else $total
+  let $all :=
+    if (fn:exists($filter-function)) then
+      fn:true()
+    else
+      xs:boolean(domain:get-param-value($params,"all"))
+
+  let $resultsExpr :=
+    if($all) then
+      if($sort ne "" and fn:exists($sort))
+      then fn:concat("(for $__context__ in ", $list, " order by ",$sort, " return $__context__)")
+      else $list
+    else
+      if($sort ne "" and fn:exists($sort))
+      then fn:concat("(for $__context__ in ", $list, " order by ",$sort, " return $__context__)[",$start, " to ",$end,"]")
+      else fn:concat("(", $list, ")[$start to $end]")
+  let $results := xdmp:with-namespaces(domain:declared-namespaces($model), xdmp:value($resultsExpr))
+  let $results :=
+    if($persistence = "directory")
+    then
+      for $result in $results
+      return
+       model:filter-list-result($model,$result/node(),$params)
+    else $results
+  return
+      (:{ attribute xmlns { domain:get-field-namespace($model) } }:)
+    <list type="{$name}" elapsed="{xdmp:elapsed-time()}">
+      { $sorting }
+      <currentpage>{$page}</currentpage>
+      <pagesize>{$pageSize}</pagesize>
+      <totalpages>{fn:ceiling($total div $pageSize)}</totalpages>
+      <totalrecords>{$total}</totalrecords>
+      {(:Add Additional Debug Arguments:)
+        if(xs:boolean(domain:get-param-value($params,"debug"))) then (
+          <debugQuery>{xdmp:describe($list,(),())}</debugQuery>,
+          <searchString>{$search}</searchString>,
+          <sortString>{$sort}</sortString>,
+          <expr>{$resultsExpr}</expr>,
+          <params>{$params}</params>
+        ) else ()
+      }
+      {
+        if (fn:exists($filter-function)) then
+          $filter-function($results)
+        else
+          $results
+      }
+    </list>
 };
 
 (:~
  : Converts Search Parameters to cts search construct for list;
  :)
 declare function model:list-params(
-    $model as element(domain:model),
-    $params as item()
+  $model as element(domain:model),
+  $params as item()
 ) {
-      let $sf := domain:get-param-value($params,"searchField"),
-          $so := domain:get-param-value($params,"searchOper"),
-          $sv := domain:get-param-value($params,"searchString"),
-          $filters := domain:get-param-value($params,"filters")[1]
+  let $sf := domain:get-param-value($params,"searchField"),
+      $so := domain:get-param-value($params,"searchOper"),
+      $sv := domain:get-param-value($params,"searchString"),
+      $filters := domain:get-param-value($params,"filters")[1]
+  return
+    if(fn:exists($sf) and fn:exists($so) and fn:exists($sv) and
+      $sf ne "" and $so ne "")
+    then
+      let $op := $so
+      let $field-elem := domain:get-model-field($model, $sf)
+      let $field := fn:QName(domain:get-field-namespace($field-elem),$field-elem/@name)
+      let $value := domain:get-param-value($params,"searchString")[1]
       return
-        if(fn:exists($sf) and fn:exists($so) and fn:exists($sv) and
-           $sf ne "" and $so ne "")
-        then
-            let $op := $so
-            let $field-elem := domain:get-model-field($model, $sf)
-            let $field := fn:QName(domain:get-field-namespace($field-elem),$field-elem/@name)
-            let $value := domain:get-param-value($params,"searchString")[1]
-            return
-                operator-to-cts($field-elem,$op,$value)
-       else if(fn:exists($filters[. ne ""])) then
-            let $parsed  := <x>{xdmp:from-json($filters)}</x>/*
-            let $groupOp := ($parsed/json:entry[@key eq "groupOp"]/json:value,"AND")[1]
-            let $rules :=
-                for $rule in $parsed//json:entry[@key eq "rules"]/json:value/json:array/json:value/json:object
-                let $op :=  $rule/json:entry[@key='op']/json:value
-                let $sf :=  $rule/json:entry[@key='field']/json:value
-                let $sv :=  $rule/json:entry[@key='data']/json:value
-                let $field-elem := domain:get-model-field($model, $sf)
-                let $field :=
-                    fn:QName(domain:get-field-namespace($field-elem),$field-elem/@name)
-                return
-                  if($op and $sf and $sv) then
-                  operator-to-cts($field-elem,$op, $sv)
-                  else ()
-            return
-               if($groupOp eq "OR") then
-                   cts:or-query((
-                      $rules
-                   ))
-               else cts:and-query((
-                 $rules
-               ))
-            else  ()
+        operator-to-cts($field-elem,$op,$value)
+    else if(fn:exists($filters[. ne ""])) then
+      let $parsed  := <x>{xdmp:from-json($filters)}</x>/*
+      let $groupOp := ($parsed/json:entry[@key eq "groupOp"]/json:value,"AND")[1]
+      let $rules :=
+        for $rule in $parsed//json:entry[@key eq "rules"]/json:value/json:array/json:value/json:object
+        let $op :=  $rule/json:entry[@key='op']/json:value
+        let $sf :=  $rule/json:entry[@key='field']/json:value
+        let $sv :=  $rule/json:entry[@key='data']/json:value
+        let $field-elem := domain:get-model-field($model, $sf)
+        let $field :=
+            fn:QName(domain:get-field-namespace($field-elem),$field-elem/@name)
+        return
+          if($op and $sf and $sv) then
+          operator-to-cts($field-elem,$op, $sv)
+          else ()
+      return
+        if($groupOp eq "OR") then
+          cts:or-query((
+            $rules
+          ))
+        else
+          cts:and-query((
+            $rules
+          ))
+    else ()
 };
 
 declare function model:page-size(

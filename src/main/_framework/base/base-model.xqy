@@ -2123,7 +2123,7 @@ declare function model:build-search-options(
     let $facet-options := $prop-nav/search:facet-option
     let $ns := domain:get-field-namespace($prop)
     return
-      <search:suggestion-source ref="{$prop/@name}">{
+      <search:default-suggestion-source ref="{$prop/@name}">{
         element { fn:QName("http://marklogic.com/appservices/search","range") } {
           attribute collation {$collation},
           if ($type eq 'range')
@@ -2138,7 +2138,7 @@ declare function model:build-search-options(
           }</search:element>,
           $facet-options
         }
-      }</search:suggestion-source>
+      }</search:default-suggestion-source>
   let $sortOptions :=
     for $prop in $properties[domain:navigation/@sortable = "true"]
       let $collation := domain:get-field-collation($prop)
@@ -2355,12 +2355,10 @@ declare function model:suggest(
 ) as xs:string* {
    let $options := model:build-search-options($model,$params)
    let $query := (domain:get-param-value($params,"query"),"")[1]
-   (:let $limit := (domain:get-param-value($params,"limit"),10)[1] cast as xs:integer:)
    let $limit := model:page-size($model, $params, "limit")
    let $position := (domain:get-param-value($params,"position"),fn:string-length($query[1]))[1] cast as xs:integer
    let $focus := (domain:get-param-value($params,"focus"),1)[1] cast as xs:integer
-   return
-       search:suggest($query,$options,$limit,$position,$focus)
+   return search:suggest($query,$options,$limit,$position,$focus)
 };
 
 (:~

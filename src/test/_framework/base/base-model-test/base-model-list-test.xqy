@@ -165,6 +165,18 @@ declare variable $INSTANCES25 := (
     <firstName>jim</firstName>
     <lastName>smith</lastName>
   </model25>
+  ,
+  <model25 xmlns="http://xquerrail.com/app-test">
+    <name>jim3</name>
+    <firstName>jim</firstName>
+    <lastName>smithA</lastName>
+  </model25>
+  ,
+  <model25 xmlns="http://xquerrail.com/app-test">
+    <name>jim4</name>
+    <firstName>jim</firstName>
+    <lastName>smithB</lastName>
+  </model25>
 );
 
 declare variable $INSTANCES26 := (
@@ -426,7 +438,6 @@ declare %test:case function model-list-sorting-ascending-in-container-test() as 
     </model15>
   )
 
-  (:let $_ := xdmp:log(("$instance", $instance, "$instance2", $instance2)):)
   return (
     assert:not-empty($instances),
     assert:equal($instances/app-test:model15[1]/app-test:groups/app-test:group/@seq, $INSTANCES15[1]/app-test:groups/app-test:group/@seq),
@@ -776,7 +787,6 @@ declare %test:ignore function model-sorted-list-in-nested-object-element-test() 
     map:entry("sort", "+order1")
   ))
   let $list := model:list($model, $params)
-  let $_ := xdmp:log($list)
   let $sorted-list :=
     for $instance in $list/app-test:model10
     order by $instance/app-test:versions/app-test:version2/app-test:order1 ascending
@@ -801,10 +811,7 @@ declare %test:ignore function model-sorted-list-in-nested-object-attribute-test(
     map:entry("debug", fn:true()),
     map:entry("sort", "-order2")
   ))
-  let $_ := xdmp:log(("domain:find-field-in-model($model, 'order2')", xdmp:describe(domain:find-field-in-model($model, 'order2'))))
-  let $_ := xdmp:log(("domain:build-field-xpath-from-model($model, domain:find-field-from-path-model($model, 'order2'))", xdmp:describe(domain:build-field-xpath-from-model($model, domain:find-field-from-path-model($model, 'order2')))))
   let $list := model:list($model, $params)
-  let $_ := xdmp:log($list)
   let $sorted-list :=
     for $instance in $list/app-test:model10
     order by $instance/app-test:versions/app-test:version2/@order2 descending
@@ -830,7 +837,6 @@ declare %test:case function model-sorted-list-in-nested-object-element-from-path
     map:entry("sort", "-versions/version/version")
   ))
   let $list := model:list($model, $params)
-  let $_ := xdmp:log($list)
   let $sorted-list :=
     for $instance in $list/app-test:model10
     order by $instance/app-test:versions/app-test:version/app-test:version descending
@@ -856,10 +862,7 @@ declare %test:case function model-sorted-list-in-nested-object-element-from-path
     map:entry("sort", "+versions/version2/order1")
   ))
   let $path := domain:find-field-from-path-model($model, 'versions/version2/order1')
-  let $_ := xdmp:log(("domain:find-field-from-path-model($model, 'versions/version2/order1')", xdmp:describe($path)))
-  let $_ := xdmp:log(("domain:build-field-xpath-from-model($model, $path)", xdmp:describe(domain:build-field-xpath-from-model($model, $path))))
   let $list := model:list($model, $params)
-  let $_ := xdmp:log($list)
   let $sorted-list :=
     for $instance in $list/app-test:model10
     order by $instance/app-test:versions/app-test:version2/app-test:order1 ascending
@@ -902,3 +905,32 @@ declare %test:case function model-sorted-list-in-nested-object-attribute-from-pa
   )
 };
 
+declare %test:case function model-suggest-lastName-test() as item()*
+{
+  let $model := domain:get-model("model25")
+  let $params := map:new((
+    map:entry("query", "lastName:sm*")
+  ))
+  let $suggest := model:suggest($model, $params)
+  return (
+    assert:not-empty($suggest),
+    $suggest ! (
+      assert:true(fn:starts-with(., "lastName:sm"), text{.,"start with", "lastName:sm"})
+    )
+  )
+};
+
+declare %test:case function model-suggest-name-test() as item()*
+{
+  let $model := domain:get-model("model25")
+  let $params := map:new((
+    map:entry("query", "name:j*")
+  ))
+  let $suggest := model:suggest($model, $params)
+  return (
+    assert:not-empty($suggest),
+    $suggest ! (
+      assert:true(fn:contains(., "john") or fn:contains(., "jim"))
+    )
+  )
+};

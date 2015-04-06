@@ -240,9 +240,13 @@
       <directory>/test/model25/</directory>
       <navigation sortField="firstName,lastName" sortOrder="ascending,descending" />
       <element name="id" type="identity" identity="true" />
-      <element name="name" type="string" />
-      <element name="firstName" type="string" />
-      <element name="lastName" type="string" />
+      <element name="name" type="string">
+        <navigation searchable="true" suggestable="true" />
+      </element>
+      <element name="firstName" type="string"/>
+      <element name="lastName" type="string">
+        <navigation searchable="true" suggestable="true" />
+      </element>
   </model>
 
   <model name="model26" key="id" keyLabel="name" persistence="directory" collation="http://marklogic.com/collation/en/S1/T00BB/AS">

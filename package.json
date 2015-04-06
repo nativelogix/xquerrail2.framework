@@ -32,6 +32,7 @@
     "gulp-watch": "*",
     "gulp-xray-runner": "https://github.com/rlouapre/gulp-xray-runner/tarball/v0.0.3",
     "lodash": "^2.4.1",
+    "nconf": "^0.7.1",
     "request": "^2.35.0",
     "run-sequence": "*",
     "tough-cookie": "^0.12.1",

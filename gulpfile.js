@@ -10,19 +10,19 @@ var git = require('gulp-git');
 var gitinfo = require('gulp-gitinfo')
 var es   = require('event-stream')
 var xray = require('gulp-xray-runner')
-var argv = require('yargs').argv;
 var mocha = require('gulp-mocha');
 var watch = require('gulp-watch');
 var plumber = require('gulp-plumber');
 var runSequence = require('run-sequence');
 var inject = require('gulp-inject-string');
+var nconf = require('nconf');
 
-var ml;
-try {
-  ml = require('./ml.json')
-} catch (e) {
-  ml = argv.ml;
-}
+nconf
+  .argv()
+  .env()
+  .file({ file: './ml.json' });
+
+var ml = nconf.get('ml')
 var version = pkg.version;
 var lastCommit;
 

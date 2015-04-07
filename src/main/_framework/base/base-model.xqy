@@ -1115,9 +1115,11 @@ declare function model:build-schema-element(
   let $name := $context/@name
   return
     element {domain:get-field-qname($context)} {
-      (:if ($updates instance of map:map and fn:exists($update-value)) then
+      if ($updates instance of json:object and fn:exists($update-value)) then
+        xdmp:unquote(fn:data($value))
+      else if ($updates instance of map:map and fn:exists($update-value)) then
         $value
-      else:) if($value instance of element()) then $value/node()
+      else if($value instance of element()) then $value/node()
       else if($value instance of text()) then $value
       else if($partial and $current) then
         $current-value/node()

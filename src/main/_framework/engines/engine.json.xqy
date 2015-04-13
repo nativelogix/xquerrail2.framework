@@ -13,8 +13,8 @@ import module namespace jsh = "http://xquerrail.com/helper/json" at "../helpers/
 import module namespace json = "http://marklogic.com/xdmp/json" at "/MarkLogic/json/json.xqy";
 
 declare namespace search = "http://marklogic.com/appservices/search";
-
 declare namespace tag = "http://xquerrail.com/tag";
+declare namespace jso = "json:options";
 
 (:~
  : You initialize your variables
@@ -68,6 +68,14 @@ declare function json-engine:render-array(
   $model as element(domain:model)*,
   $node
 ) as json:object {
+  json-engine:render-array($model, $node, ())
+};
+
+declare function json-engine:render-array(
+  $model as element(domain:model)*,
+  $node,
+  $options as element(jso:options)?
+) as json:object {
   let $types := $model/@name ! fn:string(.)
   let $types :=
     if ($types = "_type") then
@@ -88,7 +96,7 @@ declare function json-engine:render-array(
       $type,
       js:array(
         for $n in $node/*[./@xsi:type/fn:string() eq $type or fn:local-name() eq $type]
-        return model-helper:to-json( $model, $n )
+        return model-helper:to-json( $model, $n, fn:false(), $options )
       )
     )
   ))

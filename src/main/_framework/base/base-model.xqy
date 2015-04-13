@@ -1116,7 +1116,20 @@ declare function model:build-schema-element(
   return
     element {domain:get-field-qname($context)} {
       if ($updates instance of json:object and fn:exists($update-value)) then
-        xdmp:unquote(fn:data($value))
+        let $value := $value/node()
+        return
+      (
+        if ($value instance of document-node()) then
+          $value/node()
+        else if ($value instance of element()) then
+          $value
+        else if (fn:count($value) > 1) then
+          $value
+        else if (fn:empty($value)) then
+          ()
+        else
+          xdmp:unquote($value, "", ("format-xml", "repair-full"))/node()
+        )
       else if ($updates instance of map:map and fn:exists($update-value)) then
         $value
       else if($value instance of element()) then $value/node()
@@ -1326,8 +1339,7 @@ declare function model:delete(
           for $item in cts:search(fn:collection(), domain:get-models-reference-query($model, $current))
           return (
             let $parent-instance := $item/node()
-            (:let $parent-model := domain:get-domain-model($parent-instance/fn:local-name()):)
-            let $parent-model := domain:get-domain-model(fn:string($parent-instance/@xsi:type))
+            let $parent-model := domain:get-model-from-instance($parent-instance)
             return
             if ($cascade-delete eq "remove") then
             (
@@ -1619,9 +1631,6 @@ declare function model:render-list(
   let $total := xdmp:with-namespaces(domain:declared-namespaces($model), xdmp:value(fn:concat("fn:count(", $list, ")")))
   let $sorting := model:sorting($model, $params, ("sort", "sort.name", "sidx"), ("", "sort.order", "sord"))
   let $sort :=
-    if (fn:exists($filter-function)) then
-     ()
-    else
     fn:string-join(
       (
       for $field in $sorting/field
@@ -1654,7 +1663,6 @@ declare function model:render-list(
       ),
       ","
     )
-  (:let $_ := xdmp:log(("$sort", $sort), "debug"):)
 
   (:let $list := fn:concat("cts:search(fn:collection(),", $list, ")"):)
   (: 'start' is 1-based offset in records from 'page' which is 1-based offset in pages
@@ -1665,11 +1673,7 @@ declare function model:render-list(
   let $start    := $start + ($page - 1) * $pageSize
   let $last     :=  $start + $pageSize - 1
   let $end      := if ($total > $last) then $last else $total
-  let $all :=
-    if (fn:exists($filter-function)) then
-      fn:true()
-    else
-      xs:boolean(domain:get-param-value($params,"all"))
+  let $all := xs:boolean(domain:get-param-value($params,"all"))
 
   let $resultsExpr :=
     if($all) then

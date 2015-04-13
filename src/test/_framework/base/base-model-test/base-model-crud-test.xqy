@@ -1738,7 +1738,6 @@ declare %test:case function model-document-new-json-no-namespace-schema-element-
   let $instance-map := model:convert-to-map($model, $instance)
   let $value-html-from-instance-map := domain:get-field-value(domain:get-model-field($model, "html"), $instance-map)
   let $value-html-from-map := xdmp:unquote(fn:concat("<x>", map:get($map, "html"), "</x>"))/node()/node()
-  let $_ := xdmp:log(("$instance", $instance, "$value-html-from-map", $value-html-from-map, "$value-html", $value-html))
   return (
     assert:not-empty($instance),
     assert:equal($value-html/node()/fn:name(), $value-html-from-map/fn:name(), text{"html field value must be", xdmp:quote(<p>my title</p>)}),

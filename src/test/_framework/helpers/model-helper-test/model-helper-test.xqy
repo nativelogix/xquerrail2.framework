@@ -340,3 +340,57 @@ declare %test:case function custom-to-json-function-from-model-helper-build-json
     assert:equal(map:get($instance-to-json, "first-name"), "dummy-first-name", "firstName must be equal to dummy-first-name")
   )
 };
+
+declare %test:case function schema-element-no-value-model-helper-build-json-test() {
+  let $model := domain:get-model("model9")
+  let $instance :=
+    model:new(
+      $model,
+      map:new((
+        map:entry("id", "model9-id"),
+        map:entry("name", "model9-name")
+      ))
+    )
+  let $instance-to-json := model-helper:build-json($model, $instance)
+  return (
+    assert:not-empty($instance),
+    assert:empty(map:get($instance-to-json, "html"))
+  )
+};
+
+declare %test:case function schema-element-with-namespace-model-helper-build-json-test() {
+  let $model := domain:get-model("model9")
+  let $instance :=
+    model:new(
+      $model,
+      map:new((
+        map:entry("id", "model9-id"),
+        map:entry("name", "model9-name"),
+        map:entry("html", <h1 xmlns="http://www.w3.org/1999/xhtml">title</h1>)
+      ))
+    )
+  let $instance-to-json := model-helper:build-json($model, $instance)
+  return (
+    assert:not-empty($instance),
+    assert:equal(map:get($instance-to-json, "html"), '<h1 xmlns="http://www.w3.org/1999/xhtml">title</h1>')
+  )
+};
+
+declare %test:case function schema-element-no-namespace-model-helper-build-json-test() {
+  let $model := domain:get-model("model9")
+  let $instance :=
+    model:new(
+      $model,
+      map:new((
+        map:entry("id", "model9-id"),
+        map:entry("name", "model9-name"),
+        map:entry("html", <h1>title</h1>)
+      ))
+    )
+  let $instance-to-json := model-helper:build-json($model, $instance)
+  return (
+    assert:not-empty($instance),
+    assert:equal(map:get($instance-to-json, "html"), "<h1>title</h1>")
+  )
+};
+

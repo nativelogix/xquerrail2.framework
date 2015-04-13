@@ -115,4 +115,11 @@
     <element name="last-name" type="string"/>
   </model>
 
+  <model name="model9" persistence="directory" label="Model #9" extends="base" key="uuid" keyLabel="id">
+    <directory>/test/model9/</directory>
+    <element name="id" type="string"/>
+    <element name="name" type="string"/>
+    <element name="html" type="schema-element"/>
+  </model>
+
 </domain>

@@ -220,7 +220,7 @@
         <range-element-index>
           <scalar-type>string</scalar-type>
           <namespace-uri>http://xquerrail.com/app-test</namespace-uri>
-          <localname>uuid id name type</localname>
+          <localname>uuid id name type lastName</localname>
           <collation>http://marklogic.com/collation/codepoint</collation>
           <range-value-positions>false</range-value-positions>
         </range-element-index>

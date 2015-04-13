@@ -1620,12 +1620,52 @@ declare %test:case function model-document-new-xml-schema-element-test() as item
   )
 };
 
+declare %test:case function model-document-new-xml-multi-schema-element-test() as item()*
+{
+  let $model := domain:get-model("model27")
+  let $instance :=
+    model:new(
+      $model,
+      <model27 xmlns="http://xquerrail.com/app-test">
+        <name>doc1</name>
+        <html><h1>title</h1><p>paragraph</p></html>
+      </model27>
+    )
+  let $value-html := domain:get-field-value(domain:get-model-field($model, "html"), $instance)
+  return (
+    assert:not-empty($instance),
+    assert:equal($value-html, $instance/app-test:html)
+  )
+};
+
 declare %test:case function model-document-new-map-schema-element-test() as item()*
 {
   let $model := domain:get-model("model27")
   let $map := map:new((
     map:entry("name", "doc2"),
     map:entry("html", <p xmlns="http://www.w3.org/1999/xhtml">my title</p>)
+  ))
+  let $instance :=
+    model:new(
+      $model,
+      $map
+    )
+  let $value-html := domain:get-field-value(domain:get-model-field($model, "html"), $instance)
+  let $instance-map := model:convert-to-map($model, $instance)
+  let $value-html-from-map := domain:get-field-value(domain:get-model-field($model, "html"), $instance-map)
+  return (
+    assert:not-empty($instance),
+    assert:equal($value-html/node(), map:get($map, "html"), text{"html field value must be", xdmp:quote(<p>my title</p>)}),
+    assert:equal($value-html-from-map/node(), map:get($map, "html"), text{"html field value must be", xdmp:quote(<p>my title</p>)})
+  )
+};
+
+declare %test:case function model-document-new-map-multi-schema-element-test() as item()*
+{
+  let $model := domain:get-model("model27")
+  let $map := map:new((
+    map:entry("name", "doc2"),
+    map:entry("html", (<h1 xmlns="http://www.w3.org/1999/xhtml">title</h1>,<p xmlns="http://www.w3.org/1999/xhtml">my title</p>))
   ))
   let $instance :=
     model:new(
@@ -1662,3 +1702,49 @@ declare %test:case function model-document-new-json-schema-element-test() as ite
     assert:equal($value-html-from-map/node()/text(), xdmp:unquote(map:get($map, "html"))/node()/text(), text{"html field value must be", xdmp:quote(<p>my title</p>)})
   )
 };
+
+declare %test:case function model-document-new-json-multi-schema-element-test() as item()*
+{
+  let $model := domain:get-model("model27")
+  let $map := xdmp:from-json('{"name": "doc3", "html": "<h1 xmlns=\"http://www.w3.org/1999/xhtml\">title</h1><p xmlns=\"http://www.w3.org/1999/xhtml\">my title</p>"}')
+  let $instance :=
+    model:new(
+      $model,
+      $map
+    )
+  let $value-html := domain:get-field-value(domain:get-model-field($model, "html"), $instance)
+  let $instance-map := model:convert-to-map($model, $instance)
+  let $value-html-from-instance-map := domain:get-field-value(domain:get-model-field($model, "html"), $instance-map)
+  let $value-html-from-map := xdmp:unquote(fn:concat("<x>", map:get($map, "html"), "</x>"))/node()/node()
+  return (
+    assert:not-empty($instance),
+    assert:equal($value-html/node()/fn:name(), $value-html-from-map/fn:name(), text{"html field value must be", xdmp:quote(<p>my title</p>)}),
+    assert:equal($value-html/node()/text(), $value-html-from-map/text(), text{"html field value must be", xdmp:quote(<p>my title</p>)}),
+    assert:equal($value-html-from-instance-map/node()/fn:name(), $value-html-from-map/fn:name(), text{"html field value must be", xdmp:quote(<p>my title</p>)}),
+    assert:equal($value-html-from-instance-map/node()/text(), $value-html-from-map/text(), text{"html field value must be", xdmp:quote(<p>my title</p>)})
+  )
+};
+
+declare %test:case function model-document-new-json-no-namespace-schema-element-test() as item()*
+{
+  let $model := domain:get-model("model27")
+  let $map := xdmp:from-json('{"name": "doc3", "html": "<p>my title</p>"}')
+  let $instance :=
+    model:new(
+      $model,
+      $map
+    )
+  let $value-html := domain:get-field-value(domain:get-model-field($model, "html"), $instance)
+  let $instance-map := model:convert-to-map($model, $instance)
+  let $value-html-from-instance-map := domain:get-field-value(domain:get-model-field($model, "html"), $instance-map)
+  let $value-html-from-map := xdmp:unquote(fn:concat("<x>", map:get($map, "html"), "</x>"))/node()/node()
+  let $_ := xdmp:log(("$instance", $instance, "$value-html-from-map", $value-html-from-map, "$value-html", $value-html))
+  return (
+    assert:not-empty($instance),
+    assert:equal($value-html/node()/fn:name(), $value-html-from-map/fn:name(), text{"html field value must be", xdmp:quote(<p>my title</p>)}),
+    assert:equal($value-html/node()/text(), $value-html-from-map/text(), text{"html field value must be", xdmp:quote(<p>my title</p>)}),
+    assert:equal($value-html-from-instance-map/node()/fn:name(), $value-html-from-map/fn:name(), text{"html field value must be", xdmp:quote(<p>my title</p>)}),
+    assert:equal($value-html-from-instance-map/node()/text(), $value-html-from-map/text(), text{"html field value must be", xdmp:quote(<p>my title</p>)})
+  )
+};
+

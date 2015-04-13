@@ -1924,13 +1924,14 @@ declare function domain:get-model-reference-uris(
  : @param reference-value - The value for which the query will match the reference
  :)
 declare function domain:get-model-reference-query(
-    $reference-model as element(domain:model),
-    $reference-key as xs:string,
-    $reference-value as xs:anyAtomicType*
- ) {
-    let $referenced-fields := $reference-model//domain:element[@type = "reference" and @reference = $reference-key]
-    let $base-constraint := domain:get-base-query($reference-model)
-    return
+  $reference-model as element(domain:model),
+  $reference-key as xs:string,
+  $reference-value as xs:anyAtomicType*
+) as cts:and-query? {
+  let $referenced-fields := $reference-model//domain:element[@type = "reference" and @reference = $reference-key]
+  let $base-constraint := domain:get-base-query($reference-model)
+  return
+    if (fn:exists($base-constraint)) then
       cts:and-query((
         $base-constraint,
         for $reference-field in $referenced-fields
@@ -1941,6 +1942,8 @@ declare function domain:get-model-reference-query(
             cts:element-attribute-value-query(fn:QName($field-ns,$field-name),xs:QName("ref-id"),$reference-value)
           ))
       ))
+    else
+      ()
  };
 
 (:~
@@ -3247,6 +3250,8 @@ declare function domain:find-field-from-path-model(
       if (fn:exists($field)) then
         if (domain:get-base-type($field) eq "instance") then
           domain:find-field-from-path-model(domain:get-model($field/@type), $key, ($accumulator, $field))
+        else if ($field/@type eq "reference") then
+          domain:find-field-from-path-model(domain:get-field-reference-model($field), $key, ($accumulator, $field))
         else
           domain:find-field-from-path-model($model, $key, ($accumulator, $field))
       else

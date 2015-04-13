@@ -9,6 +9,7 @@ import module namespace domain = "http://xquerrail.com/domain" at "../domain.xqy
 import module namespace config = "http://xquerrail.com/config" at "../config.xqy";
 
 declare namespace json = "json:options";
+declare namespace quote = "xdmp:quote";
 
 declare option xdmp:mapping "false";
 
@@ -39,6 +40,25 @@ declare function model:get-options-cache(
    map:get($JSON-OPTIONS-MODEL-CACHE,$key)
 };
 
+declare function model:field-value-schema-element(
+  $field as element(),
+  $field-value as element()*
+) {
+  for $child-value in $field-value/node()
+  let $child-value :=
+    if ($child-value instance of text()) then
+      $child-value
+    else
+    xdmp:quote(
+      element {$child-value/fn:node-name()} {
+        $child-value/@*,
+        $child-value/node()
+      },
+      $field/quote:options
+    )
+  return $child-value
+};
+
 declare function model:field-value(
   $field as element(),
   $instance as element(),
@@ -49,7 +69,20 @@ declare function model:field-value(
     if ($options/json:empty-string/xs:boolean(.) and $field/@type eq "string" and fn:empty($field-value)) then
       ""
     else
-      $field-value
+      if ($field/@type eq "schema-element") then
+        if ($options/json:empty-string/xs:boolean(.) and fn:empty($field-value/node())) then
+          ""
+        else
+          let $field-value := model:field-value-schema-element($field, $field-value)
+          return
+            if ($field/@occurrence = ("1", "?")) then
+              fn:string-join($field-value, "")
+            else
+              $field-value
+      else if ($options/json:field-node/xs:boolean(.) and domain:get-base-type($field) eq "simple") then
+        xdmp:quote(domain:get-field-value-node($field,$instance)/node())
+      else
+        $field-value
 };
 
 declare function model:field-key(
@@ -120,7 +153,7 @@ declare function model:build-json(
             let $value := domain:get-field-value($field,$instance)
             return
               if(fn:empty($value)) then
-                js:kv(model:field-key($field),())
+                js:kv(model:field-key($field),js:a(()))
               else
                 js:kv(model:field-key($field),
                   js:a(
@@ -166,7 +199,7 @@ declare function model:build-json(
         else if($field/@type eq "identity") then
           js:kv(model:field-key($field),fn:string($field-value))
         else if($field/@type eq "schema-element") then
-          js:kv(model:field-key($field),$field-value/node() ! xdmp:quote(.))
+          js:kv(model:field-key($field),$field-value)
         else if(domain:model-exists($field/@type)) then
           if($field/@occurrence = ("*","+")) then
             js:kv(model:field-key($field),js:a(

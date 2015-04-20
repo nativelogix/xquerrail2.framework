@@ -79,7 +79,11 @@ declare function model:field-value(
               fn:string-join($field-value, "")
             else
               $field-value
-      else if ($options/json:field-node/xs:boolean(.) and domain:get-base-type($field) eq "simple") then
+      else if (
+        $options/json:field-node/xs:boolean(.) and
+        domain:get-base-type($field) eq "simple" and
+        fn:not($field instance of element(domain:attribute))
+      ) then
         xdmp:quote(domain:get-field-value-node($field,$instance)/node())
       else
         $field-value

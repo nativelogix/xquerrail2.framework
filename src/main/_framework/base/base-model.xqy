@@ -28,6 +28,7 @@ declare option xdmp:mapping "false";
 
 
 declare variable $binary-dependencies := map:map();
+declare variable $binary-deletes := map:map();
 declare variable $reference-dependencies := map:map();
 declare variable $current-identity := ();
 
@@ -788,6 +789,8 @@ declare function model:update(
           )
         else
           fn:error(xs:QName("UPDATE-NOT-PERSISTABLE"),"Cannot Update Model with persistence: " || $persistence,$persistence),
+        for $key in map:keys($binary-deletes)
+        return xdmp:document-delete($key),
         model:create-binary-dependencies($identity,$current),
         domain:fire-after-event($model,"update",$build)
       )
@@ -1117,18 +1120,17 @@ declare function model:build-schema-element(
     element {domain:get-field-qname($context)} {
       if ($updates instance of json:object and fn:exists($update-value)) then
         let $value := $value/node()
-        return
-      (
-        if ($value instance of document-node()) then
-          $value/node()
-        else if ($value instance of element()) then
-          $value
-        else if (fn:count($value) > 1) then
-          $value
-        else if (fn:empty($value)) then
-          ()
-        else
-          xdmp:unquote($value, "", ("format-xml", "repair-full"))/node()
+        return (
+          if ($value instance of document-node()) then
+            $value/node()
+          else if ($value instance of element()) then
+            $value
+          else if (fn:count($value) > 1) then
+            $value
+          else if (fn:empty($value)) then
+            ()
+          else
+            xdmp:unquote(fn:concat("<x>", $value, "</x>"), "", ("format-xml", "repair-full"))/node()/node()
         )
       else if ($updates instance of map:map and fn:exists($update-value)) then
         $value
@@ -1136,9 +1138,11 @@ declare function model:build-schema-element(
       else if($value instance of text()) then $value
       else if($partial and $current) then
         $current-value/node()
-      else if($default-value) then attribute {(fn:QName($ns,$name))}{
-        $default-value
-      } else ()
+      else if($default-value) then
+        attribute {(fn:QName($ns,$name))} {
+          $default-value
+        }
+      else ()
     }
 };
 
@@ -1146,77 +1150,87 @@ declare function model:build-schema-element(
  : Creates a binary instance
 :)
 declare function model:build-binary(
-   $context as node(),
-   $current as node()?,
-   $updates as item(),
-   $partial as xs:boolean
+  $context as node(),
+  $current as node()?,
+  $updates as item(),
+  $partial as xs:boolean
 ) {
-    let $type := fn:data($context/@type)
-    let $key  := domain:get-field-id($context)
-    let $current-value := domain:get-field-value($context,$current)
-    let $default-value := fn:data($context/@default)
-    let $ns := domain:get-field-namespace($context)
-    let $localname := fn:data($context/@name)
-    let $default   := (fn:data($context/@default),"")[1]
-    let $occurrence := ($context/@occurrence,"?")
-    let $map-values := domain:get-field-value($context, $updates)
-    let $model := $context/ancestor::domain:model
-    let $field-id := domain:get-field-id($context)
-    let $fileType := ($context/@fileType,"auto")[1]
-    let $binary := domain:get-param-value($updates,$field-id)
-    let $binary := if($binary) then $binary else domain:get-param-value($updates,fn:data($context/@name))
-    let $binaryFile :=
-      if(fn:exists($binary)) then
-          if($fileType eq "xml") then
-              if ($binary instance of binary ()) then
-                  xdmp:unquote(xdmp:binary-decode($binary,"utf-8"))
-              else
-                  xdmp:unquote($binary/node())
-          else if($fileType eq "text") then
-              xdmp:binary-decode($binary,"utf-8")
-          else $binary
-      else ()
-    let $fileURI := $context/@fileURI
-    let $fileURI :=
-       if($fileURI and $fileURI ne "")
-       then model:generate-uri($fileURI,$model,$updates)
-       else
-          let $binDirectory := $model/domain:binaryDirectory
-          let $hasBinDirectory :=
-               if($binDirectory or $fileURI) then ()
-               else fn:error(xs:QName("MODEL-MISSING-BINARY-DIRECTORY"),"Model must configure field/@fileURI or model/binaryDirectory if binary/file fields are present",$field-id)
-          return
-               model:generate-uri($binDirectory,$model,$updates)
-    let $filename :=
-         if(domain:get-param-value($updates,fn:concat($field-id,"_filename")))
-         then domain:get-param-value($updates,fn:concat($field-id,"_filename"))
-         else domain:get-param-value($updates,fn:concat($context/@name,"_filename"))
-    let $fileContentType :=
-         if(domain:get-param-value($updates,fn:concat($field-id,"_content-type")))
-         then domain:get-param-value($updates,fn:concat($field-id,"_content-type"))
-         else domain:get-param-value($updates,fn:concat($context/@name,"_content-type"))
-    return
-         if(fn:exists($binary)) then (
-             element {fn:QName($ns,$localname)} {
-                attribute type {"binary"},
-                attribute content-type {$fileContentType},
-                attribute filename {$filename},
-                attribute filesize {
-                 if($binaryFile instance of binary())
-                 then xdmp:binary-size($binaryFile)
-                 else fn:string-length(xdmp:quote($binaryFile))
-                },
-                text {$fileURI}
-             },
-             if($fileURI ne $current/text())
-             then  xdmp:document-delete($current/text())
-             else  (),
-            (:Binary Dependencies will get replaced automatically:)
-             map:put($binary-dependencies,$fileURI,$binaryFile)
-         )
-         else
-             $current-value
+  let $type := fn:data($context/@type)
+  let $key  := domain:get-field-id($context)
+  let $current-value := domain:get-field-value($context,$current)
+  let $default-value := fn:data($context/@default)
+  let $ns := domain:get-field-namespace($context)
+  let $localname := fn:data($context/@name)
+  let $default   := (fn:data($context/@default),"")[1]
+  let $occurrence := ($context/@occurrence,"?")
+  let $map-values := domain:get-field-value($context, $updates)
+  let $model := $context/ancestor::domain:model
+  let $field-id := domain:get-field-id($context)
+  let $fileType := ($context/@fileType,"auto")[1]
+  let $binary := domain:get-param-value($updates,$field-id)
+  let $binary := if($binary) then $binary else domain:get-param-value($updates,fn:data($context/@name))
+  let $binaryFile :=
+    if(fn:exists($binary)) then
+      if($fileType eq "xml") then
+        if ($binary instance of binary ()) then
+          xdmp:unquote(xdmp:binary-decode($binary,"utf-8"))
+        else
+          xdmp:unquote($binary/node())
+      else if($fileType eq "text") then
+        xdmp:binary-decode($binary,"utf-8")
+      else $binary
+    else ()
+  let $fileURI := $context/@fileURI
+  let $fileURI :=
+    if($fileURI and $fileURI ne "") then
+      model:generate-uri($fileURI,$model,$updates)
+    else
+      let $binDirectory := $model/domain:binaryDirectory
+      let $hasBinDirectory :=
+        if($binDirectory or $fileURI) then
+          ()
+        else
+          fn:error(
+            xs:QName("MODEL-MISSING-BINARY-DIRECTORY"),
+            "Model must configure field/@fileURI or model/binaryDirectory if binary/file fields are present",
+            $field-id
+          )
+      return model:generate-uri($binDirectory,$model,$updates)
+  let $filename :=
+    if(domain:get-param-value($updates,fn:concat($field-id,"_filename"))) then
+      domain:get-param-value($updates,fn:concat($field-id,"_filename"))
+    else
+      domain:get-param-value($updates,fn:concat($context/@name,"_filename"))
+  let $fileContentType :=
+    if(domain:get-param-value($updates,fn:concat($field-id,"_content-type"))) then
+      domain:get-param-value($updates,fn:concat($field-id,"_content-type"))
+    else
+      domain:get-param-value($updates,fn:concat($context/@name,"_content-type"))
+  return
+    if(fn:exists($binary)) then (
+      element {fn:QName($ns,$localname)} {
+        attribute type {"binary"},
+        attribute content-type {$fileContentType},
+        attribute filename {$filename},
+        attribute filesize {
+          if($binaryFile instance of binary()) then
+            xdmp:binary-size($binaryFile)
+          else
+            fn:string-length(xdmp:quote($binaryFile))
+        },
+        text {$fileURI}
+      },
+      if($fileURI ne $current/text()) then
+        map:put($binary-deletes, $current/text(), "1")
+      else
+        (),
+      (:Binary Dependencies will get replaced automatically:)
+      map:put($binary-dependencies,$fileURI,$binaryFile)
+    )
+    else
+      $current-value
 };
+
 (:~
  : Builds an instance of an object from a model
  :)
@@ -1653,7 +1667,6 @@ declare function model:render-list(
                 fn:substring-after(domain:get-field-absolute-xpath($domain-sort-field), $model-qname)
               else
                 fn:exactly-one(domain:build-field-xpath-from-model($model, $domain-path-sort-field))
-          (:let $_ := xdmp:log(("$sortPath", $sortPath, "$persistence", $persistence, fn:string($field/@name), xdmp:describe($domain-sort-field), xdmp:describe($BIBLIO-SORT-PATH/field/jsonPath[. = fn:string($field/@name)]))):)
           return
             if($field/@order = ("desc","descending")) then
               fn:concat("($__context__",$sortPath,")",$domain-sort-as," descending", $collation-sort-field)

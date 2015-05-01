@@ -3204,29 +3204,17 @@ declare function domain:build-field-xpath-from-model(
     else
       let $value :=
         if (fn:exists(domain:get-model-field($model, domain:get-field-key($fields[1]), fn:true()))) then
-          (:let $_ := xdmp:log(("About to build xpath from", $accumulator)):)
-          (:return:)
           fn:string-join((
             for $f at $index in $fields[fn:not(. instance of element(domain:container))]
-            (:where fn:not($f instance of element(domain:container)):)
             return
               if ($index eq 1) then
                 domain:get-field-absolute-xpath($f)
               else
                 domain:get-field-xpath($f)
-            (:,
-            if (fn:exists($accumulator)) then
-              domain:get-field-xpath($field)
-            else
-              domain:get-field-absolute-xpath($field):)
           ),
           "")
         else
-        (
-          (:for $f in $model//(domain:element)
-          where domain:get-base-type($f) eq "instance"
-          return domain:build-field-xpath-from-model(domain:get-model($f/@type), $field, ($accumulator, $f)):)
-        )
+          ()
       return domain:set-identity-cache($cache-key, $value)
 };
 

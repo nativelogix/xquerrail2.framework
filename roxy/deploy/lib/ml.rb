@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright 2012 MarkLogic Corporation
+# Copyright 2012-2015 MarkLogic Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,6 +43,8 @@ if @profile then
   end
 end
 
+@no_prompt = find_arg(['-n', '--no-prompt'])
+
 @logger = Logger.new(STDOUT)
 @logger.level = find_arg(['-v', '--verbose']) ? Logger::DEBUG : Logger::INFO
 @logger.formatter = proc { |severity, datetime, progname, msg|
@@ -60,8 +62,16 @@ if RUBY_VERSION < "1.8.7"
 
     WARNING!!!
     You are using a very old version of Ruby: #{RUBY_VERSION}
-    Roxy works best with Ruby 1.8.7 or greater.
+    Roxy works best with Ruby 1.9.3 or greater.
     Proceed with caution.
+  MSG
+elsif RUBY_VERSION < "1.9.3"
+  @logger.warn <<-MSG
+
+    WARNING!!!
+    Ruby version 1.9.3 is the oldest supported version. You are running
+    Ruby #{RUBY_VERSION}. Some features may not work. You are encouraged to
+    upgrade to Ruby 1.9.3+.
   MSG
 end
 
@@ -76,7 +86,7 @@ begin
       if need_help?
         Help.doHelp(@logger, command)
       else
-        f = Roxy::Framework.new :logger => @logger, :properties => ServerConfig.properties
+        f = Roxy::Framework.new :logger => @logger, :properties => ServerConfig.properties, :no_prompt => @no_prompt
         f.create
       end
       break
@@ -100,7 +110,7 @@ begin
       if need_help?
         Help.doHelp(@logger, command)
       else
-        upgrader = Roxy::Upgrader.new :logger => @logger, :properties => ServerConfig.properties
+        upgrader = Roxy::Upgrader.new :logger => @logger, :properties => ServerConfig.properties, :no_prompt => @no_prompt
         upgrader.upgrade(ARGV)
       end
       break
@@ -112,7 +122,11 @@ begin
         Help.doHelp(@logger, command)
       else
         ServerConfig.logger = @logger
-        ServerConfig.send command
+        ServerConfig.no_prompt = @no_prompt
+        result = ServerConfig.send command
+        if !result
+          exit!
+        end
       end
       break
     #
@@ -133,11 +147,15 @@ begin
         raise HelpException.new(command, "Missing environment for #{command}") if @properties["environment"].nil?
         raise ExitException.new("Missing ml-config.xml file. Check config.file property") if @properties["ml.config.file"].nil?
 
-        @s = ServerConfig.new(
+        result = ServerConfig.new(
           :config_file => File.expand_path(@properties["ml.config.file"], __FILE__),
           :properties => @properties,
-          :logger => @logger
+          :logger => @logger,
+          :no_prompt => @no_prompt
         ).send(command)
+        if !result
+          exit!
+        end
       else
         Help.doHelp(@logger, :usage, "Unknown command #{command}!")
         break
@@ -148,25 +166,32 @@ rescue Net::HTTPServerException => e
   case e.response
   when Net::HTTPUnauthorized then
     @logger.error "Invalid login credentials for #{@properties["environment"]} environment!!"
+    exit!
   else
     @logger.error e
     @logger.error e.response.body
+    exit!
   end
 rescue Net::HTTPFatalError => e
   @logger.error e
   @logger.error e.response.body
+  exit!
 rescue DanglingVarsException => e
   @logger.error "WARNING: The following configuration variables could not be validated:"
   e.vars.each do |k,v|
     @logger.error "#{k}=#{v}"
   end
+  exit!
 rescue HelpException => e
   Help.doHelp(@logger, e.command, e.message)
+  exit!
 rescue ExitException => e
   @logger.error e
+  exit!
 rescue Exception => e
   @logger.error e
   @logger.error e.backtrace
+  exit!
 end
 
 if @profile then

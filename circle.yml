@@ -1,0 +1,22 @@
+machine:
+  services:
+    - docker
+  ruby:
+    #version: rbx-2.0.0-p451
+
+dependencies:
+  override:
+    - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASSWORD
+    - docker info
+    - docker pull rlouapre/centos6-ml
+
+test:
+  override:
+    - docker run --name ml7 -d -p 8000:8000 -p 8001:8001 -p 8002:8002 -p 9305:9305 -p 9306:9306 rlouapre/centos6-ml
+    - sleep 5
+    - chmod 755 ./.circle/bootstrap.sh
+    - ./.circle/bootstrap.sh
+    - cd roxy && chmod 755 ml
+    - cd roxy && ./ml ci bootstrap
+    - cd roxy && ./ml ci deploy modules
+    - npm install -g gulp && npm install && gulp --ml.user=admin --ml.password=password --ml.port=9305

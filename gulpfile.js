@@ -40,16 +40,17 @@ gulp.task('copy-xqy', function () {
     .pipe(gulp.dest('./dist'));
 });
 
-gulp.task('copy-no-xqy', function(){
+gulp.task('copy-no-xqy', function() {
   return gulp.src(['src/main/**/*.xsd', 'src/main/**/*.xsl'])
     .pipe(inject.after('<?xml version="1.0" encoding="UTF-8"?>', '\n<!-- ' + fs.readFileSync('license.txt', 'utf8') + ' -->'))
     .pipe(gulp.dest('./dist'));
 });
 
-gulp.task('last-git-commit', function() {
+gulp.task('last-git-commit', function(cb) {
   return gitinfo()
-    .pipe(es.map(function(data, cb) {
-      lastCommit = data['\'local.branch.current.SHA,\' '];
+    .pipe(es.map(function(data) {
+      lastCommit = data['local.branch.current.SHA'];
+      gutil.log('data: ', data, '\nlastCommit: ', lastCommit);
       cb();
     }))
 })

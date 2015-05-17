@@ -348,7 +348,7 @@ declare %test:case function model-reference-from-model-nested-xml-test() {
   let $reference-value := domain:get-field-value($reference-field, $instance2)
   return
   (
-    assert:not-empty($reference-value, "model2/model1 reference must exist"),
+    assert:not-empty($reference-value, "model2/model1-from-model reference must exist"),
     assert:equal($reference-value/@ref-type/fn:string(), "model"),
     assert:equal($reference-value/@ref/fn:string(), "model1"),
     assert:equal($reference-value/@ref-id/fn:string(), domain:get-field-value(domain:get-model-identity-field($model1), $instance1)),

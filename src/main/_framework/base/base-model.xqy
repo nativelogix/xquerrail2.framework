@@ -2477,18 +2477,46 @@ declare function model:get-function-cache(
   let $target := fn:data($reference/@reference)
   let $tokens := fn:tokenize($target, ":")
   let $type := $tokens[2]
-  let $reference-function-name := $tokens[3]
+  let $model := domain:get-domain-model($type)
+  let $reference-definition := $tokens[3]
   let $function-arity := 3
-  let $funct := domain:get-model-function((), $type, $reference-function-name, $function-arity, fn:false())
-  let $funct := model:get-function-cache($funct)
+  let $funct := domain:get-model-function((), $type, $reference-definition, $function-arity, fn:false())
   return
     if (fn:exists($funct)) then
-      let $model := domain:get-domain-model($type)
-      for $param in $params
-      return $funct($reference, $model, $param)
+      let $funct := model:get-function-cache($funct)
+      return
+        for $param in $params
+        return $funct($reference, $model, $param)
+    else if (domain:model-exists($reference-definition)) then
+      model:build-model-reference-from-model($reference, $model, domain:get-model($reference-definition), $params)
     else
       fn:error(xs:QName("ERROR"), "No Reference function '" || $target || "' available for field '" || $name || "'.")
  };
+
+declare function model:build-model-reference-from-model(
+  $context as element(domain:element),
+  $model as element(domain:model),
+  $reference-model as element(domain:model),
+  $params as item()*
+) as element() {
+  let $instance :=
+    typeswitch ($params)
+      case element() return
+        if (fn:string($params/@xsi:type) eq fn:string($model/@name)) then
+          $params
+        else
+          model:get($model, $params/node())
+      default return model:get($model, $params)
+  let $identity-value := domain:get-field-value(domain:get-model-identity-field($model), $instance)
+  let $instance := model:recursive-create($reference-model, $instance)
+  return
+    model:build-model-reference(
+      $context,
+      $model,
+      $identity-value,
+      $instance
+    )
+};
 
 (:~
   : Returns a reference to a given controller
@@ -2516,14 +2544,33 @@ declare function model:get-cache-reference($model as element(domain:model),$keys
      $keys ! map:get($REFERENCE-CACHE,fn:concat(xdmp:hash64(xdmp:describe($model)),"::", .))
 };
 
+declare function model:build-model-reference(
+  $context as element(),
+  $model as element(domain:model),
+  $instance-reference-id,
+  $instance-reference
+) as element()? {
+    if($instance-reference) then
+      element {domain:get-field-qname($context)} {
+        attribute ref-type { "model" },
+        attribute ref-id   { $instance-reference-id },
+        attribute ref      { fn:data($model/@name) },
+        if ($instance-reference instance of node()) then (
+          $instance-reference/attribute::*,
+          $instance-reference/node()
+        )
+        else
+          fn:string($instance-reference)
+      }
+    else ()(: fn:error(xs:QName("INVALID-REFERENCE-ERROR"),"Invalid Reference", fn:data($model/@name)):)
+};
+
 declare function model:reference(
   $context as element(),
   $model as element(domain:model),
   $params as item()*
 ) as element()? {
-  let $keyLabel := fn:data($model/@keyLabel)
-  let $key := fn:data($model/@key)
-  let $modelReference :=
+  let $instance-reference :=
     typeswitch ($params)
       case element() return
         if (fn:string($params/@xsi:type) eq fn:string($model/@name)) then
@@ -2531,16 +2578,13 @@ declare function model:reference(
         else
           model:get($model, $params/node())
       default return model:get($model, $params)
-  let $name := fn:data($model/@name)
   return
-    if($modelReference) then
-      element {domain:get-field-qname($context)} {
-         attribute ref-type { "model" },
-         attribute ref-id   { domain:get-field-value(domain:get-model-identity-field($model), $modelReference) },
-         attribute ref      { $name },
-         domain:get-field-value(domain:get-model-keylabel-field($model), $modelReference)
-      }
-    else ()(: fn:error(xs:QName("INVALID-REFERENCE-ERROR"),"Invalid Reference", fn:data($model/@name)):)
+    model:build-model-reference(
+      $context,
+      $model,
+      domain:get-field-value(domain:get-model-identity-field($model), $instance-reference),
+      domain:get-field-value(domain:get-model-keylabel-field($model), $instance-reference)
+    )
 };
 
 (:~

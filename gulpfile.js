@@ -22,7 +22,11 @@ nconf
   .env()
   .file({ file: './ml.json' });
 
-var ml = nconf.get('ml')
+var ml = nconf.get('ml');
+if (!ml) {
+  throw new gutil.PluginError('xquerrail', 'ml settings are required. They can be defined as arguments, environment variables or json file.')
+}
+
 var version = pkg.version;
 var lastCommit;
 

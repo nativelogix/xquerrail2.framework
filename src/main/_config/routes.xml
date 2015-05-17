@@ -14,10 +14,10 @@
 
   </route>
 
-  <route id="initialize" pattern="^/initialize(.xqy)?$" is-resource="true">
+<!--   <route id="initialize" pattern="^/initialize(.xqy)?$" is-resource="true">
     <to>/main/_framework/initialize.xqy</to>
   </route>
-
+ -->
   <!-- Only required to run xray tests -->
   <route id="xray_index" pattern="^/xray/?$" is-resource="true">
     <to>/xray/index.xqy</to>

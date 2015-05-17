@@ -8,17 +8,32 @@ module namespace routing ="http://xquerrail.com/routing";
 
 import module namespace config = "http://xquerrail.com/config" at "config.xqy";
 
+declare %private variable $INITIALIZE-ROUTE :=
+  <route id="xquerrail_initialize" pattern="^/initialize(.xqy)?$" is-resource="true" xmlns="http://xquerrail.com/routing">
+    <to>{config:resolve-path(config:framework-path(), "initialize.xqy")}</to>
+  </route>
+;
+
 declare variable $routes := config:get-routes();
 
-declare function get-route-by-id($id as xs:string
+declare function routing:get-routes() {
+  element {$routes/fn:name()} {
+    $routes/namespace::*,
+    $routes/attribute::*,
+    $routing:INITIALIZE-ROUTE,
+    $routes/node()
+  }
+};
+
+declare function routing:get-route-by-id($id as xs:string
 ) as element(routing:route)? {
-  fn:zero-or-one($routes//routing:route[@id eq $id])
+  fn:zero-or-one(routing:get-routes()//routing:route[@id eq $id])
 };
 
 (:~
  : Function returns if a given route is valid according to schema definition
  :)
-declare function route-valid($route as element(routing:route))
+declare function routing:route-valid($route as element(routing:route))
 {
   fn:true()
 };
@@ -26,7 +41,7 @@ declare function route-valid($route as element(routing:route))
 (:~
  : Converts a list of map values to a parameter string
  :)
-declare function map-to-params($map as map:map)
+declare function routing:map-to-params($map as map:map)
 {
   fn:string-join(
    for $k in map:keys($map)
@@ -42,13 +57,13 @@ declare function map-to-params($map as map:map)
  : Returns the default route for a given url
  : @param $url - Url to find the matching route.
  :)
-declare function get-route($url as xs:string)
+declare function routing:get-route($url as xs:string)
 {
   let $params-map := map:map()
   let $params := if(fn:contains($url,"?")) then fn:substring-after($url,"?") else ()
   let $path   := if(fn:contains($url,"?")) then fn:substring-before($url,"?") else $url
   let $request-method := fn:lower-case(xdmp:get-request-method())
-  let $matching-routes := $routes//routing:route[fn:matches($path, ./@pattern, "six")]
+  let $matching-routes := routing:get-routes()//routing:route[fn:matches($path, ./@pattern, "six")]
   let $matching-route := (
     if($matching-routes[$request-method eq @method]) then
       $matching-routes[$request-method eq @method]

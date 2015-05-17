@@ -2422,12 +2422,17 @@ declare function model:suggest(
   $model as element(domain:model),
   $params as item()
 ) as xs:string* {
-   let $options := model:build-search-options($model,$params)
-   let $query := (domain:get-param-value($params,"query"),"")[1]
-   let $limit := model:page-size($model, $params, "limit")
-   let $position := (domain:get-param-value($params,"position"),fn:string-length($query[1]))[1] cast as xs:integer
-   let $focus := (domain:get-param-value($params,"focus"),1)[1] cast as xs:integer
-   return search:suggest($query,$options,$limit,$position,$focus)
+  let $options := model:build-search-options($model,$params)
+  let $options := element {$options/fn:name()} {
+    $options/@*,
+    $options/*[. except $options/search:additional-query]
+  }
+  let $query := (domain:get-param-value($params,"query"),"")[1]
+  let $limit := model:page-size($model, $params, "limit")
+  let $position := (domain:get-param-value($params,"position"),fn:string-length($query[1]))[1] cast as xs:integer
+  let $focus := (domain:get-param-value($params,"focus"),1)[1] cast as xs:integer
+  let $additional-query := model:build-search-query($model, $params, "search:query")
+  return search:suggest($query, $options, $limit, $position, $focus, $additional-query)
 };
 
 (:~

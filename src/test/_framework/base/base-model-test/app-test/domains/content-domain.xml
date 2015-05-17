@@ -244,7 +244,7 @@
         <navigation searchable="true" suggestable="true" />
       </element>
       <element name="firstName" type="string"/>
-      <element name="lastName" type="string">
+      <element name="lastName" type="string" occurrence="*">
         <navigation searchable="true" suggestable="true" />
       </element>
   </model>

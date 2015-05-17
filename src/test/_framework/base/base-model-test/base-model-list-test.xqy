@@ -904,33 +904,3 @@ declare %test:case function model-sorted-list-in-nested-object-attribute-from-pa
     assert:empty($valid)
   )
 };
-
-declare %test:case function model-suggest-lastName-test() as item()*
-{
-  let $model := domain:get-model("model25")
-  let $params := map:new((
-    map:entry("query", "lastName:sm*")
-  ))
-  let $suggest := model:suggest($model, $params)
-  return (
-    assert:not-empty($suggest),
-    $suggest ! (
-      assert:true(fn:starts-with(., "lastName:sm"), text{.,"start with", "lastName:sm"})
-    )
-  )
-};
-
-declare %test:case function model-suggest-name-test() as item()*
-{
-  let $model := domain:get-model("model25")
-  let $params := map:new((
-    map:entry("query", "name:j*")
-  ))
-  let $suggest := model:suggest($model, $params)
-  return (
-    assert:not-empty($suggest),
-    $suggest ! (
-      assert:true(fn:contains(., "john") or fn:contains(., "jim"))
-    )
-  )
-};

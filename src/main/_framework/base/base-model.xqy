@@ -2159,28 +2159,7 @@ declare function model:build-search-options(
           $facet-options
         }
       }</search:default-suggestion-source>
-  let $sortOptions :=
-    for $prop in $properties[domain:navigation/@sortable = "true"]
-      let $collation := domain:get-field-collation($prop)
-      let $search-element := model:build-search-element($prop)
-      return (
-        <search:state name="{model:search-sort-state($prop, "ascending")}">
-          <search:sort-order direction="ascending" type="{$prop/@type}" collation="{$collation}">
-            {$search-element}
-          </search:sort-order>
-          <search:sort-order>
-            <search:score/>
-          </search:sort-order>
-        </search:state>,
-        <search:state name="{model:search-sort-state($prop, "descending")}">
-          <search:sort-order direction="descending" type="{$prop/@type}" collation="{$collation}">
-            {$search-element}
-          </search:sort-order>
-          <search:sort-order>
-            <search:score/>
-          </search:sort-order>
-        </search:state>
-      )
+  let $sortOptions := model:build-sort-element($model, ())
 
   let $extractMetadataOptions :=
      for $prop in $properties[domain:navigation/@metadata = "true"]
@@ -2236,58 +2215,92 @@ declare function model:build-search-constraints(
   $model as element(domain:model),
   $params as item()
 ) {
-  let $properties := $model//(domain:element|domain:attribute)[fn:not(domain:navigation/@searchable = ('false') and domain:navigation/@facetable = ('false'))]
-  return
-    for $prop in $properties (:[domain:navigation/@searchable = "true"]:)
-      for $prop-nav in $prop/domain:navigation
-      let $name := if($prop-nav/@constraintName) then $prop-nav/@constraintName else $prop/@name
-      let $type := (
-        $prop-nav/@searchType,
-        if($prop-nav/(@suggestable|@facetable) = "true") then
-          "range"
-        else
-          "value"
-      )[1]
-      let $facet-options := $prop-nav/search:facet-option
-      let $term-options := $prop-nav/(search:term-option|search:weight)
-      let $term-options := if($term-options) then $term-options else domain:get-param-value($params, "search:term-options")
-      return
-        <search:constraint name="{$name}" label="{$prop/@label}">{
-          element { fn:QName("http://marklogic.com/appservices/search",$type) } {
-            attribute collation {domain:get-field-collation($prop)},
-            if ($type eq 'range') then
-              attribute type { domain:resolve-ctstype($prop) }
-            else
-              attribute type {"xs:string"}
-            ,
-            if ($prop-nav/@facetable eq 'true') then
-              attribute facet { fn:true() }
-            else
-              attribute facet { fn:false() }
-            ,
-            model:build-search-element($prop),
-            $term-options,
-            $facet-options
-          }
-        }</search:constraint>
+  model:build-search-constraints($model, $params, ())
+};
+
+declare function model:build-search-constraints(
+  $model as element(domain:model),
+  $params as item(),
+  $prefix as xs:string*
+) {
+  for $prop in $model//(domain:element|domain:attribute)[xs:boolean(domain:navigation/@searchable) or xs:boolean(domain:navigation/@facetable)]
+    for $prop-nav in $prop/domain:navigation
+    let $name :=
+      fn:string-join(
+        (
+          $prefix,
+          if($prop-nav/@constraintName) then $prop-nav/@constraintName else $prop/@name
+        ),
+        "."
+      )
+    let $base-type := domain:get-base-type($prop)
+    return
+      if ($base-type eq "instance") then
+        model:build-search-constraints(domain:get-model($prop/@type), $params, $name)
+      else
+        let $search-type := (
+          $prop-nav/@searchType,
+          if(xs:boolean($prop-nav/(@suggestable|@facetable))) then
+            "range"
+          else
+            "value"
+        )[1]
+        let $facet-options := $prop-nav/search:facet-option
+        let $term-options := $prop-nav/(search:term-option|search:weight)
+        let $term-options := if($term-options) then $term-options else domain:get-param-value($params, "search:term-options")
+        return
+          <search:constraint name="{$name}" label="{$prop/@label}">{
+            element { fn:QName("http://marklogic.com/appservices/search",$search-type) } {
+              attribute collation {domain:get-field-collation($prop)},
+              if ($search-type eq "range") then
+                attribute type { domain:resolve-ctstype($prop) }
+              else
+                (: According to search:search documentation @type is not needed for value constraint :)
+                attribute type {"xs:string"}
+              ,
+              if (xs:boolean($prop-nav/@facetable)) then
+                attribute facet { fn:true() }
+              else
+                attribute facet { fn:false() }
+              ,
+              model:build-search-element($prop, $prefix[fn:last()]),
+              $term-options,
+              $facet-options
+            }
+          }</search:constraint>
 };
 
 declare %private function model:build-search-element(
   $field as element()
 ) as element()* {
+  model:build-search-element($field, ())
+};
+
+declare %private function model:build-search-element(
+  $field as element(),
+  $name as xs:string?
+) as element()* {
   if ($field instance of element(domain:attribute)) then
     let $field-prop := domain:get-parent-field-attribute($field)
     return
     (
-      <search:element ns="{domain:get-field-namespace($field-prop)}" name="{fn:data($field-prop/@name)}"/>,
+      <search:element ns="{domain:get-field-namespace($field-prop)}" name="{fn:head(($name, fn:data($field-prop/@name)))}"/>,
       <search:attribute name="{$field/@name}"/>
     )
   else
-    <search:element ns="{domain:get-field-namespace($field)}" name="{$field/@name}"/>
+    <search:element ns="{domain:get-field-namespace($field)}" name="{fn:head(($name, $field/@name))}"/>
 };
 
 declare function model:search-sort-state(
   $field as element(),
+  $order as xs:string?
+) as xs:string {
+  model:search-sort-state($field, (), $order)
+};
+
+declare function model:search-sort-state(
+  $field as element(),
+  $prefix as xs:string*,
   $order as xs:string?
 ) as xs:string {
   let $order :=
@@ -2297,10 +2310,46 @@ declare function model:search-sort-state(
       "ascending"
   let $name :=
       typeswitch($field)
-        case element(domain:attribute) return fn:concat($field/../@name,"_",$field/@name)
-        case element(domain:element) return fn:data($field/@name)
+        case element(domain:attribute) return fn:concat(fn:string-join(($prefix, $field/../@name), "."), "_", $field/@name)
+        case element(domain:element) return fn:string-join(($prefix, fn:string($field/@name)), ".")
         default return fn:error(xs:QName("FIELD-NOT-SUPPORTED"), text{"Field type not supported."}, $field)
   return fn:concat($name, "-", $order)
+};
+
+declare %private function model:build-sort-element(
+  $field as element(),
+  $name as xs:string*
+) as element()* {
+  typeswitch($field)
+    case element(domain:model)
+      return $field//(domain:element|domain:attribute) ! model:build-sort-element(., $name)
+    default
+      return
+      if (domain:get-base-type($field) eq "instance") then
+        model:build-sort-element(domain:get-model($field/@type), ($name, $field/@name))
+      else if (xs:boolean($field/domain:navigation/@sortable)) then
+        let $collation := domain:get-field-collation($field)
+        let $search-element := model:build-search-element($field)
+        return (
+          <search:state name="{model:search-sort-state($field, $name, "ascending")}">
+            <search:sort-order direction="ascending" type="{$field/@type}" collation="{$collation}">
+              {$search-element}
+            </search:sort-order>
+            <search:sort-order>
+              <search:score/>
+            </search:sort-order>
+          </search:state>,
+          <search:state name="{model:search-sort-state($field, $name, "descending")}">
+            <search:sort-order direction="descending" type="{$field/@type}" collation="{$collation}">
+              {$search-element}
+            </search:sort-order>
+            <search:sort-order>
+              <search:score/>
+            </search:sort-order>
+          </search:state>
+        )
+      else
+        ()
 };
 
 declare function model:build-search-query(

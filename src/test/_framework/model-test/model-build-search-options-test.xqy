@@ -50,7 +50,7 @@ declare %test:teardown function teardown() as empty-sequence()
   )
 };
 
-declare %test:case function model-buils-search-options-element-attribute-sort-test() {
+declare %test:case function model-build-search-options-element-attribute-sort-test() {
   let $model4 := domain:get-model("model4")
   let $params := map:new()
   let $tag-title-field := $model4/domain:element[@name eq 'tag']/domain:attribute[@name eq 'title']
@@ -68,5 +68,23 @@ declare %test:case function model-buils-search-options-element-attribute-sort-te
     assert:equal($title-sort-order-descending/search:sort-order/@direction/fn:string(), "descending"),
     assert:equal($title-sort-order-descending/search:sort-order/search:element/@name/fn:string(), "tag"),
     assert:equal($title-sort-order-descending/search:sort-order/search:attribute/@name/fn:string(), "title")
+  )
+};
+
+declare %test:case function model-build-search-options-field-instance-test() {
+  let $model := domain:get-model("model4")
+  let $abstract-model := domain:get-model("model7")
+  let $params := map:new()
+  let $search-options := model:build-search-options($model, $params)
+  return (
+    for $field in $abstract-model//(domain:element|domain:attribute)[xs:boolean(domain:navigation/@searchable) or xs:boolean(domain:navigation/@facetable)]
+    let $contraint-name := fn:concat($model/domain:element[@type eq "model7"]/@name, ".", $field/@name)
+    return assert:not-empty($search-options//search:constraint[@name eq $contraint-name], text{"Missing constraint", $contraint-name}),
+    for $field in $abstract-model//(domain:element|domain:attribute)[fn:not(xs:boolean(domain:navigation/@searchable)) and fn:not(xs:boolean(domain:navigation/@facetable))]
+    let $contraint-name := fn:concat($model/domain:element[@type eq "model7"]/@name, ".", $field/@name)
+    return assert:empty($search-options//search:constraint[@name eq $contraint-name], text{"Missing constraint", $contraint-name}),
+    for $field in $abstract-model//(domain:element|domain:attribute)[xs:boolean(domain:navigation/@sortable)]
+    let $sort-state-name := model:search-sort-state($field, ("field7"))
+    return assert:empty($search-options//search:state[@name eq $sort-state-name], text{"Missing sort state", $sort-state-name})
   )
 };

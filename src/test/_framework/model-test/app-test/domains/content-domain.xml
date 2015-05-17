@@ -34,6 +34,9 @@
         <navigation searchable="true" sortable="true"/>
       </attribute>
     </element>
+    <element name="field7" type="model7">
+      <navigation searchable="true"/>
+    </element>
   </model>
 
   <model name="model5" persistence="directory" label="Model #5" extends="base" key="uuid" keyLabel="id">
@@ -78,6 +81,21 @@
     <element name="name" type="string" />
     <element name="comment" type="string">
       <constraint unique="true" />
+    </element>
+  </model>
+
+  <model name="model7" persistence="abstract">
+    <attribute name="id" identity="true" type="identity" label="Id">
+      <navigation searchable="true"/>
+    </attribute>
+    <element name="name" type="string">
+      <navigation searchable="true" sortable="true"/>
+    </element>
+    <element name="description" type="string">
+      <navigation searchable="false" />
+      <attribute name="order" type="string">
+        <navigation sortable="true"/>
+      </attribute>
     </element>
   </model>
 

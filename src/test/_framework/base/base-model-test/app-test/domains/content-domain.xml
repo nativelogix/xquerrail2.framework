@@ -13,12 +13,16 @@
       <navigation listable="false" searchable="true"></navigation>
     </element>
   </model>
+  <model name="model1-reference" persistence="abstract" extends="base" namespace-uri="http://marklogic.com/model/model1" key="id">
+    <element name="id" type="string" label="Id"></element>
+  </model>
   <model name="model2" persistence="document" label="Model #2" extends="base" namespace-uri="http://marklogic.com/model/model2" key="uuid" keyLabel="id">
     <document root="models">/test/model2.xml</document>
     <navigation listable="true" showable="true"></navigation>
     <element name="id" type="string" label="Id"></element>
     <element name="name" type="string" label="Name"/>
     <element name="model1" type="reference" reference="model:model1:reference" label="Model #1" occurrence="*"/>
+    <element name="model1-from-model" type="reference" reference="model:model1:model1-reference"/>
   </model>
   <model name="model3" persistence="document" label="Model #3" extends="base" namespace-uri="http://marklogic.com/model/model3" key="uuid" keyLabel="id">
     <document root="models">/test/model3.xml</document>

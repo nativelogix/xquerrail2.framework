@@ -292,7 +292,7 @@ declare %test:case function application-reference-from-xml-test() {
   )
 };
 
-declare %test:case function model-reference-from-nested-xml-test() {
+declare %test:case function model-reference-from-function-nested-xml-test() {
   let $model1 := domain:get-model("model1")
   let $model2 := domain:get-model("model2")
   let $instance1 :=
@@ -320,5 +320,42 @@ declare %test:case function model-reference-from-nested-xml-test() {
     assert:equal($reference-value/@ref-type/fn:string(), "model"),
     assert:equal($reference-value/@ref/fn:string(), "model1"),
     assert:equal($reference-value/@ref-id/fn:string(), domain:get-field-value(domain:get-model-identity-field($model1), $instance1))
+  )
+};
+
+declare %test:case function model-reference-from-model-nested-xml-test() {
+  let $model1 := domain:get-model("model1")
+  let $model1-reference := domain:get-model("model1-reference")
+  let $model2 := domain:get-model("model2")
+  let $instance1 :=
+    model:new(
+      $model1,
+      map:new((
+        map:entry("id", "model1-id-" || setup:random()),
+        map:entry("name", "model1-name")
+      ))
+    )
+  let $instance2 :=
+    model:new(
+      $model2,
+      map:new((
+        map:entry("id", "model2-id-" || setup:random()),
+        map:entry("name", "model2-name"),
+        map:entry("model1-from-model", $instance1)
+      ))
+    )
+  let $reference-field := domain:get-model-field($model2, "model1-from-model")
+  let $reference-value := domain:get-field-value($reference-field, $instance2)
+  return
+  (
+    assert:not-empty($reference-value, "model2/model1 reference must exist"),
+    assert:equal($reference-value/@ref-type/fn:string(), "model"),
+    assert:equal($reference-value/@ref/fn:string(), "model1"),
+    assert:equal($reference-value/@ref-id/fn:string(), domain:get-field-value(domain:get-model-identity-field($model1), $instance1)),
+    assert:equal(
+      domain:get-field-value(domain:get-model-field($model1, "id"), $instance1),
+      domain:get-field-value(domain:get-model-field($model1-reference, "id"), $reference-value),
+      "$reference-value/model1:id must equal Sinstance1/model1:id"
+    )
   )
 };

@@ -465,7 +465,7 @@ declare function model:create(
             return fn:error(xs:QName("PERSISTENCE-ERROR"),"Cannot Persist Abstract Objects",$model/@name)
           default
             return fn:error(xs:QName("PERSISTENCE-ERROR"),"No document persistence defined for create",$model/@name),
-          domain:fire-after-event($model,"create",$update)
+          domain:fire-after-event($model,"create",$update,$params)
        )
 };
 
@@ -757,8 +757,8 @@ declare function model:update(
   $collections as xs:string*,
   $partial as xs:boolean
 ) as element() {
-  let $params := domain:fire-before-event($model,"update",$params)
   let $current := model:get($model,$params)
+  let $params := domain:fire-before-event($model,"update",$params,$current)
   let $id := $model//(domain:container|domain:element|domain:attribute)[@identity eq "true"]/@name
   let $identity-field := $model//(domain:element|domain:attribute)[@identity eq "true" or @type eq "identity"]
   let $identity := (domain:get-field-value($identity-field,$current))[1]
@@ -792,7 +792,7 @@ declare function model:update(
         for $key in map:keys($binary-deletes)
         return xdmp:document-delete($key),
         model:create-binary-dependencies($identity,$current),
-        domain:fire-after-event($model,"update",$build)
+        domain:fire-after-event($model,"update",$build,$current)
       )
     else
       fn:error(xs:QName("UPDATE-NOT-EXISTS"), "Trying to update a document that does not exist.")

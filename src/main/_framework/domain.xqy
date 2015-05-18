@@ -2348,18 +2348,34 @@ declare function domain:declared-namespaces-map(
 declare function domain:invoke-events(
   $model as element(domain:model),
   $events as element()*,
-  $context as item()*
+  $updated-values as item()*
+) {
+  domain:invoke-events($model, $events, $updated-values, ())
+};
+
+declare function domain:invoke-events(
+  $model as element(domain:model),
+  $events as element()*,
+  $updated-values as item()*,
+  $old-value as item()*
 ) {
   if(fn:exists($events)) then
     let $event := fn:head($events)
-    (:let $module := $event/@module:)
-    let $module-namespace := $event/@module-namespace
-    let $module-uri := $event/@module-uri
-    let $function := $event/@function
-    let $call := xdmp:function(fn:QName($module-namespace, $function), $module-uri)
-    let $context := xdmp:apply($call, $event, $context)
-    return domain:invoke-events($model, fn:tail($events), $context)
-  else $context
+    let $module-namespace := fn:string($event/@module-namespace)
+    let $module-uri := fn:string($event/@module-uri)
+    let $function-name := fn:string($event/@function)
+    (: let $call := xdmp:function(fn:QName($module-namespace, $function-name), $module-uri) :)
+    let $_ := xdmp:log(text{"domain:get-module-function", $module-namespace, $module-uri, $function-name})
+    let $function := domain:get-module-function($module-namespace, $module-uri, $function-name, 3)
+    let $updated-values :=
+      if (fn:exists($function)) then
+        xdmp:apply($function, $event, $updated-values, $old-value)
+      else
+        let $function := domain:get-module-function($module-namespace, $module-uri, $function-name, 2)
+        return xdmp:apply($function, $event, $updated-values)
+    (:let $updated-values := xdmp:apply($call, $event, $updated-values):)
+    return domain:invoke-events($model, fn:tail($events), $updated-values, $old-value)
+  else $updated-values
 };
 
 (:~
@@ -2375,10 +2391,19 @@ declare function domain:invoke-events(
 declare function domain:fire-before-event(
   $model as element(domain:model),
   $event-name as xs:string,
-  $context as item()*
+  $updated-values as item()*
+) {
+  domain:fire-before-event($model, $event-name, $updated-values, ())
+};
+
+declare function domain:fire-before-event(
+  $model as element(domain:model),
+  $event-name as xs:string,
+  $updated-values as item()*,
+  $old-value as item()*
 ) {
   let $events := $model/domain:event[@name = $event-name and @mode = ("before","wrap")]
-  return domain:invoke-events($model, $events, $context)
+  return domain:invoke-events($model, $events, $updated-values, $old-value)
 };
 
 (:~
@@ -2394,10 +2419,19 @@ declare function domain:fire-before-event(
 declare function domain:fire-after-event(
   $model as element(domain:model),
   $event-name as xs:string,
-  $context as item()*
+  $updated-values as item()*
+) {
+  domain:fire-after-event($model, $event-name, $updated-values, ())
+};
+
+declare function domain:fire-after-event(
+  $model as element(domain:model),
+  $event-name as xs:string,
+  $updated-values as item()*,
+  $old-value as item()*
 ) {
   let $events := $model/domain:event[@name = $event-name and @mode = ("after","wrap")]
-  return domain:invoke-events($model, $events, $context)
+  return domain:invoke-events($model, $events, $updated-values, $old-value)
 };
 
 declare function domain:get-field-json-name(

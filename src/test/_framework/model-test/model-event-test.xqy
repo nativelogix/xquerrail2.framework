@@ -19,7 +19,13 @@ declare variable $TEST-APPLICATION :=
 </application>
 ;
 
-declare variable $INSTANCES5 := ();
+declare variable $INSTANCES5 := (
+<model5 xmlns="http://xquerrail.com/app-test">
+  <id>model5-id-before-update</id>
+  <name>model5-name-before-update</name>
+  <updated-count>3</updated-count>
+</model5>
+);
 
 declare variable $INSTANCES6 := (
 <model6 xmlns="http://xquerrail.com/app-test">
@@ -109,4 +115,17 @@ declare %test:case function model-unique-constraint-element-test() as item()*
     assert:error($actual, text{"Unique constraint error for model", $model6/@name})
   )
 };
+
+declare %test:case function before-update-event-test() {
+  let $model5 := domain:get-model("model5")
+  let $instance := model:get($model5, "model5-id-before-update")
+  let $instance := model:convert-to-map($model5, $instance)
+  let $_ := map:put($instance, "name", "gary")
+  let $instance := model:update($model5, $instance)
+  return (
+    assert:not-empty($instance),
+    assert:equal(domain:get-field-value(domain:get-model-field($model5, "updated-count"), $instance), 4, "$instance.updated-count must equal 4")
+  )
+};
+
 

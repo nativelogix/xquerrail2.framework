@@ -7,6 +7,22 @@ import module namespace model = "http://xquerrail.com/model/base" at "/main/_fra
 
 declare option xdmp:mapping "false";
 
+declare function events:before-update-1(
+  $event,
+  $current as item(),
+  $old as item()
+) {
+  let $model := $event/ancestor::domain:model
+  let $current-instance :=
+    if (domain:get-value-type($current) eq "xml") then
+      model:convert-to-map($model, $current)
+    else
+      $current
+  let $old-instance := model:convert-to-map($model, $old)
+  let $_ := map:put($current-instance, "updated-count", (map:get($old-instance, "updated-count") + 1))
+  return $current-instance
+};
+
 declare function events:before-create-1(
   $event,
   $context as item()

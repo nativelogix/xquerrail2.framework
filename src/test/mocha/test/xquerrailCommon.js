@@ -22,7 +22,7 @@ var xquerrailCommon = (function(){
   settings.urlBase = 'http://' + ml.host + ":" + ml.port;
   settings.username = ml.user;
   settings.password = ml.password;
-  console.log('Using XQuerrail: %j', settings)
+  console.log('Using XQuerrail: [%s] - [%s]', settings.urlBase, settings.username);
 
   function random(prefix) {
     return ((prefix)? prefix + '-': '') + Math.floor((Math.random() * 1000000) + 1)

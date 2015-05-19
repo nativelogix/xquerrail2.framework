@@ -1642,7 +1642,14 @@ declare function model:render-list(
   let $namespace := domain:get-field-namespace($model)
   let $model-prefix := domain:get-field-prefix($model)
   let $model-qname := fn:concat("/",$model-prefix,":",$model/@name)
-  let $total := xdmp:with-namespaces(domain:declared-namespaces($model), xdmp:value(fn:concat("fn:count(", $list, ")")))
+  (:let $total := xdmp:with-namespaces(domain:declared-namespaces($model), xdmp:value(fn:concat("fn:count(", $list, ")"))):)
+  let $total :=
+    if($persistence = 'document') then
+      xdmp:with-namespaces(domain:declared-namespaces($model), xdmp:value(fn:concat("fn:count(", $list, ")")))
+    else
+      xdmp:value(
+        fn:concat("xdmp:estimate(", $list, ")")
+      )
   let $sorting := model:sorting($model, $params, ("sort", "sort.name", "sidx"), ("", "sort.order", "sord"))
   let $sort :=
     fn:string-join(

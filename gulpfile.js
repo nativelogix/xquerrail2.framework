@@ -23,10 +23,6 @@ nconf
   .file({ file: './ml.json' });
 
 var ml = nconf.get('ml');
-if (!ml) {
-  throw new gutil.PluginError('xquerrail', 'ml settings are required. They can be defined as arguments, environment variables or json file.')
-}
-
 var version = pkg.version;
 var lastCommit;
 
@@ -66,6 +62,10 @@ gulp.task('lint', function () {
 });
 
 gulp.task('xray', function (cb) {
+  if (!ml) {
+    throw new gutil.PluginError('xquerrail', 'ml settings are required. They can be defined as arguments, environment variables or json file.')
+  }
+
   var options = {
     /* https://github.com/mikeal/request#http-authentication */
     auth: {

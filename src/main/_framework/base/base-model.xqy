@@ -2230,8 +2230,8 @@ declare function model:build-search-constraints(
   $params as item(),
   $prefix as xs:string*
 ) {
-  for $prop in $model//(domain:element|domain:attribute)[xs:boolean(domain:navigation/@searchable) or xs:boolean(domain:navigation/@facetable)]
-    for $prop-nav in $prop/domain:navigation
+  for $prop in $model//(domain:element|domain:attribute)
+    for $prop-nav in $prop/domain:navigation[xs:boolean(fn:data(./@searchable)) or xs:boolean(fn:data(./@facetable))]
     let $name :=
       fn:string-join(
         (
@@ -2247,7 +2247,7 @@ declare function model:build-search-constraints(
       else
         let $search-type := (
           $prop-nav/@searchType,
-          if(xs:boolean($prop-nav/(@suggestable|@facetable))) then
+          if(xs:boolean(fn:data($prop-nav/@suggestable)) or xs:boolean(fn:data($prop-nav/@facetable))) then
             "range"
           else
             "value"
@@ -2265,7 +2265,7 @@ declare function model:build-search-constraints(
                 (: According to search:search documentation @type is not needed for value constraint :)
                 attribute type {"xs:string"}
               ,
-              if (xs:boolean($prop-nav/@facetable)) then
+              if (xs:boolean(fn:data($prop-nav/@facetable))) then
                 attribute facet { fn:true() }
               else
                 attribute facet { fn:false() }
@@ -2334,7 +2334,7 @@ declare %private function model:build-sort-element(
       return
       if (domain:get-base-type($field) eq "instance") then
         model:build-sort-element(domain:get-model($field/@type), ($name, $field/@name))
-      else if (xs:boolean($field/domain:navigation/@sortable)) then
+      else if ($field/domain:navigation/@sortable = "true") then
         let $collation := domain:get-field-collation($field)
         let $search-element := model:build-search-element($field)
         return (

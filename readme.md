@@ -3,6 +3,9 @@ XQuerrail Framework
 
 Is the XQuerrail Framework as a standalone library.
 
+Continuous Integration  
+[![Circle CI](https://circleci.com/gh/nativelogix/xquerrail2.framework/tree/master.svg?style=svg)](https://circleci.com/gh/nativelogix/xquerrail2.framework/tree/master)
+
 MarkLogic supported versions:  
 - 7.0-4.3, 7.0-5  
 

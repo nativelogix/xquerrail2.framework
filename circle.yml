@@ -12,11 +12,11 @@ dependencies:
 
 test:
   override:
-    - docker run --name ml7 -d -p 8000:8000 -p 8001:8001 -p 8002:8002 -p $ML_PORT:$ML_PORT -p 9306:9306 rlouapre/centos6-ml
+    - docker run --name ml7 -d -p 8000:8000 -p 8001:8001 -p 8002:8002 -p $ML_APP_PORT:$ML_APP_PORT -p $ML_XCC_PORT:$ML_XCC_PORT rlouapre/centos6-ml
     - sleep 5
     - chmod 755 ./.circle/bootstrap.sh
     - ./.circle/bootstrap.sh
     - cd roxy && chmod 755 ml
-    - cd roxy && ./ml ci bootstrap -v
-    - cd roxy && ./ml ci deploy modules -v
-    - npm install -g gulp && npm install && gulp --ml.user=$ML_USER --ml.password=$ML_PASSWORD --ml.port=$ML_PORT --ml.host=$ML_HOST
+    - cd roxy && ./ml ci bootstrap --ml.ci-server=$ML_HOST --ml.app-port=$ML_APP_PORT --ml.xcc-port=$ML_XCC_PORT --ml.user=$ML_USER --ml.password=$ML_PASSWORD -v
+    - cd roxy && ./ml ci deploy modules --ml.ci-server=$ML_HOST --ml.app-port=$ML_APP_PORT --ml.xcc-port=$ML_XCC_PORT --ml.user=$ML_USER --ml.password=$ML_PASSWORD -v
+    - npm install -g gulp && npm install && gulp --ml.user=$ML_USER --ml.password=$ML_PASSWORD --ml.port=$ML_APP_PORT --ml.host=$ML_HOST

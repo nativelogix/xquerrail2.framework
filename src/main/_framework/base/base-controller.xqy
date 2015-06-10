@@ -69,8 +69,6 @@ declare function controller:schema() {
   (
     response:set-model(controller:model()),
     response:set-body(controller:model()),
-    response:set-view("model"),
-    response:set-action("model"),
     response:flush()
   )
 };

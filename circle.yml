@@ -8,11 +8,11 @@ dependencies:
   override:
     - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASSWORD
     - docker info
-    - docker pull rlouapre/centos6-ml
+    - docker pull $ML_DOCKER_IMAGE
 
 test:
   override:
-    - docker run --name ml7 -d -p 8000:8000 -p 8001:8001 -p 8002:8002 -p $ML_APP_PORT:$ML_APP_PORT -p $ML_XCC_PORT:$ML_XCC_PORT rlouapre/centos6-ml
+    - docker run --name ml7 -d -p 8000:8000 -p 8001:8001 -p 8002:8002 -p $ML_APP_PORT:$ML_APP_PORT -p $ML_XCC_PORT:$ML_XCC_PORT $ML_DOCKER_IMAGE
     - sleep 5
     - chmod 755 ./.circle/bootstrap.sh
     - ./.circle/bootstrap.sh

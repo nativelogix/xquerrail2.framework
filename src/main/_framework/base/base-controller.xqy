@@ -66,11 +66,9 @@ declare function controller:model()
  : Action returns the model as an endpoint representing the schema
  :)
 declare function controller:schema() {
-  (
-    response:set-model(controller:model()),
-    response:set-body(controller:model()),
-    response:flush()
-  )
+  response:set-model(controller:model()),
+  response:set-body(controller:model()),
+  response:flush()
 };
 
 (:~
@@ -105,6 +103,7 @@ declare function controller:invoke($action)
          else if($action eq "patch")  then xdmp:apply(xdmp:function(xs:QName("controller:patch")))
          else if($action eq "post")   then xdmp:apply(xdmp:function(xs:QName("controller:post")))
          else if($action eq "binary") then xdmp:apply(xdmp:function(xs:QName("controller:binary")))
+         else if($action eq "schema") then xdmp:apply(xdmp:function(xs:QName("controller:schema")))
          (:HTML:)
          else if($action eq "index")  then xdmp:apply(xdmp:function(xs:QName("controller:index")))
          else if($action eq "new")    then xdmp:apply(xdmp:function(xs:QName("controller:new")))

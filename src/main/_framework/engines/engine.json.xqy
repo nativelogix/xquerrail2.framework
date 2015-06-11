@@ -57,12 +57,12 @@ declare function json-engine:initialize($_request,$_response) {
   return json-engine:render()
 };
 
-declare function json-engine:get-view-uri($response) {
+(:declare function json-engine:get-view-uri($response) {
   if(response:base()) then
     fn:concat("../base/views/base.",response:action(),".json.xqy")
   else
     fn:concat("/",request:application(),"/views/", request:controller(),"/",request:controller(), ".", response:view(),".json.xqy")
-};
+};:)
 
 declare function json-engine:render-array(
   $model as element(domain:model)*,

@@ -115,14 +115,6 @@ declare function dispatcher:get-controller-action(
 };
 
 (:~
- : Checks whether the given view exists in modules database or on filesystem location
- :)
-declare function dispatcher:view-exists($view-uri as xs:string) as xs:boolean
-{
-	module:resource-exists($view-uri)
-};
-
-(:~
  :  Returns an errorcode for a given response/request.
  :  If defined the routing will use the application error handler
  :  or if not will use the framework internal one.
@@ -268,14 +260,10 @@ declare function dispatcher:invoke-response(
   let $action := request:action()[1]
   let $format := request:format()[1]
   let $debug  := request:debug()[1]
-  let $view-uri := fn:concat("/",$application,"/views/",$controller,"/",$controller,".",$action,".",$format,".xqy")
   return (
     if(response:set-response($response,$request)) then (
-      (: Provides the view if exists :)
-      if(dispatcher:view-exists($view-uri)) then
-        if(response:view()) then
-          ()
-        else (response:set-view($action))
+      if (fn:not(response:view()) and fn:exists($action)) then
+        response:set-view($action)
       else
         ()
       ,
@@ -286,10 +274,7 @@ declare function dispatcher:invoke-response(
       )
       else
         let $engine := engine:supported-engine($request, $response)
-        let $_ :=
-        if(fn:not(dispatcher:view-exists($view-uri)))
-          then response:set-base(fn:true())
-          else ()
+        let $_ := response:set-base(fn:true())
         return engine:initialize($engine, $request, $response)
     )
     else

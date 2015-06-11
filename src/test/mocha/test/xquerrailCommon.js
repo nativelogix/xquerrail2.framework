@@ -144,14 +144,18 @@ var xquerrailCommon = (function(){
   };
 
   function parseError(body) {
-    return {
-      name: body.error.name,
-      code: body.error.code,
-      message: body.error.message,
-      description: body.error['format_string'],
-      data: body.error.data,
-      stack: body.error.stack
-    }
+    // if (body.error) {
+      return {
+        name: body.error.name,
+        code: body.error.code,
+        message: body.error.message,
+        description: body.error['format_string'],
+        data: body.error.data,
+        stack: body.error.stack
+      }
+    // } else {
+    //   console.error(body)
+    // }
   };
 
   var create = function(model, data, callback) {

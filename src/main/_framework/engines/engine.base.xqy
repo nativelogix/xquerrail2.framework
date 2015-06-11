@@ -5,9 +5,10 @@ xquery version "1.0-ml";
  :)
 module namespace engine = "http://xquerrail.com/engine";
 
+import module namespace config = "http://xquerrail.com/config" at "../config.xqy";
+import module namespace module = "http://xquerrail.com/module" at "../module.xqy";
 import module namespace request = "http://xquerrail.com/request" at "../request.xqy";
 import module namespace response = "http://xquerrail.com/response" at "../response.xqy";
-import module namespace config = "http://xquerrail.com/config" at "../config.xqy";
 import module namespace json="http://marklogic.com/xdmp/json" at "/MarkLogic/json/json.xqy";
 
 declare namespace tag = "http://xquerrail.com/tag";
@@ -420,57 +421,66 @@ declare function engine:module-file-exists($path as xs:string) as xs:boolean
    return $exists
 };
 
-declare function engine:view-exists($view-uri as xs:string) as xs:boolean
-{
-	if (xdmp:modules-database() ne 0) then
-      let $context-uri := fn:replace(fn:concat(xdmp:modules-root(),$view-uri),"//|\\","/")
-      return
-      xdmp:eval('declare variable $uri external; fn:doc-available($uri)',
-      (fn:QName("","uri"),$context-uri),
-         <options xmlns="xdmp:eval">
-            <database>{xdmp:modules-database()}</database>
-         </options>
-      )
-	else
-		xdmp:uri-is-file($view-uri)
+declare function engine:view-exists(
+  $view-uri as xs:string
+) as xs:boolean {
+	module:resource-exists($view-uri)
 };
-declare function engine:view-uri($controller,$action) {
-  engine:view-uri($controller,$action,config:default-format())
-};
-(:~
- : Returns a view URI based on a controller/action
- :)
-declare function engine:view-uri($controller,$action,$format)
-{
-   engine:view-uri($controller,$action,$format,fn:true())
-};
-(:~
- : Returns a view URI based on a controller/action
- :)
-declare function engine:view-uri($controller,$action,$format,$checked as xs:boolean)
-{
 
-  let $view-uri := engine:normalize-uri(fn:concat(config:application-directory(response:application()),"/views/",$controller,"/",$controller,".",$action,".",$format,".xqy"))
-  let $final-view-uri :=
-  if(engine:view-exists($view-uri))
-  then $view-uri
-  else
-    let $base-view-uri := engine:normalize-uri(fn:concat(config:base-view-directory(), "/base.", $action, ".",$format, ".xqy"))
-    return
-      if(engine:view-exists($base-view-uri)) then
-         $base-view-uri
-      else
-        let $framework-view-uri := engine:normalize-uri(fn:concat(config:default-view-directory(), "/base.", $action, ".",$format, ".xqy"))
-        return
-            if(engine:view-exists($framework-view-uri)) then $framework-view-uri
-            else if($checked) then
-                fn:error(xs:QName("ERROR"),"View Does not exist",$base-view-uri)
-           else ()
-    return (
-        xdmp:log(("final-view-uri::",$final-view-uri),"fine"),
-        $final-view-uri
-       )
+declare function engine:view-uri(
+  $controller, 
+  $action
+) as xs:string? {
+  engine:view-uri($controller, $action, config:default-format())
 };
+
+(:~
+ : Returns a view URI based on a controller/action
+ :)
+declare function engine:view-uri(
+  $controller, 
+  $action, 
+  $format
+) as xs:string? {
+   engine:view-uri($controller, $action, $format, fn:true())
+};
+
+(:~
+ : Returns a view URI based on a controller/action
+ :)
+declare function engine:view-uri(
+  $controller,
+  $action,
+  $format,
+  $checked as xs:boolean
+) as xs:string? {
+  let $action-suffix := fn:concat(".", $action, ".", $format, ".xqy")
+  let $view-uri := module:normalize-uri(fn:concat(config:application-directory(response:application()),"/views/",$controller,"/",$controller,$action-suffix))
+  let $final-view-uri :=
+    if(engine:view-exists($view-uri)) then 
+      $view-uri
+    else
+      let $_ := xdmp:log(text{"controller specific view not found", $view-uri}, "fine")
+      let $base-view-uri := module:normalize-uri(fn:concat(config:base-view-directory(), "/base", $action-suffix))
+      return
+        if(engine:view-exists($base-view-uri)) then
+           $base-view-uri
+        else
+          let $_ := xdmp:log(text{"application base view not found", $base-view-uri}, "fine")
+          let $framework-view-uri := module:normalize-uri(fn:concat(config:default-view-directory(), "/base", $action-suffix))
+          return
+              if(engine:view-exists($framework-view-uri)) then 
+                $framework-view-uri
+              else if($checked) then
+                fn:error(xs:QName("ERROR"),"View Does not exist",$base-view-uri)
+             else 
+                xdmp:log(text{"framework base view not found", $framework-view-uri}, "fine")
+  return (
+    xdmp:log(("final-view-uri::",$final-view-uri),"fine"),
+    $final-view-uri
+  )
+};
+
 declare function engine:render-template($response)
 {
     let $template-uri :=
@@ -507,14 +517,13 @@ declare function engine:render-partial($response)
 (:Documentation:)
 declare function engine:render-view()
 {
-    let $view-uri := engine:view-uri(fn:data(response:controller()),fn:data((response:view(),response:action())[1]),fn:data(response:format()))
-    return
-    if($view-uri and engine:view-exists($view-uri))
-    then
-         for $n in xdmp:invoke($view-uri,(xs:QName("response"),response:response() ))
-         return
-           engine:transform($n)
-    else fn:error(xs:QName("VIEW-NOT-EXISTS"),"View does not exist ",($view-uri))
+  let $view-uri := engine:view-uri(fn:data(response:controller()),fn:data((response:view(),response:action())[1]),fn:data(response:format()))
+  return
+    if(fn:exists($view-uri)) then
+      for $n in xdmp:invoke($view-uri,(xs:QName("response"),response:response() ))
+      return engine:transform($n)
+    else 
+      fn:error(xs:QName("VIEW-NOT-EXISTS"),"View does not exist ",($view-uri))
 };
 
 declare function engine:transform-template($node)
@@ -648,32 +657,3 @@ declare function engine:transform($node as item())
      )
 };
 
-(:~
- : Takes a sequence of parts and builds a uri normalizing out repeating slashes
- : @param $parts URI Parts to join
- :)
-declare function engine:normalize-uri(
-  $parts as xs:string*
-) as xs:string {
-   engine:normalize-uri($parts,"")
- };
-(:~
- : Takes a sequence of parts and builds a uri normalizing out repeating slashes
- : @param $parts URI Parts to join
- : @param $base Base path to attach to
-~:)
-declare function engine:normalize-uri(
-  $parts as xs:string*,
-  $base as xs:string
-) as xs:string {
-  let $uri :=
-    fn:string-join(
-        fn:tokenize(
-          fn:string-join($parts ! fn:normalize-space(fn:data(.)),"/"),"/+")
-    ,"/")
-  let $final := fn:concat($base,$uri)
-  return
-     if(fn:matches($final,"^(http(s)?://|/)"))
-     then $final
-     else "/" || $final
-};

@@ -416,9 +416,12 @@ declare function config:default-view-directory() {
  : th
  :)
 declare function config:base-view-directory() as xs:string {
-  let $dir :=  xs:string(config:get-config()/config:base-view-directory/@value)
+  let $dir := xs:string(config:get-config()/config:base-view-directory/@value)
   return
-    if ($dir) then $dir else config:default-view-directory()
+    if ($dir) then
+      $dir
+    else
+      fn:concat(config:application-views-path(config:default-application()), "base")
 };
 
 (:~
@@ -863,19 +866,3 @@ declare function config:attribute-prefix() as xs:string {
   "@"
   )[1]
 };
-
-declare function config:module-exists(
-  $uri as xs:string
-) as xs:boolean {
-  if(xdmp:modules-database() = 0) then
-    xdmp:uri-is-file($uri)
-  else
-    xdmp:eval(
-      "fn:doc-available('" || $uri || "')",
-      (),
-      <options xmlns="xdmp:eval">
-        <database>{xdmp:modules-database()}</database>
-      </options>
-    )
-};
-

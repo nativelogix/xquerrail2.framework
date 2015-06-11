@@ -3,8 +3,8 @@ module namespace test = "http://github.com/robwhitby/xray/test";
 import module namespace assert = "http://github.com/robwhitby/xray/assertions" at "/xray/src/assertions.xqy";
 
 import module namespace setup = "http://xquerrail.com/test/setup" at "../../../test/_framework/setup.xqy";
-import module namespace app = "http://xquerrail.com/application" at "../../../main/_framework/application.xqy";
-import module namespace config = "http://xquerrail.com/config" at "../../../main/_framework/config.xqy";
+import module namespace app = "http://xquerrail.com/application" at "/main/_framework/application.xqy";
+import module namespace config = "http://xquerrail.com/config" at "/main/_framework/config.xqy";
 declare namespace domain = "http://xquerrail.com/domain";
 
 declare option xdmp:mapping "false";
@@ -73,7 +73,7 @@ declare %test:case function test-attribute-prefix() as item()*
 
 declare %test:case function test-base-view-directory() as item()*
 {
-  assert:equal(config:base-view-directory(), "/main/_framework/base/views")
+  assert:equal(config:base-view-directory(), "/test/_framework/config-test/app-test/views/base")
 };
 
 declare %test:case function test-cache-location() as item()*

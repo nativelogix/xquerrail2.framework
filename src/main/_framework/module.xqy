@@ -24,3 +24,32 @@ declare function module:resource-exists(
     xdmp:uri-is-file($uri)
 };
 
+(:~
+ : Takes a sequence of parts and builds a uri normalizing out repeating slashes
+ : @param $parts URI Parts to join
+ :)
+declare function module:normalize-uri(
+  $parts as xs:string*
+) as xs:string {
+   module:normalize-uri($parts,"")
+ };
+(:~
+ : Takes a sequence of parts and builds a uri normalizing out repeating slashes
+ : @param $parts URI Parts to join
+ : @param $base Base path to attach to
+~:)
+declare function module:normalize-uri(
+  $parts as xs:string*,
+  $base as xs:string
+) as xs:string {
+  let $uri :=
+    fn:string-join(
+        fn:tokenize(
+          fn:string-join($parts ! fn:normalize-space(fn:data(.)),"/"),"/+")
+    ,"/")
+  let $final := fn:concat($base,$uri)
+  return
+     if(fn:matches($final,"^(http(s)?://|/)"))
+     then $final
+     else "/" || $final
+};

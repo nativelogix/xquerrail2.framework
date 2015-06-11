@@ -116,34 +116,22 @@ describe('Cascade delete features', function() {
 
   describe('cascade', function() {
     beforeEach(function(done) {
-      // console.time('deleteAll');
-      // deleteAll(function() {
-            // console.timeEnd('deleteAll');
-            console.time('createAll');
+      deleteAll(function() {
         createAll('parent-model', parents, function() {
-          console.timeEnd('createAll');
           createAll('child-model', children, function() {
             done();
           });
         });
-      // });
+      });
     });
 
     afterEach(function(done) {
-      console.time('deleteAll');
       deleteAll(function() {
-            console.timeEnd('deleteAll');
-            done();
+        done();
       });
 
     });
 
-    xit('should just work', function(done) {
-      _.each(children, function(child) {
-        console.dir(child);
-      });
-      done();
-    });
     it('remove - should delete parent and referenced child', function(done) {
       var parentName = parents[0].name;
       xquerrailCommon.model.remove('parent-model', {'_cascade': 'remove', 'name': parentName}, function(error, response, entity) {
@@ -156,11 +144,9 @@ describe('Cascade delete features', function() {
         _.each(referencedChildren, function (child, index) {
           xquerrailCommon.model.get('child-model', {'name': child.name}, function(error, response, entity) {
             expect(response.statusCode).to.equal(404);
-            if (referencedChildren.length === index + 1) {
-              done();
-            }
           });
         });
+        done();
       });
     });
 
@@ -176,11 +162,9 @@ describe('Cascade delete features', function() {
               _.each(child.parent, function(parent) {
                 expect(parent.text).not.to.equal(parentName);
               });
-              if (referencedChildren.length === index + 1) {
-                done();
-              }
             });
           });
+          done();
         });
       });
     });
@@ -194,14 +178,9 @@ describe('Cascade delete features', function() {
           _.each(referencedChildren, function (child, index) {
             xquerrailCommon.model.get('child-model', {'name': child.name}, function(error, response, entity) {
               expect(response.statusCode).to.equal(200);
-              if (referencedChildren.length === index + 1) {
-                xquerrailCommon.model.get('parent-model', {'name': parentName}, function(error, response, entity) {
-                  expect(response.statusCode).to.equal(200);
-                  done();
-                });
-              }
             });
           });
+          done();
         });
       });
     });

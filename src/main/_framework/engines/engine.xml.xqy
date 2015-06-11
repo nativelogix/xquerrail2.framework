@@ -83,7 +83,7 @@ declare function xml-engine:custom-transform($node as item())
 declare function xml-engine:render()
 {
   if (fn:empty(response:body()) and fn:empty(response:response-code())) then
-    response:set-response-code(404, "Resounce not found")
+    response:set-response-code(404, "Resource not found")
   else (
     (:Set the response content type:)
     if (fn:empty(response:content-type())) then

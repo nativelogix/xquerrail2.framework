@@ -154,7 +154,7 @@ declare function json-engine:custom-transform($node as item())
 declare function json-engine:render()
 {
   if (fn:empty(response:body()) and fn:empty(response:response-code())) then
-    response:set-response-code(404, "Resounce not found")
+    response:set-response-code(404, "Resource not found")
   else
   (
     (:Set the response content type:)

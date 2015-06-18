@@ -40,31 +40,39 @@ var children = [
 ];
 
 var deleteAll = function(callback) {
+  // console.time('deleteAll');
   xquerrailCommon.model.removeAll('parent-model', function(error, response) {
     expect(response.statusCode).to.equal(204);
     xquerrailCommon.model.removeAll('child-model', function(error, response) {
       expect(response.statusCode).to.equal(204);
+      // console.timeEnd('deleteAll');
       callback()
     });
   });
 };
 
 var createAll = function(model, items, callback) {
+  // console.time('createAll-'+model);
   _.each(items, function(item, index) {
     xquerrailCommon.model.create(model, item, function(error, response, entity) {
       if (items.length === index + 1) {
+        // console.timeEnd('createAll-'+model);
         callback();
       }
     });
+
   });
 };
 
 describe('Cascade delete features', function() {
-
   before(function(done) {
+    // console.time('initialize');
     xquerrailCommon.initialize(function(error, response, body) {
       expect(response.statusCode).to.equal(200);
+      // console.timeEnd('initialize');
+      // console.time('login');
       xquerrailCommon.login(function(error, response, body) {
+        // console.timeEnd('login');
         deleteAll(function() {
           done();
         });
@@ -124,10 +132,10 @@ describe('Cascade delete features', function() {
             expect(response.statusCode).to.equal(200);
             _.each(child.parent, function(parent) {
               expect(parent.text).not.to.equal(parentName);
+              if (referencedChildren.length === index + 1) {
+                done();
+              }
             });
-            if (referencedChildren.length === index + 1) {
-              done();
-            }
           });
         });
       });
@@ -145,10 +153,10 @@ describe('Cascade delete features', function() {
         _.each(referencedChildren, function (child, index) {
           xquerrailCommon.model.get('child-model', {'name': child.name}, function(error, response, entity) {
             expect(response.statusCode).to.equal(200);
+            if (referencedChildren.length === index + 1) {
+              done();
+            }
           });
-          if (referencedChildren.length === index + 1) {
-            done();
-          }
         });
       });
     });

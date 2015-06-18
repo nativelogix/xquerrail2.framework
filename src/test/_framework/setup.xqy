@@ -8,6 +8,10 @@ import module namespace model = "http://xquerrail.com/model/base" at "/main/_fra
 
 declare option xdmp:mapping "false";
 
+declare function lock-for-update() {
+  xdmp:lock-for-update(xdmp:integer-to-hex(xdmp:random()))
+};
+
 declare function setup(
   $application as element(config:application)
 ) as empty-sequence() {

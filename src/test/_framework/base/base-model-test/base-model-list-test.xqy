@@ -6,6 +6,7 @@ import module namespace app = "http://xquerrail.com/application" at "/main/_fram
 import module namespace config = "http://xquerrail.com/config" at "/main/_framework/config.xqy";
 import module namespace domain = "http://xquerrail.com/domain" at "/main/_framework/domain.xqy";
 import module namespace model = "http://xquerrail.com/model/base" at "/main/_framework/base/base-model.xqy";
+import module namespace xdmp-api = "http://xquerrail.com/xdmp/api" at "/main/_framework/lib/xdmp-api.xqy";
 import module namespace setup = "http://xquerrail.com/test/setup";
 
 declare namespace model1 = "http://marklogic.com/model/model1";
@@ -541,7 +542,7 @@ declare %test:case function model-sorting-from-json-parameter-test() as item()*
   let $sorting :=
     model:sorting(
       $model,
-      xdmp:from-json('{"sortName": "BB", "sortOrder": "descending"}'),
+      xdmp-api:from-json('{"sortName": "BB", "sortOrder": "descending"}'),
       "sortName",
       "sortOrder"
   )
@@ -606,7 +607,7 @@ declare %test:case function model-sorting-from-json-parameter-multi-test() as it
   let $sorting :=
     model:sorting(
       $model,
-      xdmp:from-json('{"fields": [{"sortName": "field1", "sortOrder": "ascending"}, {"sortName": "field2", "sortOrder": "descending"}]}'),
+      xdmp-api:from-json('{"fields": [{"sortName": "field1", "sortOrder": "ascending"}, {"sortName": "field2", "sortOrder": "descending"}]}'),
       "fields.sortName",
       "fields.sortOrder"
   )
@@ -651,7 +652,7 @@ declare %test:case function model-sorting-from-json-parameter-no-param-name-test
   let $sorting :=
     model:sorting(
       $model,
-      xdmp:from-json('{"sidx": "field1", "sord": "ascending"}'),
+      xdmp-api:from-json('{"sidx": "field1", "sord": "ascending"}'),
       (),
       ()
   )

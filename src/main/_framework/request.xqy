@@ -9,6 +9,7 @@ module namespace request = "http://xquerrail.com/request";
 import module namespace mljson  = "http://marklogic.com/xdmp/json" at "/MarkLogic/json/json.xqy";
 
 import module namespace config = "http://xquerrail.com/config" at "config.xqy";
+import module namespace xdmp-api = "http://xquerrail.com/xdmp/api" at "lib/xdmp-api.xqy";
 
 declare option xdmp:mapping "false";
 
@@ -162,7 +163,7 @@ declare function request:parse($parameters, $set-format) as map:map {
                  if($j castable as xs:string and fn:not($j instance of binary()))
                  then
                     if(fn:contains($j,"\{|\}")) then
-                    let $json:= xdmp:from-json(fn:normalize-space($j))
+                    let $json:= xdmp-api:from-json(fn:normalize-space($j))
                     return
                          if($json instance of element(json))
                          then $json
@@ -186,22 +187,23 @@ declare function request:parse($parameters, $set-format) as map:map {
     let $accept-types := xdmp:uri-format($_content-type)
     let $_ := map:put($request, $CONTENT-TYPE, $_content-type)
     let $_ :=
-        if($is-multipart)
-        then (
-            map:put($request,$IS-MULTIPART,$is-multipart),
-            map:put($request,$MULTIPART-BOUNDARY,$_content-type[fn:contains(.,"boundary")]/fn:substring-after(.,"boundary="))
-        )
-        else ()
+      if($is-multipart) then
+      (
+        map:put($request,$IS-MULTIPART,$is-multipart),
+        map:put($request,$MULTIPART-BOUNDARY,$_content-type[fn:contains(.,"boundary")]/fn:substring-after(.,"boundary="))
+      )
+      else
+        ()
     let $_ :=
-         if ($_content-type = "application/json" or fn:contains($_content-type,"application/json"))
-         then
-          if(xdmp:get-request-method() = ("PUT","POST","PATCH") and fn:exists(xdmp:get-request-body()) and xdmp:get-request-body() ne "") then
-            map:put($request, $BODY, xdmp:from-json(xdmp:get-request-body())[1])
-          else
-            map:put($request, $BODY, map:new())
-         else if($_content-type  = ("application/xml","text/xml"))
-         then map:put($request, $BODY, xdmp:get-request-body("xml"))
-         else map:put($request, $BODY, xdmp:get-request-body($accept-types))
+      if ($_content-type = "application/json" or fn:contains($_content-type,"application/json")) then
+        if(xdmp:get-request-method() = ("PUT", "POST", "PATCH") and fn:exists(xdmp:get-request-body()/node())) then
+          map:put($request, $BODY, xdmp:from-json(xdmp:get-request-body())[1])
+        else
+          map:put($request, $BODY, map:new())
+      else if($_content-type  = ("application/xml", "text/xml")) then
+        map:put($request, $BODY, xdmp:get-request-body("xml"))
+      else
+        map:put($request, $BODY, xdmp:get-request-body($accept-types))
 
     let $_ :=
       if ((fn:empty(request:format()) or request:format() eq "") and fn:exists($set-format)) then
@@ -676,7 +678,7 @@ declare function request:parse-query()
  let $filters  :=
   if(request:param("_search", "false") = "true")
   then if(request:param("filters",()))
-       then xdmp:from-json(request:param($request,"filters"))
+       then xdmp-api:from-json(request:param($request,"filters"))
        else
         <item>
            <field>{request:param($request,"searchField")}</field>

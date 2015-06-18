@@ -28,9 +28,11 @@ declare variable $instance1 :=
 
 declare %test:setup function setup() as empty-sequence()
 {
-  let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION))
-  let $model1 := domain:get-model("model1")
-  let $_ := model:create($model1, $instance1, $TEST-COLLECTION)
+  let $_ := setup:setup($TEST-APPLICATION)
+  let $_ := setup:create-instances("model1", $instance1, $TEST-COLLECTION)
+  (:let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION)):)
+  (:let $model1 := domain:get-model("model1"):)
+  (:let $_ := model:create($model1, $instance1, $TEST-COLLECTION):)
   return
     ()
 };
@@ -54,6 +56,7 @@ declare %test:case function config-model-extension-test() as item()*
 };
 
 declare %test:case function build-model-extension-reference-test() {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $model2 := domain:get-model("model2")
   let $model1-instance := model:find($model1, map:new((map:entry("id", "model1-id"))))
@@ -77,6 +80,7 @@ declare %test:case function build-model-extension-reference-test() {
 };
 
 declare %test:case function build-function-model-reference-test() {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $model3 := domain:get-model("model3")
   let $model1-instance := model:find($model1, map:new((map:entry("id", "model1-id"))))

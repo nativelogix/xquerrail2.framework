@@ -9,6 +9,7 @@ import module namespace config = "http://xquerrail.com/config" at "../config.xqy
 import module namespace module = "http://xquerrail.com/module" at "../module.xqy";
 import module namespace request = "http://xquerrail.com/request" at "../request.xqy";
 import module namespace response = "http://xquerrail.com/response" at "../response.xqy";
+import module namespace xdmp-api = "http://xquerrail.com/xdmp/api" at "../lib/xdmp-api.xqy";
 import module namespace json="http://marklogic.com/xdmp/json" at "/MarkLogic/json/json.xqy";
 
 declare namespace tag = "http://xquerrail.com/tag";
@@ -428,7 +429,7 @@ declare function engine:view-exists(
 };
 
 declare function engine:view-uri(
-  $controller, 
+  $controller,
   $action
 ) as xs:string? {
   engine:view-uri($controller, $action, config:default-format())
@@ -438,8 +439,8 @@ declare function engine:view-uri(
  : Returns a view URI based on a controller/action
  :)
 declare function engine:view-uri(
-  $controller, 
-  $action, 
+  $controller,
+  $action,
   $format
 ) as xs:string? {
    engine:view-uri($controller, $action, $format, fn:true())
@@ -457,7 +458,7 @@ declare function engine:view-uri(
   let $action-suffix := fn:concat(".", $action, ".", $format, ".xqy")
   let $view-uri := module:normalize-uri(fn:concat(config:application-directory(response:application()),"/views/",$controller,"/",$controller,$action-suffix))
   let $final-view-uri :=
-    if(engine:view-exists($view-uri)) then 
+    if(engine:view-exists($view-uri)) then
       $view-uri
     else
       let $_ := xdmp:log(text{"controller specific view not found", $view-uri}, "fine")
@@ -469,11 +470,11 @@ declare function engine:view-uri(
           let $_ := xdmp:log(text{"application base view not found", $base-view-uri}, "fine")
           let $framework-view-uri := module:normalize-uri(fn:concat(config:default-view-directory(), "/base", $action-suffix))
           return
-              if(engine:view-exists($framework-view-uri)) then 
+              if(engine:view-exists($framework-view-uri)) then
                 $framework-view-uri
               else if($checked) then
                 fn:error(xs:QName("ERROR"),"View Does not exist",$base-view-uri)
-             else 
+             else
                 xdmp:log(text{"framework base view not found", $framework-view-uri}, "fine")
   return (
     xdmp:log(("final-view-uri::",$final-view-uri),"fine"),
@@ -522,7 +523,7 @@ declare function engine:render-view()
     if(fn:exists($view-uri)) then
       for $n in xdmp:invoke($view-uri,(xs:QName("response"),response:response() ))
       return engine:transform($n)
-    else 
+    else
       fn:error(xs:QName("VIEW-NOT-EXISTS"),"View does not exist ",($view-uri))
 };
 
@@ -587,8 +588,7 @@ declare function engine:transform-to-json($node) {
    let $source   := xdmp:value($_node/@source)
    let $strategy := ($_node/@strategy,"full")[1]
    let $config   := json:config($strategy)
-   return
-     xdmp:from-json(json:transform-to-json($source,$config))
+   return xdmp-api:from-json(json:transform-to-json($source,$config))
 };
 
 declare function engine:get-role-names() {

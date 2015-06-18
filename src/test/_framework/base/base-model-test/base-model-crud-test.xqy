@@ -2,11 +2,12 @@ xquery version "1.0-ml";
 module namespace test = "http://github.com/robwhitby/xray/test";
 import module namespace assert = "http://github.com/robwhitby/xray/assertions" at "/xray/src/assertions.xqy";
 
-import module namespace app = "http://xquerrail.com/application" at "../../../../main/_framework/application.xqy";
-import module namespace config = "http://xquerrail.com/config" at "../../../../main/_framework/config.xqy";
-import module namespace context = "http://xquerrail.com/context" at "../../../../main/_framework/context.xqy";
-import module namespace domain = "http://xquerrail.com/domain" at "../../../../main/_framework/domain.xqy";
-import module namespace model = "http://xquerrail.com/model/base" at "../../../../main/_framework/base/base-model.xqy";
+import module namespace app = "http://xquerrail.com/application" at "/main/_framework/application.xqy";
+import module namespace config = "http://xquerrail.com/config" at "/main/_framework/config.xqy";
+import module namespace context = "http://xquerrail.com/context" at "/main/_framework/context.xqy";
+import module namespace domain = "http://xquerrail.com/domain" at "/main/_framework/domain.xqy";
+import module namespace model = "http://xquerrail.com/model/base" at "/main/_framework/base/base-model.xqy";
+import module namespace xdmp-api = "http://xquerrail.com/xdmp/api" at "/main/_framework/lib/xdmp-api.xqy";
 import module namespace setup = "http://xquerrail.com/test/setup";
 
 declare namespace model1 = "http://marklogic.com/model/model1";
@@ -217,8 +218,8 @@ declare %test:setup function setup() {
 declare %test:teardown function teardown() {
   xdmp:invoke-function(
     function() {
-      xdmp:collection-delete($TEST-COLLECTION)
-      , xdmp:commit()
+      xdmp:collection-delete($TEST-COLLECTION),
+      xdmp:commit()
     },
     <options xmlns="xdmp:eval">
       <transaction-mode>update</transaction-mode>
@@ -338,6 +339,7 @@ declare %test:case function model-document-new-keep-identity-test() as item()*
 
 declare %test:case function model-document-new-create-keep-identity-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $random := setup:random()
   let $model1 := domain:get-model("model1")
   let $new-instance1 := model:new(
@@ -415,6 +417,7 @@ declare %test:case function model-new-container-empty-element-with-attribute-tes
 (: Require element range index for keyLabel :)
 declare %test:case function model-directory-create-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model4 := domain:get-model("model4")
   let $instance4 :=
   <model4 xmlns="http://marklogic.com/model/model4">
@@ -441,6 +444,7 @@ declare %test:case function model-directory-create-test() as item()*
 
 declare %test:case function model-document-update-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $identity-field := domain:get-model-identity-field($model1)
   let $name-field := domain:get-model-field($model1, "name")
@@ -478,6 +482,7 @@ declare %test:case function model-document-update-test() as item()*
 
 declare %test:case function model-directory-partial-update-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model4 := domain:get-model("model4")
   let $instance4 := model:find(
     $model4,
@@ -507,6 +512,7 @@ declare %test:case function model-directory-partial-update-test() as item()*
 
 declare %test:case function model-partial-update-map-empty-field-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model4 := domain:get-model("model4")
   let $instance4 := setup:eval(
     function() {
@@ -530,6 +536,7 @@ declare %test:case function model-partial-update-map-empty-field-test() as item(
 
 declare %test:case function model-partial-update-xml-empty-field-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model4 := domain:get-model("model4")
   let $instance4 := setup:eval(
     function() {
@@ -553,12 +560,13 @@ declare %test:case function model-partial-update-xml-empty-field-test() as item(
 
 declare %test:case function model-partial-update-json-empty-field-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model4 := domain:get-model("model4")
   let $instance4 := setup:eval(
     function() {
       model:update(
         $model4,
-        xdmp:from-json('{"id": "partial-update-empty-field-json-model4-id", "name": ""}'),
+        xdmp-api:from-json('{"id": "partial-update-empty-field-json-model4-id", "name": ""}'),
         (),
         fn:true()
       )
@@ -573,6 +581,7 @@ declare %test:case function model-partial-update-json-empty-field-test() as item
 
 declare %test:case function model-partial-update-map-empty-attribute-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model6 := domain:get-model("model6")
   let $instance6 := setup:eval(
     function() {
@@ -596,6 +605,7 @@ declare %test:case function model-partial-update-map-empty-attribute-test() as i
 
 declare %test:case function model-partial-update-xml-empty-attribute-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model6 := domain:get-model("model6")
   let $instance6 := setup:eval(
     function() {
@@ -617,12 +627,14 @@ declare %test:case function model-partial-update-xml-empty-attribute-test() as i
 
 declare %test:case function model-partial-update-json-empty-attribute-test() as item()*
 {
+  let $_ := setup:lock-for-update()
+  let $_ := setup:lock-for-update()
   let $model6 := domain:get-model("model6")
   let $instance6 := setup:eval(
     function() {
       model:update(
         $model6,
-        xdmp:from-json('{"' || config:attribute-prefix() || 'id": "partial-update-empty-attribute-json-model6-id", "' || config:attribute-prefix() || 'score": ""}'),
+        xdmp-api:from-json('{"' || config:attribute-prefix() || 'id": "partial-update-empty-attribute-json-model6-id", "' || config:attribute-prefix() || 'score": ""}'),
         (),
         fn:true()
       )
@@ -660,6 +672,7 @@ declare %test:case function model-partial-update-json-empty-attribute-test() as 
 :)
 declare %test:case function model-partial-update-xml-empty-array-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model15 := domain:get-model("model15")
   let $instance15 := setup:eval(
     function() {
@@ -683,12 +696,13 @@ declare %test:case function model-partial-update-xml-empty-array-test() as item(
 
 declare %test:case function model-partial-update-json-empty-array-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model15 := domain:get-model("model15")
   let $instance15 := setup:eval(
     function() {
       model:update(
         $model15,
-        xdmp:from-json('{"id": "partial-update-empty-array-json-model15-id", "groups": {"group": []}}'),
+        xdmp-api:from-json('{"id": "partial-update-empty-array-json-model15-id", "groups": {"group": []}}'),
         (),
         fn:true()
       )
@@ -726,6 +740,7 @@ declare %test:case function model-document-new-different-namespace-test() as ite
 
 declare %test:case function model-document-create-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $instance1 := setup:eval(
     function() {
@@ -750,6 +765,7 @@ declare %test:case function model-document-create-test() as item()*
 
 declare %test:case function model-document-create-from-xml-with-attribute-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model6 := domain:get-model("model6")
   let $instance6 := setup:eval(
     function() {
@@ -776,6 +792,7 @@ declare %test:case function model-document-create-from-xml-with-attribute-test()
 
 declare %test:case function model-document-create-from-map-with-attribute-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model6 := domain:get-model("model6")
   let $instance6 := setup:eval(
     function() {
@@ -804,6 +821,7 @@ declare %test:case function model-document-create-from-map-with-attribute-test()
 
 declare %test:case function model-find-by-attribute-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $id := setup:random()
   let $model6 := domain:get-model("model6")
   let $instance6 := setup:invoke(
@@ -840,6 +858,7 @@ declare %test:case function model-find-by-attribute-test() as item()*
 
 declare %test:case function model-document-create-from-xml-with-integer-attribute-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model7 := domain:get-model("model7")
   let $instance7 := setup:eval(
     function() {
@@ -867,6 +886,7 @@ declare %test:case function model-document-create-from-xml-with-integer-attribut
 
 declare %test:case function model-document-create-from-map-with-integer-attribute-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model7 := domain:get-model("model7")
   let $instance7 := setup:eval(
     function() {
@@ -895,6 +915,7 @@ declare %test:case function model-document-create-from-map-with-integer-attribut
 
 declare %test:case function model-document-create-multiple-reference-instances-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $version-model := domain:get-model("version")
   let $model10 := domain:get-model("model10")
 
@@ -939,6 +960,7 @@ declare %test:case function model-document-create-multiple-reference-instances-t
 
 declare %test:case function model-document-binary-with-directory-binary-create() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model12 := domain:get-model("model12")
   let $id := "id12-" || xdmp:random()
   let $binary := binary{ xs:hexBinary("DEADBEEF") }
@@ -966,6 +988,7 @@ declare %test:case function model-document-binary-with-directory-binary-create()
 
 declare %test:case function model-document-binary-with-file-uri-create() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model13 := domain:get-model("model13")
   let $id := "id13-" || xdmp:random()
   let $binary := binary{ xs:hexBinary("DEADBEEF") }
@@ -993,6 +1016,7 @@ declare %test:case function model-document-binary-with-file-uri-create() as item
 
 declare %test:case function model-document-binary-with-filename-content-type-create() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model13 := domain:get-model("model13")
   let $id := "id13-" || xdmp:random()
   let $text := "Testing binary Constructor"
@@ -1027,6 +1051,7 @@ declare %test:case function model-document-binary-with-filename-content-type-cre
 
 declare %test:case function model-directory-container-multiple-instance-element-with-attributes-new() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model14 := domain:get-model("model14")
   let $group-model := domain:get-model("group")
   let $id := "id14-" || xdmp:random()
@@ -1074,6 +1099,7 @@ declare %test:case function model-directory-container-multiple-instance-element-
 
 declare %test:case function model-directory-container-multiple-element-with-attributes-new() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model15 := domain:get-model("model15")
   let $id := "id15-" || xdmp:random()
   let $instance15 := setup:invoke(
@@ -1242,7 +1268,7 @@ declare %test:case function model-new-json-empty-element-occurrence-question-mar
   let $model17 := domain:get-model("model17")
   let $instance17 := model:new(
     $model17,
-    xdmp:from-json('{"@id": "model17-id", "element-question-mark": null}')
+    xdmp-api:from-json('{"@id": "model17-id", "element-question-mark": null}')
   )
   let $element-question-mark-node := domain:get-field-value-node(domain:get-model-field($model17, "element-question-mark"), $instance17)
   return (
@@ -1340,6 +1366,7 @@ declare %test:case function model-document-new-custom-user-context-test() as ite
 
 declare %test:case function model-append-new-item-container-element-with-id-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model19 := domain:get-model("model19")
   let $model-abstract2 := domain:get-model("abstract2")
   let $instance19 := model:get($model19, "model19-name-append")
@@ -1379,6 +1406,7 @@ declare %test:case function model-append-new-item-container-element-with-id-test
 
 declare %test:case function model-prepend-new-item-container-element-with-id-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model19 := domain:get-model("model19")
   let $model-abstract2 := domain:get-model("abstract2")
   let $instance19 := model:get($model19, "model19-name-prepend")
@@ -1418,6 +1446,7 @@ declare %test:case function model-prepend-new-item-container-element-with-id-tes
 
 declare %test:case function model-delete-key-label-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $key := "crud-model4-id-delete"
   let $model4 := domain:get-model("model4")
   let $result := model:delete($model4, $key)
@@ -1428,6 +1457,7 @@ declare %test:case function model-delete-key-label-test() as item()*
 
 declare %test:case function model-delete-cascade-remove-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $key := "parent-model-1"
   let $child-model := domain:get-model("child-model")
   let $parent-model := domain:get-model("parent-model")
@@ -1446,6 +1476,7 @@ declare %test:case function model-delete-cascade-remove-test() as item()*
 
 declare %test:case function model-delete-cascade-detach-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $key := "parent-model-3"
   let $child-model := domain:get-model("child-model")
   let $parent-model := domain:get-model("parent-model")
@@ -1466,6 +1497,7 @@ declare %test:case function model-delete-cascade-detach-test() as item()*
 
 declare %test:case function model-no-delete-cascade-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $key := "parent-model-2"
   let $child-model := domain:get-model("child-model")
   let $parent-model := domain:get-model("parent-model")
@@ -1487,7 +1519,7 @@ declare %test:case function model-new-json-name-attribute-test() as item()*
   let $model22 := domain:get-model("model22")
   let $instance22 := model:new(
     $model22,
-    xdmp:from-json('{"contentType": "dummy-content-type", "description": "dummy-description"}')
+    xdmp-api:from-json('{"contentType": "dummy-content-type", "description": "dummy-description"}')
   )
   let $content-type-value := domain:get-field-value(domain:get-model-field($model22, "content-type"), $instance22)
   let $my-description-value := domain:get-field-value(domain:get-model-field($model22, "MyDescription"), $instance22)
@@ -1523,7 +1555,7 @@ declare %test:case function model-new-json-default-fields-test() as item()*
   let $name := setup:random("dummy-name")
   let $instance23 := model:new(
     $model23,
-    xdmp:from-json('{"name": "'||$name||'"}')
+    xdmp-api:from-json('{"name": "'||$name||'"}')
   )
   let $comment-value := domain:get-field-value(domain:get-model-field($model23, "comment"), $instance23)
   let $description-value := domain:get-field-value(domain:get-model-field($model23, "description"), $instance23)
@@ -1536,6 +1568,7 @@ declare %test:case function model-new-json-default-fields-test() as item()*
 
 declare %test:case function model-update-default-element-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model23 := domain:get-model("model23")
   let $instance23 := model:get($model23, "model23-name-with-default")
   let $comment-value := domain:get-field-value(domain:get-model-field($model23, "comment"), $instance23)
@@ -1564,6 +1597,7 @@ declare %test:case function model-update-default-element-test() as item()*
 
 declare %test:case function model-update-default-attribute-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model23 := domain:get-model("model23")
   let $instance23 := model:get($model23, "model23-name-default-attribute")
   let $comment-value := domain:get-field-value(domain:get-model-field($model23, "comment"), $instance23)
@@ -1685,7 +1719,7 @@ declare %test:case function model-document-new-map-multi-schema-element-test() a
 declare %test:case function model-document-new-json-schema-element-test() as item()*
 {
   let $model := domain:get-model("model27")
-  let $map := xdmp:from-json('{"name": "doc3", "html": "<p xmlns=\"http://www.w3.org/1999/xhtml\">my title</p>"}')
+  let $map := xdmp-api:from-json('{"name": "doc3", "html": "<p xmlns=\"http://www.w3.org/1999/xhtml\">my title</p>"}')
   let $instance :=
     model:new(
       $model,
@@ -1706,7 +1740,7 @@ declare %test:case function model-document-new-json-schema-element-test() as ite
 declare %test:case function model-document-new-json-multi-schema-element-test() as item()*
 {
   let $model := domain:get-model("model27")
-  let $map := xdmp:from-json('{"name": "doc3", "html": "<h1 xmlns=\"http://www.w3.org/1999/xhtml\">title</h1><p xmlns=\"http://www.w3.org/1999/xhtml\">my title</p>"}')
+  let $map := xdmp-api:from-json('{"name": "doc3", "html": "<h1 xmlns=\"http://www.w3.org/1999/xhtml\">title</h1><p xmlns=\"http://www.w3.org/1999/xhtml\">my title</p>"}')
   let $instance :=
     model:new(
       $model,
@@ -1728,7 +1762,7 @@ declare %test:case function model-document-new-json-multi-schema-element-test() 
 declare %test:case function model-document-new-json-no-namespace-schema-element-test() as item()*
 {
   let $model := domain:get-model("model27")
-  let $map := xdmp:from-json('{"name": "doc3", "html": "<p>my title</p>"}')
+  let $map := xdmp-api:from-json('{"name": "doc3", "html": "<p>my title</p>"}')
   let $instance :=
     model:new(
       $model,

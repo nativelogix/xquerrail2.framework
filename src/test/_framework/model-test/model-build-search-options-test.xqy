@@ -31,8 +31,7 @@ declare variable $instance4 :=
 declare %test:setup function setup() as empty-sequence()
 {
   let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION))
-  let $model4 := domain:get-model("model4")
-  let $_ := model:create($model4, $instance4, $TEST-COLLECTION)
+  let $_ := setup:create-instances("model4", $instance4, $TEST-COLLECTION)
   return
     ()
 };

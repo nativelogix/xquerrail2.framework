@@ -4,9 +4,10 @@ module namespace test = "http://github.com/robwhitby/xray/test";
 import module namespace assert = "http://github.com/robwhitby/xray/assertions" at "/xray/src/assertions.xqy";
 
 import module namespace setup = "http://xquerrail.com/test/setup" at "../../../test/_framework/setup.xqy";
-import module namespace app = "http://xquerrail.com/application" at "../../../main/_framework/application.xqy";
-import module namespace config = "http://xquerrail.com/config" at "../../../main/_framework/config.xqy";
-import module namespace domain = "http://xquerrail.com/domain" at "../../../main/_framework/domain.xqy";
+import module namespace app = "http://xquerrail.com/application" at "/main/_framework/application.xqy";
+import module namespace config = "http://xquerrail.com/config" at "/main/_framework/config.xqy";
+import module namespace domain = "http://xquerrail.com/domain" at "/main/_framework/domain.xqy";
+import module namespace xdmp-api = "http://xquerrail.com/xdmp/api" at "/main/_framework/lib/xdmp-api.xqy";
 
 declare namespace app-test = "http://xquerrail.com/app-test";
 
@@ -267,7 +268,7 @@ declare %test:case function get-param-value-map-multi-test() as item()*
 declare %test:case function get-param-value-json-key-value-test() as item()*
 {
   let $value := "banana"
-  let $json-object := xdmp:from-json('{"fruit": "banana"}')
+  let $json-object := xdmp-api:from-json('{"fruit": "banana"}')
   return
     assert:equal(xs:string(domain:get-param-value($json-object, "fruit")), $value)
 };
@@ -275,7 +276,7 @@ declare %test:case function get-param-value-json-key-value-test() as item()*
 declare %test:case function get-param-value-json-multi-test() as item()*
 {
   let $values := ("banana", "orange")
-  let $json-array := xdmp:from-json('{"fruits": ["banana", "orange"]}')
+  let $json-array := xdmp-api:from-json('{"fruits": ["banana", "orange"]}')
   return
     assert:equal(domain:get-param-value($json-array, "fruits"), $values)
 };
@@ -333,7 +334,7 @@ declare %test:case function get-param-value-map-array-dotted-notation-test() as 
   let $sort := domain:get-param-value($params, "sort")
   let $field := domain:get-param-value($sort[1], "field")
   return (
-    assert:equal($field, "field1","sort.field[1] msut equal 'field1")
+    assert:equal($field, "field1","sort.field[1] must equal 'field1")
   )
 };
 
@@ -341,7 +342,7 @@ declare %test:case function get-param-value-json-dotted-notation-test() as item(
 {
   let $citrus := ("lemon", "orange")
   let $berries := ("strawberry", "raspberry", "blueberry")
-  let $params1 := xdmp:from-json('{"fruits": {"citrus": ["lemon", "orange"], "berry": ["strawberry", "raspberry", "blueberry"]}}')
+  let $params1 := xdmp-api:from-json('{"fruits": {"citrus": ["lemon", "orange"], "berry": ["strawberry", "raspberry", "blueberry"]}}')
   return (
     assert:equal(domain:get-param-value($params1, "fruits.citrus"), $citrus, "'fruits.citrus' must equal " || fn:string-join($citrus, ",")),
     assert:equal(domain:get-param-value($params1, "fruits.berry")[2], $berries[2], "'fruits.berry[2]' must equal " || $berries[2]),
@@ -351,11 +352,11 @@ declare %test:case function get-param-value-json-dotted-notation-test() as item(
 
 declare %test:case function get-param-value-json-array-dotted-notation-test() as item()*
 {
-  let $params2 := xdmp:from-json('{"sort": [{"field": "field1", "order": "descending"}, {"field": "field2", "order": "ascending"}]}')
+  let $params2 := xdmp-api:from-json('{"sort": [{"field": "field1", "order": "descending"}, {"field": "field2", "order": "ascending"}]}')
   let $sort := domain:get-param-value($params2, "sort")
   let $field := domain:get-param-value($sort[1], "field")
   return (
-    assert:equal($field, "field1","sort.field[1] msut equal 'field1")
+    assert:equal($field, "field1","sort.field[1] must equal 'field1")
   )
 };
 
@@ -419,7 +420,7 @@ declare %test:case function field-xml-exists-test() as item()* {
 
 declare %test:case function field-json-exists-test() as item()* {
   let $model := domain:get-model("model4")
-  let $instance := xdmp:from-json('{"@id": "", "title": "Title", "content": null}')
+  let $instance := xdmp-api:from-json('{"@id": "", "title": "Title", "content": null}')
   let $id-exists := domain:field-json-exists(
     domain:get-model-field($model, "id"),
     $instance
@@ -530,7 +531,6 @@ declare %test:case function build-field-xpath-from-model-with-container-test() a
       domain:get-field-xpath($model9-nested10-field),
       domain:get-field-xpath($model10-name-field)
     ))
-  let $_ := xdmp:log($expected)
   return (
     assert:not-empty($model10-name-field),
     assert:not-empty($xpath),

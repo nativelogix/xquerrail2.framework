@@ -36,41 +36,18 @@ declare variable $INSTANCES6 := (
 
 declare %test:setup function setup() as empty-sequence()
 {
-  let $_ := setup:setup($TEST-APPLICATION)
-  let $model := domain:get-model("model5")
-  let $_ := for $instance in $INSTANCES5 return (
-    setup:invoke(
-      function() {
-        model:create($model, $instance, $TEST-COLLECTION)
-      }
-    )
-  )
-  let $model := domain:get-model("model6")
-  let $_ := for $instance in $INSTANCES6 return (
-    setup:invoke(
-      function() {
-        model:create($model, $instance, $TEST-COLLECTION)
-      }
-    )
-  )
-  return
-    ()
+  setup:setup($TEST-APPLICATION),
+  setup:create-instances("model5", $INSTANCES5, $TEST-COLLECTION),
+  setup:create-instances("model6", $INSTANCES6, $TEST-COLLECTION)
 };
 
 declare %test:teardown function teardown() as empty-sequence()
 {
-  xdmp:invoke-function(
-    function() {
-      xdmp:collection-delete($TEST-COLLECTION),
-      xdmp:commit()
-    },
-    <options xmlns="xdmp:eval">
-      <transaction-mode>update</transaction-mode>
-    </options>
-  )
+  setup:teardown($TEST-COLLECTION)
 };
 
 declare %test:case function build-model-extension-reference-test() {
+  let $_ := setup:lock-for-update()
   let $model5 := domain:get-model("model5")
   let $map := map:new((
       map:entry("id", setup:random("model5-id")),
@@ -90,6 +67,7 @@ declare %test:case function build-model-extension-reference-test() {
 
 declare %test:case function model-unique-constraint-element-test() as item()*
 {
+  let $_ := setup:lock-for-update()
   let $model6 := domain:get-model("model6")
   let $instance6 := model:get($model6, "model6-name-unique-constraint")
   let $comment-value := domain:get-field-value(domain:get-model-field($model6, "comment"), $instance6)
@@ -98,7 +76,6 @@ declare %test:case function model-unique-constraint-element-test() as item()*
       map:entry("name", "model6-name-unique-constraint-2"),
       map:entry("comment", fn:string($comment-value))
     ))
-  let $_ := xdmp:log($instance6-map)
   let $actual := try {
     setup:invoke(
       function() {
@@ -117,6 +94,7 @@ declare %test:case function model-unique-constraint-element-test() as item()*
 };
 
 declare %test:case function before-update-event-test() {
+  let $_ := setup:lock-for-update()
   let $model5 := domain:get-model("model5")
   let $instance := model:get($model5, "model5-id-before-update")
   let $instance := model:convert-to-map($model5, $instance)

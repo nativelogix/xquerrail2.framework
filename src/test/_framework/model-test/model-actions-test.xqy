@@ -110,6 +110,7 @@ declare %test:teardown function teardown() as empty-sequence()
 };
 
 declare %test:case function model-patch-add-operation-test() {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $description-field := domain:get-model-field($model1, "description")
   let $_ := setup:invoke(function(){model:create($model1, $instances[1], $TEST-COLLECTION)})
@@ -127,6 +128,7 @@ declare %test:case function model-patch-add-operation-test() {
 };
 
 declare %test:case function model-patch-replace-operation-test() {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $_ := setup:invoke(function(){model:create($model1, $instances[2], $TEST-COLLECTION)})
   let $current-instance := model:get($model1, "model1-patch-replace")
@@ -145,6 +147,7 @@ declare %test:case function model-patch-replace-operation-test() {
 };
 
 declare %test:case function model-patch-remove-operation-test() {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $_ := setup:invoke(function(){model:create($model1, $instances[3], $TEST-COLLECTION)})
   let $current-instance := model:get($model1, "model1-patch-remove")
@@ -161,6 +164,7 @@ declare %test:case function model-patch-remove-operation-test() {
 };
 
 declare %test:case function model-patch-remove-operation-field-not-found-test() {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $actual := try {
     let $_ := setup:invoke(function(){model:create($model1, $instances[4], $TEST-COLLECTION)})
@@ -177,6 +181,7 @@ declare %test:case function model-patch-remove-operation-field-not-found-test() 
 };
 
 declare %test:case function model-patch-operation-not-implemented-test() {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $operation := "dummy"
   let $actual := try {
@@ -194,6 +199,7 @@ declare %test:case function model-patch-operation-not-implemented-test() {
 };
 
 declare %test:case function model-patch-test-operation-successful-test() {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $_ := setup:invoke(function(){model:create($model1, $instances[6], $TEST-COLLECTION)})
   let $current-instance := model:get($model1, "model1-patch-test-successful")
@@ -209,6 +215,7 @@ declare %test:case function model-patch-test-operation-successful-test() {
 };
 
 declare %test:case function model-patch-test-operation-failed-test() {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $path := "name"
   let $value := "dummy"
@@ -228,6 +235,7 @@ declare %test:case function model-patch-test-operation-failed-test() {
 };
 
 declare %test:case function model-patch-add-operation-multi-value-test() {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $_ := setup:invoke(function(){model:create($model1, $instances[8], $TEST-COLLECTION)})
   let $current-instance := model:get($model1, "model1-patch-add-multi")
@@ -246,6 +254,7 @@ declare %test:case function model-patch-add-operation-multi-value-test() {
 };
 
 declare %test:case function model-patch-mutliple-operations-test() {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $_ := setup:invoke(function(){model:create($model1, $instances[9], $TEST-COLLECTION)})
   let $current-instance := model:get($model1, "model1-patch-mutliple-operations")
@@ -271,6 +280,7 @@ declare %test:case function model-patch-mutliple-operations-test() {
 };
 
 declare %test:case function model-patch-add-with-position-test() {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $_ := setup:invoke(function(){model:create($model1, $instances[10], $TEST-COLLECTION)})
   let $current-instance := model:get($model1, "model1-patch-add-with-position")
@@ -308,6 +318,7 @@ declare %test:case function model-patch-add-with-position-test() {
 };
 
 declare %test:case function model-patch-replace-with-position-test() {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $_ := setup:invoke(function(){model:create($model1, $instances[11], $TEST-COLLECTION)})
   let $current-instance := model:get($model1, "model1-patch-replace-with-position")
@@ -345,6 +356,7 @@ declare %test:case function model-patch-replace-with-position-test() {
 };
 
 declare %test:case function model-patch-remove-with-position-test() {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $_ := setup:invoke(function(){model:create($model1, $instances[12], $TEST-COLLECTION)})
   let $current-instance := model:get($model1, "model1-patch-remove-with-position")
@@ -379,6 +391,7 @@ declare %test:case function model-patch-remove-with-position-test() {
 };
 
 declare %test:case function model-patch-test-with-position-successful-test() {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $_ := setup:invoke(function(){model:create($model1, $instances[13], $TEST-COLLECTION)})
   let $current-instance := model:get($model1, "model1-patch-test-with-position-successful")

@@ -91,6 +91,7 @@ declare %test:teardown function teardown() {
 declare %private function model-create(
   $identity
 ) as element() {
+  setup:lock-for-update(),
   model-create($TEST-MODEL, $identity)
 };
 
@@ -98,6 +99,7 @@ declare %private function model-create(
   $model,
   $identity
 ) as element() {
+  setup:lock-for-update(),
   model:create($model, $identity, $TEST-COLLECTION)
 };
 

@@ -158,6 +158,7 @@ declare %test:case function model-new-two-reference-test() {
 };
 
 declare %test:case function model-update-two-reference-test() {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $model2 := domain:get-model("model2")
   let $model1-instance-1 := model:get($model1, "model1-id")
@@ -192,6 +193,7 @@ declare %test:case function model-update-two-reference-test() {
 };
 
 declare %test:case function build-reference-test() {
+  let $_ := setup:lock-for-update()
   let $model1 := domain:get-model("model1")
   let $model2 := domain:get-model("model2")
   let $model1-instance := model:get($model1, "model1-id")

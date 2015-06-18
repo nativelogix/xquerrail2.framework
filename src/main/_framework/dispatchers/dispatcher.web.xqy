@@ -34,7 +34,6 @@ declare option xdmp:output "method=xml";
 declare option xdmp:output "indent-untyped=yes";
 declare option xdmp:ouput "omit-xml-declaration=yes";
 declare option xdmp:update "false";
-(:declare option xdmp:transaction-mode "query";:)
 
 declare variable $CONTROLLER-EXTENSION-NAMESPACE := "http://xquerrail.com/controller/extension";
 declare variable $BASE-CONTROLLER-NAMESPACE := "http://xquerrail.com/controller/base";
@@ -372,7 +371,7 @@ let $_ := interceptor:before-request()
 return
   if(fn:normalize-space(request:redirect()) ne "" and fn:exists(request:redirect())) then  (
     xdmp:redirect-response(request:redirect()),
-    xdmp:log(xdmp:log(string-join(("dispatcher::after-request::[",request:redirect(),"]"),""),"debug"))
+    xdmp:log(string-join(("dispatcher::after-request::[",request:redirect(),"]"),""), "debug")
   )
   else
     dispatcher:process-request()

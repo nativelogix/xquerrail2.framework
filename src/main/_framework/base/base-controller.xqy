@@ -34,7 +34,7 @@ declare variable $collation := "http://marklogic.com/collation/codepoint";
 : Helper function to extract params for REST endpoint
 :)
 declare function controller:get-params() {
-  if (request:format() eq "json" and (request:method() eq "POST" or request:method() eq "PUT")) then request:body()
+  if (request:format() = ("json", "xml") and (request:method() = ("POST", "PUT"))) then request:body()
   else request:params()
 };
 
@@ -194,11 +194,14 @@ declare function controller:info() {
 declare function controller:create() {(
   let $body := request:body()
   let $params :=
-     if(fn:exists(request:body()))
-     then if($body instance of binary() and xdmp:binary-size($body) gt 0) then  request:body() else controller:get-params()
-     else controller:get-params()
-  return
-    model:create(controller:model(),$params)
+    if(fn:exists($body)) then
+      if($body instance of binary() and xdmp:binary-size($body) gt 0) then
+        $body
+      else
+        controller:get-params()
+    else
+      controller:get-params()
+  return model:create(controller:model(), $params)
 )};
 
 (:~

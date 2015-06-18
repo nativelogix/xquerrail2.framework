@@ -8,7 +8,20 @@ var request = require('request').defaults({jar: true});
 
 describe('XML CRUD features', function() {
 
-  // this.timeout(10000);
+  var create = function(model, data, callback) {
+    xquerrailCommon.model.create(
+      model,
+      data,
+      function(error, response, entity) {
+        expect(response.statusCode).to.equal(200);
+        xquerrailCommon.model.stripRoot(model, error, response, entity, function(error, response,entity) {
+          callback(entity);
+        });
+      },
+      'xml'
+    );
+  };
+
   before(function(done) {
     xquerrailCommon.initialize(function(error, response, body) {
       expect(response.statusCode).to.equal(200);
@@ -37,21 +50,24 @@ describe('XML CRUD features', function() {
   });
 
   describe('model1', function() {
-
+    var namespace;
     before(function(done) {
       xquerrailCommon.login(function() {
-        done();
+        xquerrailCommon.model.schema('model1', function(error, response, entity) {
+          namespace = entity.model.namespace;
+          done();
+        });
       });
     });
 
     it('should create and get new entity', function(done) {
       var id = xquerrailCommon.random('model1-id');
       var data = {
+        '$': {'xmlns': namespace},
         'id': id,
         'name': 'model1-name'
       };
-      xquerrailCommon.model.create('model1', data, function(error, response, entity) {
-        expect(response.statusCode).to.equal(200);
+      create('model1', data, function(entity) {
         expect(entity.id).to.equal(id);
         xquerrailCommon.model.get('model1', {'id': id}, function(error, response, entity) {
           expect(response.statusCode).to.equal(200);
@@ -64,13 +80,14 @@ describe('XML CRUD features', function() {
     it('should create and update new entity', function(done) {
       var id = xquerrailCommon.random('model1-id');
       var data = {
+        '$': {'xmlns': namespace},
         'id': id,
         'name': 'model1-name'
       };
-      xquerrailCommon.model.create('model1', data, function(error, response, entity) {
-        expect(response.statusCode).to.equal(200);
+      create('model1', data, function(entity) {
         var name = xquerrailCommon.random('model1-name-update');
         var data = {
+        '$': {'xmlns': namespace},
           'id': id,
           'name': name
         };
@@ -86,11 +103,11 @@ describe('XML CRUD features', function() {
     it('should create, delete and get entity', function(done) {
       var id = xquerrailCommon.random('model1-id');
       var data = {
+        '$': {'xmlns': namespace},
         'id': id,
         'name': 'model1-name'
       };
-      xquerrailCommon.model.create('model1', data, function(error, response, entity) {
-        expect(response.statusCode).to.equal(200);
+      create('model1', data, function(entity) {
         expect(entity.id).to.equal(id);
         xquerrailCommon.model.remove('model1', data, function(error, response, entity) {
           expect(response.statusCode).to.equal(200);

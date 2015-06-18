@@ -49,7 +49,6 @@ function validateSearch(model, response) {
 
 describe('JSON CRUD features', function() {
 
-  // this.timeout(10000);
   before(function(done) {
     xquerrailCommon.initialize(function(error, response, body) {
       expect(response.statusCode).to.equal(200);

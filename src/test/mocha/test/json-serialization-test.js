@@ -23,7 +23,6 @@ var multi = function(model, data, callback) {
 
 describe('Custom app1 features', function() {
 
-  // this.timeout(10000);
   before(function(done) {
     xquerrailCommon.initialize(function(error, response, body) {
       expect(response.statusCode).to.equal(200);
@@ -59,7 +58,7 @@ describe('Custom app1 features', function() {
       });
     });
 
-    it('should create and get new entity', function(done) {
+    it('should create and find new entity', function(done) {
       find('model1', {'name': 'model1-name'}, function(error, response, entity) {
         expect(response.statusCode).to.equal(200);
         expect(entity).to.have.property('_type');
@@ -70,7 +69,7 @@ describe('Custom app1 features', function() {
       });
     });
 
-    it('should create and get new entity', function(done) {
+    it('should create and findEmpty new entity', function(done) {
       findEmpty('model1', {'name': 'model1-name'}, function(error, response, entity) {
         expect(response.statusCode).to.equal(200);
         expect(entity).to.have.property('_type');
@@ -82,7 +81,7 @@ describe('Custom app1 features', function() {
       });
     });
 
-    it('should create and get new entity', function(done) {
+    it('should create and multi new entity', function(done) {
       multi('model1', {'tag': 'commontag'}, function(error, response, entity) {
         expect(response.statusCode).to.equal(200);
         expect(entity).to.have.property('_type');

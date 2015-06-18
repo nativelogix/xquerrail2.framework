@@ -1,11 +1,13 @@
 'use strict';
 
+var fs = require('fs');
 var path = require('path');
 var request = require('request').defaults({jar: true});
 var assert = require('chai').assert;
 var expect = require('chai').expect;
 var xml2js = require('xml2js');
-var parser = new xml2js.Parser({explicitArray: false});
+var parser = new xml2js.Parser({explicitArray: false, explicitRoot: true});
+var builder = new xml2js.Builder();
 
 var xquerrailCommon = (function(){
   var settings = {};
@@ -16,6 +18,7 @@ var xquerrailCommon = (function(){
       throw new Error();
     }
   } catch(e) {
+    console.error(e);
     console.log('Could find global ml try different location ./ml.json');
     ml = require('./ml.json');
   }
@@ -91,25 +94,48 @@ var xquerrailCommon = (function(){
     return format;
   };
 
-  function httpMethod(method, model, action, data, qs, callback, format) {
+  function httpMethod(method, model, action, data, qs, callback, format, opt) {
     format = getFormat(format);
-    var options = {
-      method: method,
-      url: xquerrailCommon.urlBase + '/' + model + '/' + action + '.' + format,
-      json: data,
-      qs: qs,
-      followRedirect: true
-    };
+    var options = opt || {};
+    if (!options.method) {
+      options.method = method;
+    }
+    if (!options.url) {
+      options.url = xquerrailCommon.urlBase + '/' + model + '/' + action + '.' + format;
+    }
+    if (!options.qs) {
+      options.qs = qs;
+    }
+    if (!options.headers) {
+      options.headers = {};
+    }
+    options.followRedirect = true;
+
+      if (format === 'json') {
+        options.headers['content-type'] = 'application/json';
+        options.json = data;
+      } else if (format === 'xml') {
+        options.headers['content-type'] = 'text/xml';
+        if (data) {
+          options.body = new xml2js.Builder({'rootName': model, 'headless': true, 'renderOpts': {}}).buildObject(data);
+        }
+      } else {
+        options.form = data;
+    }
+
     request(options, function(error, response) {
       return parseResponse(model, format, error, response, callback);
     });
   };
 
   function parseResponse(model, format, error, response, callback) {
+    var entity = response.body;
     if (format === 'xml') {
       parseXml(model, error, response, callback);
-    } else {
+    } else if (format === 'json') {
       parseJson(model, error, response, callback);
+    } else {
+      callback(error, response, entity);
     }
   };
 
@@ -144,7 +170,7 @@ var xquerrailCommon = (function(){
   };
 
   function parseError(body) {
-    // if (body.error) {
+    if (body.error) {
       return {
         name: body.error.name,
         code: body.error.code,
@@ -153,46 +179,60 @@ var xquerrailCommon = (function(){
         data: body.error.data,
         stack: body.error.stack
       }
-    // } else {
-    //   console.error(body)
-    // }
+    } else {
+      throw new Error({
+        'name': 'parseErrorException',
+        'message': 'parseError failed body does not content error property',
+        'value': body
+      });
+    }
   };
 
-  var create = function(model, data, callback) {
-    httpMethod('POST', model, 'create', data, undefined, callback);
+  var schema = function (model, callback, format, options) {
+    httpMethod('GET', model, 'schema', undefined, undefined, callback, format, options);
   };
 
-  var update = function(model, data, callback) {
-    httpMethod('POST', model, 'update', data, undefined, callback);
+  var create = function(model, data, callback, format, options) {
+    httpMethod('POST', model, 'create', data, undefined, callback, format, options);
   };
 
-  var get = function (model, data, callback) {
-    httpMethod('GET', model, 'get', undefined, data, callback);
+  var update = function(model, data, callback, format, options) {
+    httpMethod('POST', model, 'update', data, undefined, callback, format, options);
   };
 
-  var remove = function(model, data, callback) {
-    httpMethod('POST', model, 'delete', data, undefined, callback);
+  var get = function (model, data, callback, format, options) {
+    httpMethod('GET', model, 'get', undefined, data, callback, format, options);
   };
 
-  var list = function(model, data, callback) {
-    httpMethod('GET', model, 'list', undefined, data, callback);
+  var remove = function(model, data, callback, format, options) {
+    httpMethod('POST', model, 'delete', data, undefined, callback, format, options);
   };
 
-  var lookup = function(model, data, callback) {
-    httpMethod('GET', model, 'lookup', undefined, data, callback);
+  var list = function(model, data, callback, format, options) {
+    httpMethod('GET', model, 'list', undefined, data, callback, format, options);
   };
 
-  var suggest = function(model, data, callback) {
-    httpMethod('GET', model, 'suggest', undefined, data, callback);
+  var lookup = function(model, data, callback, format, options) {
+    httpMethod('GET', model, 'lookup', undefined, data, callback, format, options);
   };
 
-  var search = function(model, data, callback) {
-    httpMethod('GET', model, 'search', undefined, data, callback);
+  var suggest = function(model, data, callback, format, options) {
+    httpMethod('GET', model, 'suggest', undefined, data, callback, format, options);
   };
 
-  var removeAll = function(model, callback) {
-    httpMethod('DELETE', model, 'delete-all', undefined, undefined, callback);
+  var search = function(model, data, callback, format, options) {
+    httpMethod('GET', model, 'search', undefined, data, callback, format, options);
   };
+
+  var removeAll = function(model, callback, format, options) {
+    httpMethod('DELETE', model, 'delete-all', undefined, undefined, callback, format, options);
+  };
+
+  var stripRoot = function(model, error, response, entity, callback) {
+    entity = entity[model] || entity;
+    callback(error, response, entity);
+  };
+
 
   var model = {
     create: create,
@@ -203,7 +243,9 @@ var xquerrailCommon = (function(){
     list: list,
     lookup: lookup,
     suggest: suggest,
-    search: search
+    search: search,
+    schema: schema,
+    stripRoot: stripRoot
   };
 
   return {

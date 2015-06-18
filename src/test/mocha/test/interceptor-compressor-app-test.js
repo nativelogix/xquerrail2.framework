@@ -4,106 +4,68 @@ var xquerrailCommon = require('./xquerrailCommon');
 var _ = require('lodash');
 var assert = require('chai').assert;
 var expect = require('chai').expect;
-var request = require('request').defaults({jar: true});
-var xml2js = require('xml2js');
-
-var parser = new xml2js.Parser({explicitArray: false});
-
-function random(prefix) {
-  return ((prefix)? prefix + '-': '') + Math.floor((Math.random() * 1000000) + 1)
-};
-
-function httpGet(model, action, format, data, callback) {
-  var options = {
-    json: true,
-    method: 'POST',
-    url: xquerrailCommon.urlBase + '/' + model + '/' + action + '.' + format,
-    qs: data,
-    followRedirect: true,
-    gzip: true
-  };
-  request(options, function(error, response) {
-    return parseResponse(model, format, error, response, callback);
-  });
-};
-
-function httpPost(model, action, format, data, callback) {
-  var options = {
-    method: 'POST',
-    url: xquerrailCommon.urlBase + '/' + model + '/' + action + '.' + format,
-    followRedirect: true,
-    gzip: true
-  };
-  if (format === 'json') {
-    options.json = data;
-  } else if (format === 'xml') {
-    options.form = data;
-  } else {
-    options.form = data;
-  }
-  request(options, function(error, response, body) {
-    return parseResponse(model, format, error, response, callback);
-  });
-};
-
-function parseResponse(model, format, error, response, callback) {
-  if (response.statusCode === 500) {
-    error = parseError(response);
-  }
-  var entity = response.body;
-  if (format === 'json') {
-    callback(error, response, entity);
-  } else if (format === 'xml') {
-    parser.parseString(entity, function (err, result) {
-      entity = (result !== null && result !== undefined)?result[model]: undefined;
-      callback(error, response, entity);
-    });
-  } else {
-    callback(error, response, entity);
-  }
-};
-
-function parseError(response) {
-  return {
-    code: response.body.error.code,
-    message: response.body.error.message,
-    description: response.body.error['format_string'],
-    data: response.body.error.data,
-    stack: response.body.error.stack
-  }
-};
 
 function create(model, format, data, callback) {
-  if (format === 'html') {
-    httpPost(model, 'save', format, data, callback);
-  } else {
-    httpPost(model, 'create', format, data, callback);
-  }
-};
-
-function update(model, format, data, callback) {
-  httpPost(model, 'update', format, data, callback);
-};
-
-function get(model, format, data, callback) {
-  httpGet(model, 'get', format, data, callback);
+  xquerrailCommon.model.create(
+    model,
+    data,
+    function(error, response, entity) {
+      expect(response.statusCode).to.equal(200);
+      expect(response.headers['content-encoding']).to.equal('gzip');
+      return xquerrailCommon.model.stripRoot(model, error, response, entity, callback);
+    },
+    format,
+    {gzip: true}
+  );
 };
 
 function remove(model, format, data, callback) {
+  var done = function(error, response) {
+    expect(response.statusCode).to.equal(200);
+    if (callback) {
+      callback();
+    }
+  }
   if (format === 'html') {
-    httpPost(model, 'remove', format, data, callback);
+    xquerrailCommon.httpMethod(
+      'POST',
+      model,
+      'remove',
+      data,
+      undefined,
+      done,
+      format,
+      {gzip: true}
+    );
   } else {
-    httpPost(model, 'delete', format, data, callback);
+    xquerrailCommon.model.remove(
+      model,
+      data,
+      done,
+      format,
+      {gzip: true}
+    );
   }
 };
 
+// function stripModelRoot(model, error, response, entity, callback) {
+//   entity = entity[model] || entity;
+//   callback(error, response, entity);
+// };
+
 describe('Compress feature', function() {
 
-  // this.timeout(10000);
+  var namespace;
+
   before(function(done) {
     xquerrailCommon.initialize(function(error, response, body) {
       expect(response.statusCode).to.equal(200);
-      done();
+      xquerrailCommon.login(function() {
+        xquerrailCommon.model.schema('model1', function(error, response, entity) {
+          namespace = entity.model.namespace;
+          done();
+        });
+      });
     }, module.filename);
   });
 
@@ -111,57 +73,43 @@ describe('Compress feature', function() {
 
     it('should create and remove entity in json format', function(done) {
       xquerrailCommon.login(function(error, response, body) {
-        var id = random('json-model1-id');
+        var id = xquerrailCommon.random('json-model1-id');
         var data = {
           'id': id,
           'name': 'model1-name'
         };
         create('model1', 'json', data, function(error, response, entity) {
-          expect(response.statusCode).to.equal(200);
-          expect(response.headers['content-encoding']).to.equal('gzip');
           expect(entity.id).to.equal(id);
-          remove('model1', 'json', data, function(error, response, entity) {
-            expect(response.statusCode).to.equal(200);
-            done();
-          });
+          remove('model1', 'json', data, done);
         });
       });
     });
 
     it('should create and remove entity in xml format', function(done) {
       xquerrailCommon.login(function(error, response, body) {
-        var id = random('xml-model1-id');
+        var id = xquerrailCommon.random('xml-model1-id');
         var data = {
+          '$': {'xmlns': namespace},
           'id': id,
           'name': 'model1-name'
         };
         create('model1', 'xml', data, function(error, response, entity) {
-          expect(response.statusCode).to.equal(200);
-          expect(response.headers['content-encoding']).to.equal('gzip');
           expect(entity.id).to.equal(id);
-          remove('model1', 'xml', data, function(error, response, entity) {
-            expect(response.statusCode).to.equal(200);
-            done();
-          });
+          remove('model1', 'xml', entity, done);
         });
       });
     });
 
     it('should create and remove entity in html format', function(done) {
       xquerrailCommon.login(function(error, response, body) {
-        var id = random('html-model1-id');
+        var id = xquerrailCommon.random('html-model1-id');
         var data = {
           'id': id,
           'name': 'model1-name'
         };
         create('model1', 'json', data, function(error, response, entity) {
-          expect(response.statusCode).to.equal(200);
-          expect(response.headers['content-encoding']).to.equal('gzip');
           expect(entity.id).to.equal(id);
-          remove('model1', 'html', data, function(error, response, entity) {
-            expect(response.statusCode).to.equal(200);
-            done();
-          });
+          remove('model1', 'html', data, done);
         });
       });
     });

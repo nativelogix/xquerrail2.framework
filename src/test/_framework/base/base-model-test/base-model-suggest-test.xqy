@@ -140,7 +140,6 @@ declare %test:case function model-suggest-lastName-in-specific-document-test() a
     map:entry("_query", "name:jim6")
   ))
   let $suggest := model:suggest($model, $params)
-  let $_ := xdmp:log(("suggest for specific document", xdmp:describe($suggest, (), ())))
   return (
     assert:not-empty($suggest),
     $suggest ! (

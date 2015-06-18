@@ -68,7 +68,6 @@ declare %test:case function test-application-cache() as item()*
   let $key := "my-application-key"
   let $_ := cache:set-application-cache((), $key, $TEST-VALUE, $ANONYMOUS-USER)
   let $cache-empty := cache:is-application-cache-empty((), $ANONYMOUS-USER)
-  let $_ := xdmp:log(("xdmp:directory('http://xquerrail.com/cache/')", xdmp:directory("http://xquerrail.com/cache/")))
   let $cache-value := cache:get-application-cache((), $key, $ANONYMOUS-USER)
   let $_ := cache:remove-application-cache((), $key, $ANONYMOUS-USER)
   let $cache-value-2 := cache:get-application-cache((), $key, $ANONYMOUS-USER)

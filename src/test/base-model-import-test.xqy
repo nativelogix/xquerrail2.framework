@@ -9,7 +9,7 @@ declare namespace mdm = "http://marklogic.com/mdm";
 
 declare option xdmp:mapping "false";
 
-declare variable $TEST-DIRECTORY := "/test/program/";
+declare variable $TEST-DIRECTORY := "/test10/program/";
 
 declare variable $TEST-MODEL :=
   <model name="program" persistence="directory" label="Program" key="id" keyLabel="id" xmlns="http://xquerrail.com/domain">

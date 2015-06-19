@@ -13,7 +13,7 @@ dependencies:
 
 test:
   override:
-    - docker run -d -p 8000:8000 -p 8001:8001 -p 8002:8002 -p $ML_APP_PORT:$ML_APP_PORT -p $ML_XCC_PORT:$ML_XCC_PORT $ML7_LATEST_DOCKER_IMAGE
+    - docker run --name ml7 -d -p 8000:8000 -p 8001:8001 -p 8002:8002 -p $ML_APP_PORT:$ML_APP_PORT -p $ML_XCC_PORT:$ML_XCC_PORT $ML7_LATEST_DOCKER_IMAGE
     - sleep 5
     - chmod 755 ./.circle/bootstrap.sh
     - ./.circle/bootstrap.sh
@@ -21,8 +21,8 @@ test:
     - cd roxy && ./ml ci bootstrap --ml.ci-server=$ML_HOST --ml.app-port=$ML_APP_PORT --ml.xcc-port=$ML_XCC_PORT --ml.user=$ML_USER --ml.password=$ML_PASSWORD -v
     - cd roxy && ./ml ci deploy modules --ml.ci-server=$ML_HOST --ml.app-port=$ML_APP_PORT --ml.xcc-port=$ML_XCC_PORT --ml.user=$ML_USER --ml.password=$ML_PASSWORD -v
     - npm install -g gulp && npm install && gulp --ml.user=$ML_USER --ml.password=$ML_PASSWORD --ml.port=$ML_APP_PORT --ml.host=$ML_HOST
-    - docker stop $(docker ps -q)
-    - docker run -d -p 8000:8000 -p 8001:8001 -p 8002:8002 -p $ML_APP_PORT:$ML_APP_PORT -p $ML_XCC_PORT:$ML_XCC_PORT $ML8_LATEST_DOCKER_IMAGE
+    - docker stop ml7
+    - docker run --name ml8 -d -p 8000:8000 -p 8001:8001 -p 8002:8002 -p $ML_APP_PORT:$ML_APP_PORT -p $ML_XCC_PORT:$ML_XCC_PORT $ML8_LATEST_DOCKER_IMAGE
     - sleep 5
     - chmod 755 ./.circle/bootstrap.sh
     - ./.circle/bootstrap.sh

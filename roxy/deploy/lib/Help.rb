@@ -38,17 +38,17 @@ class Help
         test          Runs xquery unit tests against the given environment
         xqsync        Runs XQSync against the given environment
     DOC
-    
+
     help += app_specific || ''
 
     help += <<-DOC.strip_heredoc
 
       All commands can be run with -h or --help for more information.
     DOC
-    
+
     help
   end
-  
+
   def self.app_specific
     #stub
   end
@@ -164,7 +164,8 @@ class Help
       Usage: ml {env} info [options]
 
       General options:
-        -v, [--verbose]  # Verbose output
+        --format                           # Output format can be (json | xml).
+        -v, [--verbose]                    # Verbose output
 
       Displays the properties for the given environment
     DOC
@@ -373,7 +374,8 @@ class Help
 
       Runs MLCP with given command-line options agains selected environment.
       MLCP supports options files natively using the -option_file parameter.
-      The path must a relative or absolute path to a MLCP options file.
+      The path to the MLCP options file must be an absolute path or a relative
+      path from the deploy directory.
       See http://docs.marklogic.com/guide/ingestion/content-pump#chapter
 
       General options:
@@ -383,7 +385,7 @@ class Help
       Roxy applies variable substitution within option files. You may use variables like:
 
       -input_file_path
-      ${ml.data.dir}/
+      @ml.data.dir/
     DOC
   end
 
@@ -474,10 +476,10 @@ class Help
     <<-DOC.strip_heredoc
       Usage: ml {env} capture --modules-db=[name of modules database]
 		Captures the source for an existing application
-		
+
 	  modules-db: (required)
         The modules database of the application.
-	  
+
 	  ml {env} capture --app-builder=[name of Application Builder-based application]
         Captures the source and REST API configuration for an existing
         Application Builder-based application.

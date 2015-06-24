@@ -197,34 +197,22 @@ declare variable $INSTANCES24 := (
 </model24>
 );
 
-declare variable $CONFIG := ();
-
 declare %test:setup function setup() {
-  let $_ := setup:setup($TEST-APPLICATION)
-  let $_ := setup:create-instances("model1", $INSTANCES1, $TEST-COLLECTION)
-  let $_ := setup:create-instances("model4", $INSTANCES4, $TEST-COLLECTION)
-  let $_ := setup:create-instances("model5", $INSTANCES5, $TEST-COLLECTION)
-  let $_ := setup:create-instances("model6", $INSTANCES6, $TEST-COLLECTION)
-  let $_ := setup:create-instances("model15", $INSTANCES15, $TEST-COLLECTION)
-  let $_ := setup:create-instances("model19", $INSTANCES19, $TEST-COLLECTION)
-  let $_ := setup:create-instances("model23", $INSTANCES23, $TEST-COLLECTION)
-  let $_ := setup:create-instances("model24", $INSTANCES24, $TEST-COLLECTION)
-  let $_ := setup:create-instances("parent-model", $PARENT-INSTANCES, $TEST-COLLECTION)
-  let $_ := setup:create-instances("child-model", $CHILD-INSTANCES, $TEST-COLLECTION)
-  return
-    ()
+  setup:setup($TEST-APPLICATION),
+  setup:create-instances("model1", $INSTANCES1, $TEST-COLLECTION),
+  setup:create-instances("model4", $INSTANCES4, $TEST-COLLECTION),
+  setup:create-instances("model5", $INSTANCES5, $TEST-COLLECTION),
+  setup:create-instances("model6", $INSTANCES6, $TEST-COLLECTION),
+  setup:create-instances("model15", $INSTANCES15, $TEST-COLLECTION),
+  setup:create-instances("model19", $INSTANCES19, $TEST-COLLECTION),
+  setup:create-instances("model23", $INSTANCES23, $TEST-COLLECTION),
+  setup:create-instances("model24", $INSTANCES24, $TEST-COLLECTION),
+  setup:create-instances("parent-model", $PARENT-INSTANCES, $TEST-COLLECTION),
+  setup:create-instances("child-model", $CHILD-INSTANCES, $TEST-COLLECTION)
 };
 
 declare %test:teardown function teardown() {
-  xdmp:invoke-function(
-    function() {
-      xdmp:collection-delete($TEST-COLLECTION),
-      xdmp:commit()
-    },
-    <options xmlns="xdmp:eval">
-      <transaction-mode>update</transaction-mode>
-    </options>
-  )
+  setup:teardown($TEST-COLLECTION)
 };
 
 declare %test:case function model1-model2-exist-test() as item()*

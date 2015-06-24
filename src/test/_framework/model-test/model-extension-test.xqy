@@ -2,11 +2,11 @@ xquery version "1.0-ml";
 module namespace test = "http://github.com/robwhitby/xray/test";
 import module namespace assert = "http://github.com/robwhitby/xray/assertions" at "/xray/src/assertions.xqy";
 
-import module namespace setup = "http://xquerrail.com/test/setup" at "../../../test/_framework/setup.xqy";
-import module namespace app = "http://xquerrail.com/application" at "../../../main/_framework/application.xqy";
-import module namespace config = "http://xquerrail.com/config" at "../../../main/_framework/config.xqy";
-import module namespace domain = "http://xquerrail.com/domain" at "../../../main/_framework/domain.xqy";
-import module namespace model = "http://xquerrail.com/model/base" at "../../../../main/_framework/base/base-model.xqy";
+import module namespace setup = "http://xquerrail.com/test/setup" at "/test/_framework/setup.xqy";
+import module namespace app = "http://xquerrail.com/application" at "/main/_framework/application.xqy";
+import module namespace config = "http://xquerrail.com/config" at "/main/_framework/config.xqy";
+import module namespace domain = "http://xquerrail.com/domain" at "/main/_framework/domain.xqy";
+import module namespace model = "http://xquerrail.com/model/base" at "/main/_framework/base/base-model.xqy";
 
 declare option xdmp:mapping "false";
 
@@ -28,26 +28,13 @@ declare variable $instance1 :=
 
 declare %test:setup function setup() as empty-sequence()
 {
-  let $_ := setup:setup($TEST-APPLICATION)
-  let $_ := setup:create-instances("model1", $instance1, $TEST-COLLECTION)
-  (:let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION)):)
-  (:let $model1 := domain:get-model("model1"):)
-  (:let $_ := model:create($model1, $instance1, $TEST-COLLECTION):)
-  return
-    ()
+  setup:setup($TEST-APPLICATION),
+  setup:create-instances("model1", $instance1, $TEST-COLLECTION)
 };
 
 declare %test:teardown function teardown() as empty-sequence()
 {
-  xdmp:invoke-function(
-    function() {
-      xdmp:collection-delete($TEST-COLLECTION),
-      xdmp:commit()
-    },
-    <options xmlns="xdmp:eval">
-      <transaction-mode>update</transaction-mode>
-    </options>
-  )
+  setup:teardown($TEST-COLLECTION)
 };
 
 declare %test:case function config-model-extension-test() as item()*

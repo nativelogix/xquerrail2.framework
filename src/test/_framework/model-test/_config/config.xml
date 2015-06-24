@@ -1,17 +1,17 @@
-<config xmlns="http://xquerrail.com/config" 
+<config xmlns="http://xquerrail.com/config"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://xquerrail.com/domain file:..schemas/config.xsd"
+    xsi:schemaLocation="http://xquerrail.com/config https://raw.githubusercontent.com/nativelogix/xquerrail2.framework/master/src/main/_framework/schemas/config.xsd"
     >
     <!--Configurations-->
-  
+
     <routes-config resource="test-routes.xml"/>
 
-    <anonymous-user value="xquerrail2-anonymous-user"/> 
-    
+    <anonymous-user value="xquerrail2-anonymous-user"/>
+
   <default-application value="app-test"/>
-  
+
   <model-extension resource="/test/_framework/model-test/_extensions/test-model.extension.xqy"/>
-    
+
     <!--Register Your Application(s) Here-->
   <application name="app-test" namespace="http://xquerrail.com/app-test" uri="/test/_framework/model-test/app-test">
       <domain resource="domains/application-domain.xml" />
@@ -25,5 +25,5 @@
         <property name="resource-path" resource="js"/>
         <property name="css-path" resource="css"/>
         <property name="js-path"  resource="js"/>
-    </properties>    
+    </properties>
 </config>

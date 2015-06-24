@@ -70,22 +70,13 @@ declare %private function check-violations( $instance as item()*, $checks as ele
 
 declare %test:setup function setup() as empty-sequence()
 {
-  let $_ := setup:setup($TEST-APPLICATION)
-  let $_ := setup:create-instances("validate-model", $INSTANCES, $TEST-COLLECTION)
-  let $_ := setup:create-instances("validate-model2", $INSTANCE2S, $TEST-COLLECTION)
-  return ()
+  setup:setup($TEST-APPLICATION),
+  setup:create-instances("validate-model", $INSTANCES, $TEST-COLLECTION),
+  setup:create-instances("validate-model2", $INSTANCE2S, $TEST-COLLECTION)
 };
 
 declare %test:teardown function teardown() {
-  xdmp:invoke-function(
-    function() {
-      xdmp:collection-delete($TEST-COLLECTION)
-      , xdmp:commit()
-    },
-    <options xmlns="xdmp:eval">
-      <transaction-mode>update</transaction-mode>
-    </options>
-  )
+  setup:teardown($TEST-COLLECTION)
 };
 
 declare %private function model-create(

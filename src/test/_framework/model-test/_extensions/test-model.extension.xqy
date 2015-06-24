@@ -2,8 +2,8 @@ xquery version "1.0-ml";
 
 module namespace model = "http://xquerrail.com/model/extension";
 
-import module namespace base = "http://xquerrail.com/model/base" at "../../../../main/_framework/base/base-model.xqy";
-import module namespace domain = "http://xquerrail.com/domain" at "../../../../main/_framework/domain.xqy";
+import module namespace base = "http://xquerrail.com/model/base" at "/main/_framework/base/base-model.xqy";
+import module namespace domain = "http://xquerrail.com/domain" at "/main/_framework/domain.xqy";
 
 declare option xdmp:mapping "false";
 

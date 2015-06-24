@@ -5,8 +5,8 @@
   <name>pippo</name>
   <model name="model1" persistence="document" label="Model #1" extends="base" namespace-uri="http://marklogic.com/model/model1" key="uuid" keyLabel="id">
     <document root="templates">/test/model1.xml</document>
-    <element name="id" type="string" label="Id"></element> 
+    <element name="id" type="string" label="Id"></element>
     <element name="name" type="string" label="Name"/>
   </model>
-
+  <controller name="model1" model="model1" />
 </domain>

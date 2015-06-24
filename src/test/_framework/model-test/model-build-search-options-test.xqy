@@ -2,11 +2,11 @@ xquery version "1.0-ml";
 module namespace test = "http://github.com/robwhitby/xray/test";
 import module namespace assert = "http://github.com/robwhitby/xray/assertions" at "/xray/src/assertions.xqy";
 
-import module namespace setup = "http://xquerrail.com/test/setup" at "../../../test/_framework/setup.xqy";
-import module namespace app = "http://xquerrail.com/application" at "../../../main/_framework/application.xqy";
-import module namespace config = "http://xquerrail.com/config" at "../../../main/_framework/config.xqy";
-import module namespace domain = "http://xquerrail.com/domain" at "../../../main/_framework/domain.xqy";
-import module namespace model = "http://xquerrail.com/model/base" at "../../../../main/_framework/base/base-model.xqy";
+import module namespace setup = "http://xquerrail.com/test/setup" at "/test/_framework/setup.xqy";
+import module namespace app = "http://xquerrail.com/application" at "/main/_framework/application.xqy";
+import module namespace config = "http://xquerrail.com/config" at "/main/_framework/config.xqy";
+import module namespace domain = "http://xquerrail.com/domain" at "/main/_framework/domain.xqy";
+import module namespace model = "http://xquerrail.com/model/base" at "/main/_framework/base/base-model.xqy";
 import module namespace search = "http://marklogic.com/appservices/search" at "/MarkLogic/appservices/search/search.xqy";
 
 declare option xdmp:mapping "false";
@@ -30,23 +30,13 @@ declare variable $instance4 :=
 
 declare %test:setup function setup() as empty-sequence()
 {
-  let $_ := (app:reset(), app:bootstrap($TEST-APPLICATION))
-  let $_ := setup:create-instances("model4", $instance4, $TEST-COLLECTION)
-  return
-    ()
+  setup:setup($TEST-APPLICATION),
+  setup:create-instances("model4", $instance4, $TEST-COLLECTION)
 };
 
 declare %test:teardown function teardown() as empty-sequence()
 {
-  xdmp:invoke-function(
-    function() {
-      xdmp:collection-delete($TEST-COLLECTION),
-      xdmp:commit()
-    },
-    <options xmlns="xdmp:eval">
-      <transaction-mode>update</transaction-mode>
-    </options>
-  )
+  setup:teardown($TEST-COLLECTION)
 };
 
 declare %test:case function model-build-search-options-element-attribute-sort-test() {

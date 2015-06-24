@@ -4,7 +4,6 @@ module namespace test = "http://github.com/robwhitby/xray/test";
 import module namespace assert = "http://github.com/robwhitby/xray/assertions" at "/xray/src/assertions.xqy";
 
 import module namespace cache = "http://xquerrail.com/cache" at "../../../main/_framework/cache.xqy";
-(:import module namespace config = "http://xquerrail.com/config" at "../../main/_framework/config.xqy";:)
 
 declare option xdmp:mapping "false";
 
@@ -66,26 +65,28 @@ declare %test:case function test-database-cache() as item()*
 declare %test:case function test-application-cache() as item()*
 {
   let $key := "my-application-key"
-  let $_ := cache:set-application-cache((), $key, $TEST-VALUE, $ANONYMOUS-USER)
-  let $cache-empty := cache:is-application-cache-empty((), $ANONYMOUS-USER)
-  let $cache-value := cache:get-application-cache((), $key, $ANONYMOUS-USER)
-  let $_ := cache:remove-application-cache((), $key, $ANONYMOUS-USER)
-  let $cache-value-2 := cache:get-application-cache((), $key, $ANONYMOUS-USER)
+  let $cache-type := $cache:SERVER-FIELD-CACHE-LOCATION
+  let $_ := cache:set-application-cache($cache-type, $key, $TEST-VALUE, $ANONYMOUS-USER)
+  let $cache-empty := cache:is-application-cache-empty($cache-type, $key, $ANONYMOUS-USER)
+  let $cache-value := cache:get-application-cache($cache-type, $key, $ANONYMOUS-USER)
+  let $_ := cache:remove-application-cache($cache-type, $key, $ANONYMOUS-USER)
+  let $cache-value-2 := cache:get-application-cache($cache-type, $key, $ANONYMOUS-USER)
   return
   (
     assert:true($cache-value eq $TEST-VALUE),
-    assert:false($cache-empty),
+    assert:false($cache-empty, "application cache should not be empty."),
     assert:empty($cache-value-2),
-    assert:true(cache:is-application-cache-empty((), $ANONYMOUS-USER))
+    assert:true(cache:is-application-cache-empty($cache-type, $key, $ANONYMOUS-USER), "application cache must be empty")
   )
 };
 
 declare %test:case function test-config-cache() as item()*
 {
-  let $_ := cache:set-config-cache((), $TEST-VALUE, $ANONYMOUS-USER)
-  let $cache-value := cache:get-config-cache((), $ANONYMOUS-USER)
-  let $_ := cache:remove-config-cache((), $ANONYMOUS-USER)
-  let $cache-value-2 := cache:get-config-cache((), $ANONYMOUS-USER)
+  let $key := "my-config-key"
+  let $_ := cache:set-config-cache((), $key, $TEST-VALUE, $ANONYMOUS-USER)
+  let $cache-value := cache:get-config-cache((), $key, $ANONYMOUS-USER)
+  let $_ := cache:remove-config-cache((), $key, $ANONYMOUS-USER)
+  let $cache-value-2 := cache:get-config-cache((), $key, $ANONYMOUS-USER)
   return
   (
     assert:true($cache-value eq $TEST-VALUE),

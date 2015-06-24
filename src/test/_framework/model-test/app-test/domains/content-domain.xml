@@ -205,4 +205,5 @@
     <element name="lastName" type="string" />
   </model>
 
+  <controller name="programs" model="program" />
 </domain>

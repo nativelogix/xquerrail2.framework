@@ -6,6 +6,7 @@
     <!--Routing Module and Configuration-->
     <routes-config resource="routes.xml"/>
     <routes-module resource="routing.xqy"/>
+    <cache-location value="server-field"/>
 
     <controller-extension resource="/test/mocha/test/default-app-test/app/extensions/default.controller.extension.xqy"/>
 

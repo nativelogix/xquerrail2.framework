@@ -6,6 +6,7 @@
     <!--Routing Module and Configuration-->
     <routes-config resource="routes.xml"/>
     <routes-module resource="routing.xqy"/>
+    <cache-location value="server-field"/>
 
     <!--Interceptor Configuration-->
 <!--    <interceptor-config resource="interceptor.xml"/>-->

@@ -5,6 +5,7 @@
     <!--Configurations-->
 
     <routes-config resource="test-routes.xml"/>
+    <cache-location value="server-field"/>
 
     <anonymous-user value="xquerrail2-anonymous-user"/>
 

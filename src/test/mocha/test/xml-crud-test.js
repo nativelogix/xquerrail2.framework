@@ -23,10 +23,10 @@ describe('XML CRUD features', function() {
   };
 
   before(function(done) {
-    xquerrailCommon.initialize(function(error, response, body) {
+    xquerrailCommon.initialize(done/*function(error, response, body) {
       expect(response.statusCode).to.equal(200);
       done();
-    });
+    }*/);
   });
 
   describe('user not authenticated', function() {

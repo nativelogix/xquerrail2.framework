@@ -14,14 +14,29 @@ let $application :=
     fn:error(xs:QName("UNSUPPORTED-HTTP-METHOD"), text{"Unsupported HTTP method", $http-method})
 return (
   xdmp:set-response-content-type("application/xml"),
-  <domains xmlns="http://xquerrail.com/domain">
-  {config:refresh-app-cache($application)}</domains>,
-  xdmp:spawn(
-    "initialize-taskserver.xqy",
-    if (fn:exists($application)) then
-      (xs:QName("config:application"), $application)
-    else
-      (xs:QName("config:application"), <config:application/>)
+  if (xs:boolean(xdmp:get-request-field("domain-ready"))) then
+    <domains xmlns="http://xquerrail.com/domain">
+      <ready>
+      {
+        try {
+          fn:exists(config:get-domain())
+        } catch ($ex) {
+          fn:false()
+        }
+      }
+      </ready>
+    </domains>
+  else
+  (
+    <domains xmlns="http://xquerrail.com/domain">
+    {config:refresh-app-cache($application)}</domains>,
+    xdmp:spawn(
+      "initialize-taskserver.xqy",
+      if (fn:exists($application)) then
+        (xs:QName("config:application"), $application)
+      else
+        (xs:QName("config:application"), <config:application/>)
+    )
   )
 )
 

@@ -24,10 +24,10 @@ var multi = function(model, data, callback) {
 describe('Custom app1 features', function() {
 
   before(function(done) {
-    xquerrailCommon.initialize(function(error, response, body) {
+    xquerrailCommon.initialize(done/*function(error, response, body) {
       expect(response.statusCode).to.equal(200);
       done();
-    }, module.filename);
+    }*/, module.filename);
   });
 
   describe('model1', function() {
@@ -83,6 +83,10 @@ describe('Custom app1 features', function() {
 
     it('should create and multi new entity', function(done) {
       multi('model1', {'tag': 'commontag'}, function(error, response, entity) {
+        if (error) {console.dir(error);}
+        if (response.statusCode !== 200) {
+          console.dir(response.body);
+        }
         expect(response.statusCode).to.equal(200);
         expect(entity).to.have.property('_type');
         expect(entity._type).to.be.instanceof(Array);

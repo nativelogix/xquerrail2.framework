@@ -27,10 +27,10 @@ var invokeMethod = function(method, format, callback) {
 describe('Same action different methods', function() {
 
   before(function(done) {
-    xquerrailCommon.initialize(function(error, response, body) {
+    xquerrailCommon.initialize(done/*function(error, response, body) {
       expect(response.statusCode).to.equal(200);
       done();
-    });
+    }*/);
   });
 
   describe('model1', function() {

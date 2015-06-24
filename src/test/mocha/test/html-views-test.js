@@ -17,10 +17,10 @@ describe('HTML view features', function() {
 
   // this.timeout(10000);
   before(function(done) {
-    xquerrailCommon.initialize(function(error, response, body) {
+    xquerrailCommon.initialize(done/*function(error, response, body) {
       expect(response.statusCode).to.equal(200);
       done();
-    });
+    }*/);
   });
 
   describe('model3', function() {

@@ -57,7 +57,41 @@ var xquerrailCommon = (function(){
       body: getApplicationConfig(configuration)
     };
 
-    request(options, function(error, response, body) {setTimeout(function(){callback(error, response, body)}, 300)});
+    request(
+      options,
+      function(error, response, body) {
+        expect(response.statusCode).to.equal(200);
+        domainReady(callback);
+      }
+    );
+  };
+
+  function domainReady(callback) {
+    var options = {
+      method: 'GET',
+      qs: {'domain-ready': 1},
+      url: settings.urlBase + '/initialize',
+      followRedirect: true
+    };
+
+    request(
+      options,
+      function(error, response, body) {
+        expect(response.statusCode).to.equal(200);
+        parser.parseString(body, function (err, result) {
+          if (result.domains.ready === 'true') {
+            if (callback) {
+              callback();
+            }
+          } else
+            setTimeout(
+              function() {
+                console.log('Domain is not ready. Waiting 50 ms..');
+                domainReady(callback);
+              }, 50);
+        });
+      }
+    );
   };
 
   function login(callback) {

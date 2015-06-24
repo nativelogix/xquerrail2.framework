@@ -98,10 +98,10 @@ describe('Custom Interceptor features', function() {
 
   // this.timeout(10000);
   before(function(done) {
-    xquerrailCommon.initialize(function(error, response, body) {
+    xquerrailCommon.initialize(done/*function(error, response, body) {
       expect(response.statusCode).to.equal(200);
       done();
-    });
+    }*/);
   });
 
   describe('custom-interceptor-2.xqy', function() {

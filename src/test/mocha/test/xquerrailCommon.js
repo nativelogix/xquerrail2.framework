@@ -57,7 +57,7 @@ var xquerrailCommon = (function(){
       body: getApplicationConfig(configuration)
     };
 
-    request(options, function(error, response, body) {setTimeout(function(){callback(error, response, body)}, 100)});
+    request(options, function(error, response, body) {setTimeout(function(){callback(error, response, body)}, 300)});
   };
 
   function login(callback) {

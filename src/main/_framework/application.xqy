@@ -6,6 +6,7 @@ import module namespace config = "http://xquerrail.com/config" at "config.xqy";
 import module namespace cache = "http://xquerrail.com/cache" at "cache.xqy";
 
 import module namespace domain = "http://xquerrail.com/domain" at "domain.xqy";
+import module namespace module-loader = "http://xquerrail.com/module" at "module.xqy";
 
 declare namespace extension      = "http://xquerrail.com/application/extension";
 
@@ -35,11 +36,14 @@ declare function app:bootstrap($application as element(config:application)?) as 
     ()
   else
   (
-    app:set-path($application)
-    ,
+    app:set-path($application),
     for $application in config:get-applications()
-      return app:load-application(xs:string($application/@name))
-    )
+    let $application-name := fn:string($application/@name)
+      return (
+        module-loader:load-modules($application-name, fn:true()),
+        app:load-application($application-name)
+      )
+  )
 };
 
 declare %private function app:load-application(
@@ -54,6 +58,7 @@ declare %private function app:load-application(
   let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config), fn:true())
   let $domain := app:update-domain($application-name, $domain)
   let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config))
+  let $_ := module-loader:load-modules($application-name, fn:false())
   let $_ := app:custom-bootstrap($application-name)
   return $domain
 };
@@ -91,9 +96,17 @@ declare %private function app:load-config(
          <database>{xdmp:modules-database()}</database>
       </options>
       )
-  let $config := element config:config { $config/* }
-  let $_ := cache:set-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $config)
-  return $config
+
+  let $config := element config:config {
+    (:$config/namespace::*,:)
+    $config/@*,
+    $config/*
+  }
+
+  return (
+    config:set-config($config),
+    $config
+  )
 };
 
 declare %private function app:load-domain(

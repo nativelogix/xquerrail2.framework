@@ -1,6 +1,6 @@
 xquery version "1.0-ml";
 (:~
-: Model : Base for ML8
+: Base Model for MarkLogic 8
 : @author Gary Vidal
 : @version  1.0
  :)
@@ -9,13 +9,13 @@ module namespace model-impl = "http://xquerrail.com/model/base/v8";
 
 import module namespace search = "http://marklogic.com/appservices/search" at "/MarkLogic/appservices/search/search.xqy";
 
-import module namespace context = "http://xquerrail.com/context" at "../../../context.xqy";
+import module namespace context = "http://xquerrail.com/context" at "../context.xqy";
 
-import module namespace domain = "http://xquerrail.com/domain" at "../../../domain.xqy";
+import module namespace domain = "http://xquerrail.com/domain" at "../domain.xqy";
 
-import module namespace model = "http://xquerrail.com/model/base" at "../../../base/base-model.xqy";
+import module namespace model = "http://xquerrail.com/model/base" at "base-model.xqy";
 
-import module namespace config = "http://xquerrail.com/config" at "../../../config.xqy";
+import module namespace config = "http://xquerrail.com/config" at "../config.xqy";
 
 import module namespace functx = "http://www.functx.com" at "/MarkLogic/functx/functx-1.0-doc-2007-01.xqy";
 

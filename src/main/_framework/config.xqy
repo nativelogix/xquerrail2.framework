@@ -99,8 +99,8 @@ declare variable $ERROR-ROUTING-CONFIGURATION  := xs:QName("ERROR-ROUTING-CONFIG
 declare variable $ERROR-DOMAIN-CONFIGURATION   := xs:QName("ERROR-DOMAIN-CONFIGURATION");
 
 (:Cache Keys:)
-declare variable $BASE-PATH-CACHE-KEY := "__base-path__";
-declare variable $CONFIG-PATH-CACHE-KEY := "__config-path__";
+declare variable $BASE-PATH-CACHE-KEY := "base-path";
+declare variable $CONFIG-PATH-CACHE-KEY := "config-path";
 (:declare variable $CONFIG-CACHE-KEY := "http://xquerrail.com/cache/config" ;:)
 declare variable $DOMAIN-CACHE-KEY := "http://xquerrail.com/cache/domains/" ;
 declare variable $DOMAIN-CACHE-TS := "application-domains:timestamp::";
@@ -122,25 +122,27 @@ declare function config:last-commit() as xs:string {
 };
 
 declare function config:get-config() as element(config:config)? {
-  cache:get-config-cache($cache:SERVER-FIELD-CACHE-LOCATION)
+  cache:get-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, ())
+};
+
+declare function config:set-config($config as element(config:config)?) as empty-sequence() {
+  cache:set-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, (), $config)
 };
 
 declare function config:get-base-path() as xs:string? {
-  cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY)
+  cache:get-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY)
 };
 
 declare function config:set-base-path($base-path as xs:string) as empty-sequence() {
-  let $_ := cache:set-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY, $base-path)
-  return ()
+  cache:set-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY, $base-path)[0]
 };
 
 declare function config:get-config-path() as xs:string? {
-  cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)
+  cache:get-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)
 };
 
 declare function config:set-config-path($config-path as xs:string) as empty-sequence() {
-  let $_ := cache:set-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY, $config-path)
-  return ()
+  cache:set-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY, $config-path)[0]
 };
 
 (:~
@@ -168,9 +170,9 @@ declare function config:clear-cache() {
   else
     ()
   ,
-  cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION),
-  cache:remove-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY),
-  cache:remove-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)
+  cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, ()),
+  cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY),
+  cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)
 };
 
 (:~
@@ -195,7 +197,8 @@ declare function config:cache-location($config as element(config:config)) as xs:
  : Returns a list of applications from the config.xml.
  : Try to resolve the application path using @uri
  :)
-declare function config:get-applications() {
+declare function config:get-applications(
+) as element(config:application)* {
   for $application in config:get-config()/config:application
     return config:resolve-application($application)
 };
@@ -819,6 +822,14 @@ declare function config:model-uri(
 declare function config:model-extension-location(
 ) as xs:string* {
   config:model-extension()/@resource
+};
+
+declare function config:domain-extension() {
+  config:get-config()/config:domain-extension
+};
+
+declare function config:domain-extension-location() {
+  config:domain-extension()/@resource
 };
 
 (:~

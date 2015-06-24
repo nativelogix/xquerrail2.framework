@@ -6,8 +6,8 @@ xquery version "1.0-ml";
  :)
 module namespace domain-impl = "http://xquerrail.com/domain/v8";
 
-import module namespace config = "http://xquerrail.com/config" at "../../config.xqy";
-import module namespace domain = "http://xquerrail.com/domain" at "../../domain.xqy";
+import module namespace config = "http://xquerrail.com/config" at "config.xqy";
+import module namespace domain = "http://xquerrail.com/domain" at "domain.xqy";
 
 import module namespace functx = "http://www.functx.com" at "/MarkLogic/functx/functx-1.0-doc-2007-01.xqy";
 import module namespace sem = "http://marklogic.com/semantics" at "/MarkLogic/semantics.xqy";
@@ -26,8 +26,10 @@ declare function domain-impl:get-base-query(
   switch($model/@persistence)
     case "directory"
       return cts:and-query((
-        $model/domain:directory[. ne ""] ! cts:directory-query(.,"infinity")(:,:)
-        (:xdmp:plan(/*[fn:node-name(.)  eq domain:get-field-qname($model)])//*:key ! cts:term-query(.):)
+        $model/domain:directory[. ne ""] ! cts:directory-query(.,"infinity"),
+        cts:or-query((
+          xdmp:plan(/*[fn:node-name(.)  eq domain:get-field-qname($model)])//*:key ! cts:term-query(.)
+        ))
       ))
     case "document"
       return cts:document-query($model/domain:document)
@@ -48,13 +50,12 @@ declare function domain-impl:model-root-query(
   let $name := $model/@name
   let $ns := domain:get-field-namespace($model)
   let $prefix := domain:get-field-prefix($model)
-  return ()
-  (:return
-   switch($model/@persistence)
-     case "directory" return
-         xdmp:with-namespaces(domain:declared-namespaces($model),
-            xdmp:value(fn:concat("xdmp:plan(/",$prefix,":",$name,")"))/qry:final-plan//qry:key ! cts:term-query(.)
-         )
+  return switch($model/@persistence)
+    case "directory" return (:cts:or-query(( :)
+      xdmp:with-namespaces(domain:declared-namespaces($model),
+        xdmp:value(fn:concat("xdmp:plan(/",$prefix,":",$name,")"))/qry:final-plan//qry:key ! cts:term-query(.)
+      )
+    (:)):)
      case "document" return
        try{
          xdmp:with-namespaces(domain:declared-namespaces($model),
@@ -69,5 +70,5 @@ declare function domain-impl:model-root-query(
      default return
         xdmp:with-namespaces(domain:declared-namespaces($model),
             xdmp:value(fn:concat("xdmp:plan(/",$prefix,":",$name,")"))/qry:final-plan//qry:key ! cts:term-query(.)
-        ):)
+        )
 };

@@ -11,10 +11,10 @@ declare variable $DEFAULT-CACHE-USER := "anonymous";
 
 declare variable $CONFIG-CACHE-TYPE := "config" ;
 declare variable $DOMAIN-CACHE-TYPE := "domain";
-declare variable $APPLICATION-CACHE-TYPE    := "application";
+declare variable $APPLICATION-CACHE-TYPE := "application";
 
 declare variable $CACHE-BASE-KEY := "http://xquerrail.com/cache/";
-declare variable $CONFIG-CACHE-KEY := $CACHE-BASE-KEY || "config" ;
+declare variable $CONFIG-CACHE-KEY := $CACHE-BASE-KEY || "config/" ;
 declare variable $DOMAIN-CACHE-KEY := $CACHE-BASE-KEY || "domains/";
 declare variable $APPLICATION-CACHE-KEY    := $CACHE-BASE-KEY || "applications/";
 declare variable $CACHE-COLLECTION := "cache:domain";
@@ -28,7 +28,7 @@ declare variable $CACHE-PERMISSIONS := (
 
 declare variable $CACHE-MAP := map:new();
 
-declare %private function get-cache-map-type(
+declare %private function cache:get-cache-map-type(
   $type as xs:string
 ) as map:map {
   let $_ :=
@@ -39,72 +39,72 @@ declare %private function get-cache-map-type(
   return map:get($CACHE-MAP, $type)
 };
 
-declare %private function get-cache-map(
+declare %private function cache:get-cache-map(
   $type as xs:string,
   $key as xs:string
 ) {
-  let $cache := get-cache-map-type($type)
+  let $cache := cache:get-cache-map-type($type)
   return map:get($cache, $key)
 };
 
-declare %private function set-cache-map(
+declare %private function cache:set-cache-map(
   $type as xs:string,
   $key as xs:string,
   $value
 ) {
-  let $cache := get-cache-map-type($type)
+  let $cache := cache:get-cache-map-type($type)
   return map:put($cache, $key, $value)
 };
 
-declare %private function clear-cache-map(
+declare %private function cache:clear-cache-map(
   $type as xs:string,
   $key as xs:string
 ) {
-  let $cache := get-cache-map-type($type)
+  let $cache := cache:get-cache-map-type($type)
   return map:delete($cache, $key)
 };
 
-declare %private function get-cache-key($type as xs:string, $key as xs:string?) as xs:string {
+declare %private function cache:get-cache-key($type as xs:string, $key as xs:string?) as xs:string {
   switch($type)
     case $DOMAIN-CACHE-TYPE return $DOMAIN-CACHE-KEY || $key
     case $APPLICATION-CACHE-TYPE return $APPLICATION-CACHE-KEY || $key
-    case $CONFIG-CACHE-TYPE return $CONFIG-CACHE-KEY
+    case $CONFIG-CACHE-TYPE return $CONFIG-CACHE-KEY || $key
     default return fn:error(xs:QName("INVALID-CACHE-KEY"), "Invalid Cache Key", "[" || $type || "] - [" || $key || "]")
 };
 
-declare %private function validate-cache-location($type as xs:string) {
+declare %private function cache:validate-cache-location($type as xs:string) {
   switch($type)
     case $DEFAULT-CACHE-LOCATION return ()
     case $SERVER-FIELD-CACHE-LOCATION return ()
     default return fn:error(xs:QName("INVALID-CACHE-TYPE"), "Invalid Cache Type", $type)
 };
 
-declare %private function get-user-id($user as xs:string?) as xs:integer {
+declare %private function cache:get-user-id($user as xs:string?) as xs:integer {
   xdmp:user(($user, $DEFAULT-CACHE-USER)[1])
 };
 
-declare %private function cache-location($location as xs:string?) {
+declare %private function cache:cache-location($location as xs:string?) {
   ($location, $DEFAULT-CACHE-LOCATION)[1]
 };
 
-declare function set-cache($key as xs:string, $value as item()*) as empty-sequence(){
-  set-cache($DEFAULT-CACHE-LOCATION, $key, $value)
+declare function cache:set-cache($key as xs:string, $value as item()*) as empty-sequence(){
+  cache:set-cache($DEFAULT-CACHE-LOCATION, $key, $value)
 };
 
-declare function set-cache($type as xs:string, $key as xs:string, $value) as empty-sequence() {
-  set-cache($type, $key, $value, ())
+declare function cache:set-cache($type as xs:string, $key as xs:string, $value) as empty-sequence() {
+  cache:set-cache($type, $key, $value, ())
 };
 
-declare function set-cache($type as xs:string, $key as xs:string, $value, $user as xs:string?) as empty-sequence() {
-  set-cache($type, $key, $value, $user, fn:false())
+declare function cache:set-cache($type as xs:string, $key as xs:string, $value, $user as xs:string?) as empty-sequence() {
+  cache:set-cache($type, $key, $value, $user, fn:false())
 };
 
-declare function set-cache($type as xs:string, $key as xs:string, $value, $user as xs:string?, $transient as xs:boolean) as empty-sequence() {
-  let $_ := xdmp:log(text{"set-cache", $type, $key, $transient}, "finest")
-  let $_ := (
-    validate-cache-location($type)
+declare function cache:set-cache($type as xs:string, $key as xs:string, $value, $user as xs:string?, $transient as xs:boolean) as empty-sequence() {
+  xdmp:log(text{"set-cache", $type, $key, $transient}, "finest"),
+  (
+    cache:validate-cache-location($type)
     ,
-    set-cache-map($type, $key, $value)
+    cache:set-cache-map($type, $key, $value)
     ,
     if ($transient) then
       ()
@@ -132,30 +132,29 @@ declare function set-cache($type as xs:string, $key as xs:string, $value, $user 
              <user-id>{get-user-id($user)}</user-id>
             </options>
           )
-  )
-  return ()
+  )[0]
 };
 
-declare function get-cache($key as xs:string) {
-  get-cache($DEFAULT-CACHE-LOCATION, $key, ())
+declare function cache:get-cache($key as xs:string) {
+  cache:get-cache($DEFAULT-CACHE-LOCATION, $key, ())
 };
 
-declare function get-cache($type as xs:string, $key as xs:string) {
-  get-cache($type, $key, ())
+declare function cache:get-cache($type as xs:string, $key as xs:string) {
+  cache:get-cache($type, $key, ())
 };
 
-declare function get-cache($type as xs:string, $key as xs:string, $user as xs:string?) {
+declare function cache:get-cache($type as xs:string, $key as xs:string, $user as xs:string?) {
   let $_ := (
     xdmp:log((text{"get-cache", $type, $key, $user}), "finest"),
-    validate-cache-location($type)
+    cache:validate-cache-location($type)
   )
-  let $value := get-cache-map($type, $key)
-  let $value := 
+  let $value := cache:get-cache-map($type, $key)
+  let $value :=
     if (fn:exists($value)) then
       $value
     else
     (
-      let $value := 
+      let $value :=
         switch($type)
           case $SERVER-FIELD-CACHE-LOCATION
             return xdmp:get-server-field($key)
@@ -170,18 +169,18 @@ declare function get-cache($type as xs:string, $key as xs:string, $user as xs:st
                 <user-id>{get-user-id($user)}</user-id>
               </options>
             )
-      let $_ := set-cache-map($type, $key, $value)
+      let $_ := cache:set-cache-map($type, $key, $value)
       return $value
     )
   return $value
 };
 
-declare function get-cache-keys($type as xs:string, $path as xs:string) as xs:string* {
-  get-cache-keys($type, $path, ())
+declare function cache:get-cache-keys($type as xs:string, $path as xs:string) as xs:string* {
+  cache:get-cache-keys($type, $path, ())
 };
 
-declare function get-cache-keys($type as xs:string, $path as xs:string?, $user as xs:string?) as xs:string* {
-  validate-cache-location($type)
+declare function cache:get-cache-keys($type as xs:string, $path as xs:string?, $user as xs:string?) as xs:string* {
+  cache:validate-cache-location($type)
   ,
   switch($type)
     case $SERVER-FIELD-CACHE-LOCATION
@@ -199,14 +198,14 @@ declare function get-cache-keys($type as xs:string, $path as xs:string?, $user a
       )
 };
 
-declare function remove-cache($type as xs:string, $key as xs:string) as empty-sequence() {
-  remove-cache($type, $key, ())
+declare function cache:remove-cache($type as xs:string, $key as xs:string) as empty-sequence() {
+  cache:remove-cache($type, $key, ())
 };
 
-declare function remove-cache($type as xs:string, $key as xs:string, $user as xs:string?) as empty-sequence() {
-  validate-cache-location($type)
+declare function cache:remove-cache($type as xs:string, $key as xs:string, $user as xs:string?) as empty-sequence() {
+  cache:validate-cache-location($type)
   ,
-  clear-cache-map($type, $key)
+  cache:clear-cache-map($type, $key)
   ,
   switch($type)
     case $SERVER-FIELD-CACHE-LOCATION
@@ -230,18 +229,18 @@ declare function remove-cache($type as xs:string, $key as xs:string, $user as xs
       )
 };
 
-declare function clear-cache($key as xs:string) as empty-sequence() {
+declare function cache:clear-cache($key as xs:string) as empty-sequence() {
   clear-cache($DEFAULT-CACHE-LOCATION, $key, ())
 };
 
-declare function clear-cache($type as xs:string, $key as xs:string) as empty-sequence() {
+declare function cache:clear-cache($type as xs:string, $key as xs:string) as empty-sequence() {
   clear-cache($type, $key, ())
 };
 
-declare function clear-cache($type as xs:string, $key as xs:string, $user as xs:string?) as empty-sequence() {
-  validate-cache-location($type)
+declare function cache:clear-cache($type as xs:string, $key as xs:string, $user as xs:string?) as empty-sequence() {
+  cache:validate-cache-location($type)
   ,
-  clear-cache-map($type, $key)
+  cache:clear-cache-map($type, $key)
   ,
   switch($type)
     case $SERVER-FIELD-CACHE-LOCATION
@@ -263,12 +262,12 @@ declare function clear-cache($type as xs:string, $key as xs:string, $user as xs:
       )
 };
 
-declare function is-cache-empty($type as xs:string, $base-key as xs:string) as xs:boolean {
-  is-cache-empty($type, $base-key, ())
+declare function cache:is-cache-empty($type as xs:string, $base-key as xs:string) as xs:boolean {
+  cache:is-cache-empty($type, $base-key, ())
 };
 
-declare function is-cache-empty($type as xs:string, $base-key as xs:string, $user as xs:string?) as xs:boolean {
-  validate-cache-location($type)
+declare function cache:is-cache-empty($type as xs:string, $base-key as xs:string, $user as xs:string?) as xs:boolean {
+  cache:validate-cache-location($type)
   ,
   switch($type)
     case $SERVER-FIELD-CACHE-LOCATION
@@ -289,126 +288,130 @@ declare function is-cache-empty($type as xs:string, $base-key as xs:string, $use
 
 (: Application cache implementation :)
 
-declare function get-application-cache($key as xs:string) {
-  get-application-cache((), $key)
+declare function cache:get-application-cache($key as xs:string) {
+  cache:get-application-cache((), $key)
 };
 
-declare function get-application-cache($type as xs:string?, $key as xs:string) {
-  get-application-cache($type, $key, ())
+declare function cache:get-application-cache($type as xs:string?, $key as xs:string) {
+  cache:get-application-cache($type, $key, ())
 };
 
-declare function get-application-cache($type as xs:string?, $key as xs:string, $user as xs:string?) {
-  get-cache(cache-location($type), get-cache-key($APPLICATION-CACHE-TYPE, $key), $user)
+declare function cache:get-application-cache($type as xs:string?, $key as xs:string, $user as xs:string?) {
+  cache:get-cache(cache:cache-location($type), cache:get-cache-key($APPLICATION-CACHE-TYPE, $key), $user)
 };
 
-declare function set-application-cache($key as xs:string, $value) as item()* {
-  set-application-cache((), $key, $value)
+declare function cache:set-application-cache($key as xs:string, $value) as item()* {
+  cache:set-application-cache((), $key, $value)
 };
 
-declare function set-application-cache($type as xs:string?, $key as xs:string, $value) as item()* {
-  set-application-cache($type, $key, $value, ())
+declare function cache:set-application-cache($type as xs:string?, $key as xs:string, $value) as item()* {
+  cache:set-application-cache($type, $key, $value, ())
 };
 
-declare function set-application-cache($type as xs:string?, $key as xs:string, $value, $user as xs:string?) as item()* {
-  set-cache(cache-location($type), get-cache-key($APPLICATION-CACHE-TYPE, $key), $value, $user)
+declare function cache:set-application-cache($type as xs:string?, $key as xs:string, $value, $user as xs:string?) as empty-sequence() {
+  cache:set-cache(cache:cache-location($type), cache:get-cache-key($APPLICATION-CACHE-TYPE, $key), $value, $user)
 };
 
-declare function remove-application-cache($key as xs:string) as empty-sequence() {
-  remove-application-cache((), $key)
+declare function cache:remove-application-cache($key as xs:string) as empty-sequence() {
+  cache:remove-application-cache((), $key)
 };
 
-declare function remove-application-cache($type as xs:string?, $key as xs:string) as empty-sequence() {
-  remove-application-cache(cache-location($type), $key, ())
+declare function cache:remove-application-cache($type as xs:string?, $key as xs:string) as empty-sequence() {
+  cache:remove-application-cache(cache:cache-location($type), $key, ())
 };
 
-declare function remove-application-cache($type as xs:string?, $key as xs:string, $user as xs:string?) as empty-sequence() {
-  remove-cache(cache-location($type), get-cache-key($APPLICATION-CACHE-TYPE, $key), $user)
+declare function cache:remove-application-cache($type as xs:string?, $key as xs:string, $user as xs:string?) as empty-sequence() {
+  cache:remove-cache(cache:cache-location($type), cache:get-cache-key($APPLICATION-CACHE-TYPE, $key), $user)
 };
 
-declare function is-application-cache-empty() as xs:boolean {
-  is-application-cache-empty((), ())
+declare function cache:is-application-cache-empty($key as xs:string) as xs:boolean {
+  cache:is-application-cache-empty((), $key)
 };
 
-declare function is-application-cache-empty($type as xs:string?, $user as xs:string?) as xs:boolean {
-  is-cache-empty(cache-location($type), $APPLICATION-CACHE-KEY, $user)
+declare function cache:is-application-cache-empty($type as xs:string?, $key as xs:string) as xs:boolean {
+  cache:is-application-cache-empty($type, $key, ())
+};
+
+declare function cache:is-application-cache-empty($type as xs:string?, $key as xs:string, $user as xs:string?) as xs:boolean {
+  cache:is-cache-empty(cache:cache-location($type), cache:get-cache-key($APPLICATION-CACHE-TYPE, $key), $user)
 };
 
 (: Domain cache implementation :)
 
-declare function get-domain-cache($key as xs:string) {
-  get-domain-cache((), $key)
+declare function cache:get-domain-cache($key as xs:string) {
+  cache:get-domain-cache((), $key)
 };
 
-declare function get-domain-cache($type as xs:string?, $key as xs:string) {
-  get-domain-cache($type, $key, ())
+declare function cache:get-domain-cache($type as xs:string?, $key as xs:string) {
+  cache:get-domain-cache($type, $key, ())
 };
 
-declare function get-domain-cache($type as xs:string?, $key as xs:string, $user as xs:string?) {
-  get-cache(cache-location($type), get-cache-key($DOMAIN-CACHE-TYPE, $key), $user)
+declare function cache:get-domain-cache($type as xs:string?, $key as xs:string, $user as xs:string?) {
+  cache:get-cache(cache:cache-location($type), cache:get-cache-key($DOMAIN-CACHE-TYPE, $key), $user)
 };
 
-declare function set-domain-cache($key as xs:string, $value) as empty-sequence() {
-  set-domain-cache((), $key, $value)
+declare function cache:set-domain-cache($key as xs:string, $value) as empty-sequence() {
+  cache:set-domain-cache((), $key, $value)
 };
 
-declare function set-domain-cache($type as xs:string?, $key as xs:string, $value) as empty-sequence() {
-  set-domain-cache($type, $key, $value, ())
+declare function cache:set-domain-cache($type as xs:string?, $key as xs:string, $value) as empty-sequence() {
+  cache:set-domain-cache($type, $key, $value, ())
 };
 
-declare function set-domain-cache($type as xs:string?, $key as xs:string, $value, $user as xs:string?) as empty-sequence() {
-  set-domain-cache($type, $key, $value, $user, fn:false())
+declare function cache:set-domain-cache($type as xs:string?, $key as xs:string, $value, $user as xs:string?) as empty-sequence() {
+  cache:set-domain-cache($type, $key, $value, $user, fn:false())
 };
 
-declare function set-domain-cache($type as xs:string?, $key as xs:string, $value, $user as xs:string?, $transient as xs:boolean) as empty-sequence() {
-  set-cache(cache-location($type), get-cache-key($DOMAIN-CACHE-TYPE, $key), $value, $user, $transient)
+declare function cache:set-domain-cache($type as xs:string?, $key as xs:string, $value, $user as xs:string?, $transient as xs:boolean) as empty-sequence() {
+  cache:set-cache(cache:cache-location($type), cache:get-cache-key($DOMAIN-CACHE-TYPE, $key), $value, $user, $transient)
 };
 
-declare function remove-domain-cache($key as xs:string) as empty-sequence() {
-  remove-domain-cache($DEFAULT-CACHE-LOCATION, $key)
+declare function cache:remove-domain-cache($key as xs:string) as empty-sequence() {
+  cache:remove-domain-cache($DEFAULT-CACHE-LOCATION, $key)
 };
 
-declare function remove-domain-cache($type as xs:string, $key as xs:string) as empty-sequence() {
-  remove-domain-cache($type, $key, ())
+declare function cache:remove-domain-cache($type as xs:string, $key as xs:string) as empty-sequence() {
+  cache:remove-domain-cache($type, $key, ())
 };
 
-declare function remove-domain-cache($type as xs:string?, $key as xs:string, $user as xs:string?) as empty-sequence() {
-  remove-cache(cache-location($type), get-cache-key($DOMAIN-CACHE-TYPE, $key), $user)
+declare function cache:remove-domain-cache($type as xs:string?, $key as xs:string, $user as xs:string?) as empty-sequence() {
+  cache:remove-cache(cache:cache-location($type), cache:get-cache-key($DOMAIN-CACHE-TYPE, $key), $user)
 };
 
 (: Config cache implementation :)
 
-declare function get-config-cache() {
-  get-config-cache(())
+declare function cache:get-config-cache($key as xs:string) {
+  cache:get-config-cache((), $key)
 };
 
-declare function get-config-cache($type as xs:string?) {
-  get-config-cache($type, ())
+declare function cache:get-config-cache($type as xs:string?, $key as xs:string?) {
+  cache:get-config-cache($type, $key, ())
 };
 
-declare function get-config-cache($type as xs:string?, $user as xs:string?) {
-  get-cache(cache-location($type), get-cache-key($CONFIG-CACHE-TYPE, ()), $user)
+declare function cache:get-config-cache($type as xs:string?, $key as xs:string?, $user as xs:string?) {
+  cache:get-cache(cache:cache-location($type), cache:get-cache-key($CONFIG-CACHE-TYPE, $key), $user)
 };
 
-declare function set-config-cache($value) as item()* {
-  set-config-cache((), $value)
+declare function cache:set-config-cache($key as xs:string?, $value) as empty-sequence() {
+  cache:set-config-cache((), $key, $value)
 };
 
-declare function set-config-cache($type as xs:string?, $value) as item()* {
-  set-config-cache($type, $value, ())
+declare function cache:set-config-cache($type as xs:string?, $key as xs:string?, $value) as empty-sequence() {
+  cache:set-config-cache($type, $key, $value, ())
 };
 
-declare function set-config-cache($type as xs:string?, $value, $user as xs:string?) as item()* {
-  set-cache(cache-location($type), get-cache-key($CONFIG-CACHE-TYPE, ()), $value, $user)
+declare function cache:set-config-cache($type as xs:string?, $key as xs:string?, $value, $user as xs:string?) as empty-sequence() {
+  cache:set-cache(cache:cache-location($type), cache:get-cache-key($CONFIG-CACHE-TYPE, $key), $value, $user)
 };
 
-declare function remove-config-cache() as empty-sequence() {
-  remove-config-cache($DEFAULT-CACHE-LOCATION)
+declare function cache:remove-config-cache($key as xs:string?) as empty-sequence() {
+  cache:remove-config-cache($DEFAULT-CACHE-LOCATION)
 };
 
-declare function remove-config-cache($type as xs:string) as empty-sequence() {
-  remove-config-cache($type, ())
+declare function cache:remove-config-cache($type as xs:string, $key as xs:string?) as empty-sequence() {
+  cache:remove-config-cache($type, $key, ())
 };
 
-declare function remove-config-cache($type as xs:string?, $user as xs:string?) as empty-sequence() {
-  remove-cache(cache-location($type), get-cache-key($CONFIG-CACHE-TYPE, ()), $user)
+declare function cache:remove-config-cache($type as xs:string?, $key as xs:string?, $user as xs:string?) as empty-sequence() {
+  cache:remove-cache(cache:cache-location($type), cache:get-cache-key($CONFIG-CACHE-TYPE, $key), $user)
 };

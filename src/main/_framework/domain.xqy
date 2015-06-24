@@ -7,8 +7,7 @@ xquery version "1.0-ml";
 module namespace domain = "http://xquerrail.com/domain";
 
 import module namespace config = "http://xquerrail.com/config" at "config.xqy";
-
-import module namespace module = "http://xquerrail.com/module" at "module.xqy";
+import module namespace module-loader = "http://xquerrail.com/module" at "module.xqy";
 
 import module namespace functx = "http://www.functx.com" at "/MarkLogic/functx/functx-1.0-doc-2007-01.xqy";
 import module namespace sem = "http://marklogic.com/semantics" at "/MarkLogic/semantics.xqy";
@@ -20,20 +19,43 @@ declare option xdmp:mapping "false";
 declare variable $FUNCTIONS-CACHE := map:map();
 declare variable $FUNCTION-KEYS := "$FUNCTION-KEYS$";
 declare variable $UNDEFINED-FUNCTION := "$UNDEFINED-FUNCTION$";
+declare variable $CONTROLLER-EXTENSION-NAMESPACE := "http://xquerrail.com/controller/extension";
+declare variable $DOMAIN-EXTENSION-NAMESPACE := "http://xquerrail.com/domain/extension";
+declare variable $MODEL-EXTENSION-NAMESPACE := "http://xquerrail.com/model/extension";
+
+declare %config:module-location function domain:module-location(
+) as element(module)* {
+  let $modules-map := module-loader:get-modules-map("http://xquerrail.com/domain/", "/domain")
+  for $namespace in map:keys($modules-map)
+  return
+    element module {
+      attribute type {"domain"},
+      attribute namespace { $namespace },
+      attribute location { map:get($modules-map, $namespace) }
+    }
+};
 
 declare function domain:domain-function(
-  $name as xs:string
-) {
+  $name as xs:string,
+  $arity as xs:integer
+) as xdmp:function {
   if (map:contains($FUNCTIONS-CACHE, $name)) then
     map:get($FUNCTIONS-CACHE, $name)
   else
     let $function :=
-      module:load-function(
-        fn:substring-before($name, "#"),
-        xs:integer(fn:substring-after($name, "#")),
-        "http://xquerrail.com/domain/",
-        "/domain/domain-"
-      )
+      module-loader:load-function-module(
+        domain:get-default-application(),
+        "domain",
+        $name,
+        $arity,
+        (),
+        ()
+        )
+    let $function :=
+      if (fn:empty($function)) then
+        fn:error(xs:QName("LOAD-FUNCTION-MODULE-ERROR"), text{"Function", $name, "from domain module type not found."})
+      else
+        $function
     return (
       map:put($FUNCTIONS-CACHE, $name, $function),
       $function
@@ -107,7 +129,7 @@ declare function domain:cast-value(
   $field as element(),
   $value as item()*
 ) {
-  domain:domain-function("cast-value#2")($field, $value)
+  domain:domain-function("cast-value", 2)($field, $value)
 };
 
 (:~
@@ -116,7 +138,7 @@ declare function domain:cast-value(
 declare function domain:get-field-scalar-type(
   $field as element()
 ) {
-  domain:domain-function("get-field-scalar-type#2")($field)
+  domain:domain-function("get-field-scalar-type", 2)($field)
 };
 
 (:~
@@ -127,34 +149,34 @@ declare function domain:castable-value(
   $field as element(),
   $value as item()?
 ) {
-  domain:domain-function("castable-value#2")($field, $value)
+  domain:domain-function("castable-value", 2)($field, $value)
 };
 
 declare function domain:resolve-cts-type(
   $type as xs:string
 ) {
-  domain:domain-function("resolve-cts-type#1")($type)
+  domain:domain-function("resolve-cts-type", 1)($type)
 };
 
 (:~
  : Gets the domain model from the given cache
  :)
 declare function domain:get-model-cache(
-  $application-name,
+  $application,
   $model-name
 ) {
-  domain:domain-function("get-model-cache#2")($application-name, $model-name)
+  domain:domain-function("get-model-cache", 2)($application, $model-name)
 };
 
 (:~
  : Sets the cache for a domain model
  :)
 declare function domain:set-model-cache(
-  $application-name,
+  $application,
   $model-name,
   $model as element(domain:model)?
 ) {
-  domain:domain-function("set-model-cache#3")($application-name, $model-name, $model)
+  domain:domain-function("set-model-cache", 3)($application, $model-name, $model)
 };
 
 (:~
@@ -164,7 +186,7 @@ declare function domain:set-field-cache(
   $key as xs:string,
   $func as function(*)
 ) {
-  domain:domain-function("set-field-cache#2")($key, $func)
+  domain:domain-function("set-field-cache", 2)($key, $func)
 };
 
 (:~
@@ -174,7 +196,7 @@ declare function domain:set-field-cache(
 declare function domain:get-identity-cache(
   $key as xs:string
 ) {
-  domain:domain-function("get-identity-cache#1")($key)
+  domain:domain-function("get-identity-cache", 1)($key)
 };
 
 (:~
@@ -186,7 +208,7 @@ declare function domain:set-identity-cache(
   $key as xs:string,
   $value as item()*
 ) as item()* {
-  domain:domain-function("set-identity-cache#2")($key, $value)
+  domain:domain-function("set-identity-cache", 2)($key, $value)
 };
 
 (:~
@@ -196,14 +218,14 @@ declare function domain:get-field-cache-key(
   $field,
   $prefix as xs:string
 ) {
-  domain:domain-function("get-field-cache-key#2")($field, $prefix)
+  domain:domain-function("get-field-cache-key", 2)($field, $prefix)
 };
 
 declare function domain:get-function-cache-key(
   $field as item(),
   $type as xs:string
 ) as xs:string {
-  domain:domain-function("get-function-cache-key#2")($field, $type)
+  domain:domain-function("get-function-cache-key", 2)($field, $type)
 };
 
 (:~
@@ -213,7 +235,7 @@ declare function domain:undefined-field-function-cache(
   $field as element(),
   $type as xs:string
 ) as xs:boolean {
-  domain:domain-function("undefined-field-function-cache#2")($field, $type)
+  domain:domain-function("undefined-field-function-cache", 2)($field, $type)
 };
 
 (:~
@@ -223,7 +245,7 @@ declare function domain:exists-field-function-cache(
   $field as element(),
   $type as xs:string
 ) as xs:boolean {
-  domain:domain-function("exists-field-function-cache#2")($field, $type)
+  domain:domain-function("exists-field-function-cache", 2)($field, $type)
 };
 
 (:~
@@ -234,7 +256,7 @@ declare function domain:set-field-function-cache(
   $type as xs:string,
   $funct as function(*)?
 ) {
-  domain:domain-function("set-field-function-cache#3")($field, $type, $funct)
+  domain:domain-function("set-field-function-cache", 3)($field, $type, $funct)
 };
 
 (:~
@@ -244,7 +266,7 @@ declare function domain:get-field-function-cache(
   $field as element(),
   $type as xs:string
 ) as function(*)? {
-  domain:domain-function("get-field-function-cache#2")($field, $type)
+  domain:domain-function("get-field-function-cache", 2)($field, $type)
 };
 
 
@@ -255,7 +277,7 @@ declare function domain:exists-field-value-cache(
   $field as element(),
   $type as xs:string
 ) as xs:boolean {
-  domain:domain-function("exists-field-value-cache#2")($field, $type)
+  domain:domain-function("exists-field-value-cache", 2)($field, $type)
 };
 
 (:~
@@ -266,7 +288,7 @@ declare function domain:set-field-value-cache(
   $type as xs:string,
   $value as item()*
 ) {
-  domain:domain-function("set-field-value-cache#3")($field, $type, $value)
+  domain:domain-function("set-field-value-cache", 3)($field, $type, $value)
 };
 
 (:~
@@ -276,7 +298,7 @@ declare function domain:get-field-value-cache(
   $field as element(),
   $type as xs:string
 ) as item() {
-  domain:domain-function("get-field-value-cache#2")($field, $type)
+  domain:domain-function("get-field-value-cache", 2)($field, $type)
 };
 
 (:~
@@ -286,7 +308,7 @@ declare function domain:get-field-value-cache(
 declare function domain:get-model-identity-field-name(
   $model as element(domain:model)
 ) as xs:string {
-  domain:domain-function("get-model-identity-field-name#1")($model)
+  domain:domain-function("get-model-identity-field-name", 1)($model)
 };
 
 (:~
@@ -296,7 +318,7 @@ declare function domain:get-model-identity-field-name(
 declare function domain:get-model-identity-field(
   $model as element(domain:model)
 ) {
-  domain:domain-function("get-model-identity-field#1")($model)
+  domain:domain-function("get-model-identity-field", 1)($model)
 };
 
 (:~
@@ -306,7 +328,7 @@ declare function domain:get-model-identity-field(
 declare function domain:get-model-keylabel-field(
   $model as element(domain:model)
 ) {
-  domain:domain-function("get-model-keylabel-field#1")($model)
+  domain:domain-function("get-model-keylabel-field", 1)($model)
 };
 
 (:~
@@ -318,7 +340,7 @@ declare function domain:get-model-identity-query(
   $model as element(domain:model),
   $value as xs:anyAtomicType?
 ) {
-  domain:domain-function("get-model-identity-query#2")($model, $value)
+  domain:domain-function("get-model-identity-query", 2)($model, $value)
 };
 
 (:~
@@ -328,7 +350,7 @@ declare function domain:get-model-identity-query(
 declare function domain:get-model-key-field(
   $model as element(domain:model)
 ) {
-  domain:domain-function("get-model-key-field#1")($model)
+  domain:domain-function("get-model-key-field", 1)($model)
 };
 
 (:~
@@ -338,13 +360,13 @@ declare function domain:get-model-key-field(
 declare function domain:get-model-keyLabel-field(
   $model as element(domain:model)
 ) {
-  domain:domain-function("get-model-keyLabel-field#1")($model)
+  domain:domain-function("get-model-keyLabel-field", 1)($model)
 };
 
 declare function domain:get-field-prefix(
   $field as element()
 ) as xs:string? {
-  domain:domain-function("get-field-prefix#1")($field)
+  domain:domain-function("get-field-prefix", 1)($field)
 };
 
 (:~
@@ -364,7 +386,7 @@ declare function domain:get-model-field(
   $name as xs:string,
   $include-container as xs:boolean
 ) {
-  domain:domain-function("get-model-field#3")($model, $name, $include-container)
+  domain:domain-function("get-model-field", 3)($model, $name, $include-container)
 };
 
 (:~
@@ -374,7 +396,7 @@ declare function domain:get-model-field(
 declare function domain:get-model-unique-constraint-fields(
   $model as element(domain:model)
 ) {
-  domain:domain-function("get-model-unique-constraint-fields#1")($model)
+  domain:domain-function("get-model-unique-constraint-fields", 1)($model)
 };
 
 (:~
@@ -384,7 +406,7 @@ declare function domain:get-model-unique-constraint-fields(
 declare function domain:resolve-datatype(
   $field as element()
 ) {
-  domain:domain-function("resolve-datatype#1")($field)
+  domain:domain-function("resolve-datatype", 1)($field)
 };
 
 (:~
@@ -394,7 +416,7 @@ declare function domain:resolve-datatype(
 declare function domain:resolve-ctstype(
   $field as element()
 ) {
-  domain:domain-function("resolve-ctstype#1")($field)
+  domain:domain-function("resolve-ctstype", 1)($field)
 };
 
 (:~
@@ -403,30 +425,30 @@ declare function domain:resolve-ctstype(
  :)
 declare function domain:get-content-namespace-uri(
 ) as xs:string {
-  domain:domain-function("get-content-namespace-uri#0")()
+  domain:domain-function("get-content-namespace-uri", 0)()
 };
 
 (:~
  : Returns the content-namespace value for a given application
- : @param $application-name - name of the application
+ : @param $application - name of the application
  : @return - The namespace URI of the given application
  :)
 declare function domain:get-content-namespace-uri(
-  $application-name as xs:string
+  $application as xs:string
 ) as xs:string {
-  domain:domain-function("get-content-namespace-uri#1")($application-name)
+  domain:domain-function("get-content-namespace-uri", 1)($application)
 };
 
 (:~
  : Gets the controller definition for a given application by its name
- : @param $application-name - Name of the application
+ : @param $application - Name of the application
  : @param $controller-name - Name of the controller
  :)
 declare function domain:get-controller(
-  $application-name as xs:string,
+  $application as xs:string,
   $controller-name as xs:string
 ) as element(domain:controller)? {
-  domain:domain-function("get-controller#2")($application-name, $controller-name)
+  domain:domain-function("get-controller", 2)($application, $controller-name)
 };
 (:~
  : Returns the actions associated with the controller. The function assumes the controller lives in the default application.
@@ -435,43 +457,43 @@ declare function domain:get-controller(
 declare function domain:get-controller-actions(
   $controller-name as xs:string
 ) {
-  domain:domain-function("get-controller-actions#1")($controller-name)
+  domain:domain-function("get-controller-actions", 1)($controller-name)
 };
 
 (:~
  : Returns all the available functions for a given controller.
- : @param $application-name - Name of the application
+ : @param $application - Name of the application
  : @param $controller-name - Name of the controller
  :)
 declare function domain:get-controller-actions(
-  $application-name as xs:string,
+  $application as xs:string,
   $controller-name as xs:string
 ) {
-  domain:domain-function("get-controller-actions#2")($application-name, $controller-name)
+  domain:domain-function("get-controller-actions", 2)($application, $controller-name)
 };
 
 (:~
  :  Returns the name of the model associated with a controller.
- :  @param $application-name - Name of the application
+ :  @param $application - Name of the application
  :  @param $controller-name - Name of the controller
  :)
 declare function domain:get-controller-model(
   $controller-name as xs:string
 ) as element(domain:model)? {
-  domain:domain-function("get-controller-model#1")($controller-name)
+  domain:domain-function("get-controller-model", 1)($controller-name)
 };
 
 (:~
  :  Returns the name of the model associated with a controller.
- :  @param $application-name - Name of the application
+ :  @param $application - Name of the application
  :  @param $controller-name - Name of the controller
  :  @return  - returns the model associated with the given controller.
  :)
 declare function domain:get-controller-model(
-  $application-name as xs:string,
+  $application as xs:string,
   $controller-name as xs:string
 ) as element(domain:model)? {
-  domain:domain-function("get-controller-model#2")($application-name, $controller-name)
+  domain:domain-function("get-controller-model", 2)($application, $controller-name)
 };
 
 (:~
@@ -482,12 +504,12 @@ declare function domain:get-controller-model(
 declare function domain:get-model-controller-name(
   $model-name as xs:string?
 ) as xs:string* {
-  domain:domain-function("get-model-controller-name#1")($model-name)
+  domain:domain-function("get-model-controller-name", 1)($model-name)
 };
 
 (:~
  : Gets the name of the controller for a given application and model.
- :  @param $application-name - Name of the application
+ :  @param $application - Name of the application
  :  @param $model-name - Name of the controller
  :  @return - the name of the controller
  :)
@@ -495,20 +517,20 @@ declare function domain:get-model-controller-name(
   $application as xs:string,
   $model-name as xs:string?
 ) as xs:string* {
-  domain:domain-function("get-model-controller-name#2")($application, $model-name)
+  domain:domain-function("get-model-controller-name", 2)($application, $model-name)
 };
 
 (:~
  : Returns the model definition by its application and model name
- : @param $application-name - Name of the application
+ : @param $application - Name of the application
  : @param $model-name - Name of the model
  : @return  a model definition
   :)
 declare function domain:get-model(
-  $application-name as xs:string,
+  $application as xs:string,
   $model-name as xs:string*
 ) as element(domain:model)* {
-  domain:get-domain-model($application-name, $model-name)
+  domain:get-domain-model($application, $model-name)
 };
 
 (:~
@@ -533,10 +555,10 @@ declare function domain:get-domain-model(
 };
 
 declare function domain:get-domain-model(
-  $application-name as xs:string,
+  $application as xs:string,
   $model-name as xs:string*
 ) as element(domain:model)* {
-  domain:get-domain-model($application-name, $model-name, fn:true())
+  domain:get-domain-model($application, $model-name, fn:true())
 };
 
 (:~
@@ -545,37 +567,37 @@ declare function domain:get-domain-model(
  : @param $extension - If true then returns the extension fields, false returns the raw model
  :)
 declare function domain:get-domain-model(
-  $application-name as xs:string,
+  $application as xs:string,
   $model-names as xs:string+,
   $extension as xs:boolean
 ) as element(domain:model)+ {
-  domain:domain-function("get-domain-model#3")($application-name, $model-names, $extension)
+  domain:domain-function("get-domain-model", 3)($application, $model-names, $extension)
 };
 
 declare %private function domain:find-model-by-name(
   $domain as element(domain:domain),
   $name as xs:string?
 ) as element(domain:model)? {
-  domain:domain-function("find-model-by-name#2")($domain, $name)
+  domain:domain-function("find-model-by-name", 2)($domain, $name)
 };
 
 declare function domain:compile-model(
-  $application-name as xs:string,
+  $application as xs:string,
   $model as element(domain:model)
 ) as element(domain:model) {
-  domain:domain-function("compile-model#2")($application-name, $model)
+  domain:domain-function("compile-model", 2)($application, $model)
 };
 
 declare function domain:navigation(
   $field as element()
 ) as element(domain:navigation)? {
-  domain:domain-function("navigation#1")($field)
+  domain:domain-function("navigation", 1)($field)
 };
 
 declare function domain:validators(
   $model as element(domain:model)
 ) as element(domain:validator)* {
-  domain:domain-function("validators#1")($model)
+  domain:domain-function("validators", 1)($model)
 };
 
 (:~
@@ -584,7 +606,7 @@ declare function domain:validators(
 declare function domain:build-model-permission(
   $model as element(domain:model)
 ) as element(domain:permission)? {
-  domain:domain-function("build-model-permission#1")($model)
+  domain:domain-function("build-model-permission", 1)($model)
 };
 
 (:~
@@ -593,7 +615,7 @@ declare function domain:build-model-permission(
 declare function domain:build-model-navigation(
   $field as element()
 ) as element(domain:navigation)* {
-  domain:domain-function("build-model-navigation#1")($field)
+  domain:domain-function("build-model-navigation", 1)($field)
 };
 
 (:~
@@ -602,65 +624,67 @@ declare function domain:build-model-navigation(
 declare function domain:set-model-field-defaults(
   $field as item()
 ) as item() {
-  domain:domain-function("set-model-field-defaults#1")($field)
+  domain:domain-function("set-model-field-defaults", 1)($field)
 };
 
 declare function domain:set-model-field-attributes(
   $field as item()
 ) as item() {
-  domain:domain-function("set-model-field-attributes#1")($field)
+  domain:domain-function("set-model-field-attributes", 1)($field)
 };
 
 declare function domain:set-field-attributes(
   $field as element()
 ) as attribute()* {
-  domain:domain-function("set-field-attributes#1")($field)
+  domain:domain-function("set-field-attributes", 1)($field)
 };
 
 declare function domain:model-validation-enabled(
   $model as element(domain:model)
 ) as xs:boolean {
-  domain:domain-function("model-validation-enabled#1")($model)
+  domain:domain-function("model-validation-enabled", 1)($model)
 };
 
 (:~
  : Returns a list of all defined controllers for a given application domain
- : @param $application-name - application domain name
+ : @param $application - application domain name
  :)
 declare function domain:get-controllers(
-   $application-name as xs:string
-) {
-  domain:domain-function("get-controllers#1")($application-name)
+  $application as xs:string
+) as element(domain:controller)* {
+  (:domain:domain-function("get-controllers", 1)($application):)
+  config:get-domain($application)/domain:controller
 };
 
 (:~
  : Returns the default application domain defined in the config.xml
  :)
 declare function domain:get-default-application(
-) {
-  domain:domain-function("get-default-application#0")()
+) as xs:string {
+  (:domain:domain-function("get-default-application", 0)():)
+  config:default-application()
 };
 
 (:~
  : Returns the default content namespace for a given application. Convenience wrapper for @see config:default-namespace() function.
- : @param $application-name - Name of the application
+ : @param $application - Name of the application
  : @return default content namespace
  :)
 declare function domain:get-default-namespace(
-  $application-name as xs:string
+  $application as xs:string
 ) {
-  domain:domain-function("get-default-namespace#1")($application-name)
+  domain:domain-function("get-default-namespace", 1)($application)
 };
 
 (:~
  : Returns all content and declare-namespace in application-domain
- : @param $application-name - Name of the application
+ : @param $application - Name of the application
  : @return sequence of element(namespace).
  :)
 declare function domain:get-domain-namespaces(
-  $application-name as xs:string
+  $application as xs:string
 ) as element(namespace) {
-  domain:domain-function("get-domain-namespaces#1")($application-name)
+  domain:domain-function("get-domain-namespaces", 1)($application)
 };
 
 (:~
@@ -676,14 +700,14 @@ declare function domain:model-selector(
 (:~
  : Returns a list of models with a given class attribute from a given application.
  : Function is helpful for selecting a list of all models or selecting them by their @class attribute.
- : @param $application-name - Name of the application
+ : @param $application - Name of the application
  : @param $class - the selector class it can be space delimitted
  :)
 declare function domain:model-selector(
-  $application-name as xs:string,
+  $application as xs:string,
   $class as xs:string*
 ) as element(domain:model)* {
-  domain:domain-function("model-selector#2")($application-name, $class)
+  domain:domain-function("model-selector", 2)($application, $class)
 };
 
 (:~
@@ -699,10 +723,10 @@ declare function domain:model-fields(
  : Returns the list of fields associated iwth
  :)
 declare function domain:model-fields(
-  $application-name as xs:string,
+  $application as xs:string,
   $model-name as xs:string
 ) as element()* {
-  domain:domain-function("model-fields#2")($application-name, $model-name)
+  domain:domain-function("model-fields", 2)($application, $model-name)
 };
 (:~
  : Returns the unique hash of an element suitable for creating a named element.
@@ -721,13 +745,13 @@ declare function domain:get-field-key(
 declare function domain:get-field-name-key(
   $field as node()
 ) {
-  domain:domain-function("get-field-name-key#1")($field)
+  domain:domain-function("get-field-name-key", 1)($field)
 };
 
 declare function domain:hash(
   $field as node()
 ) {
-  domain:domain-function("hash#1")($field)
+  domain:domain-function("hash", 1)($field)
 };
 
 (:~
@@ -738,7 +762,7 @@ declare function domain:hash(
 declare function domain:get-field-id(
   $field as node()
 ) {
-  domain:domain-function("get-field-id#1")($field)
+  domain:domain-function("get-field-id", 1)($field)
 };
 
 (:~
@@ -750,7 +774,7 @@ declare function domain:get-field-id(
 declare function domain:get-field-namespace(
   $field as element()
 ) as xs:string? {
-  domain:domain-function("get-field-namespace#1")($field)
+  domain:domain-function("get-field-namespace", 1)($field)
 };
 
 (:~
@@ -771,28 +795,28 @@ declare function domain:get-field-param-value(
   $relative as xs:boolean,
   $cast as xs:boolean
 ) {
-  domain:domain-function("get-field-param-value#4")($field, $params, $relative, $cast)
+  domain:domain-function("get-field-param-value", 4)($field, $params, $relative, $cast)
 };
 
 declare function domain:get-field-param-match-key(
   $field as element(),
   $params as map:map
 ) {
-  domain:domain-function("get-field-param-match-key#2")($field, $params)
+  domain:domain-function("get-field-param-match-key", 2)($field, $params)
 };
 
 declare function domain:get-field-param-langString-value(
   $field as element(),
   $params as map:map
 ) {
-  domain:domain-function("get-field-param-langString-value#2")($field, $params)
+  domain:domain-function("get-field-param-langString-value", 2)($field, $params)
 };
 
 declare function domain:get-field-param-triple-value(
   $field as element(),
   $params as map:map
 ) {
-  domain:domain-function("get-field-param-triple-value#2")($field, $params)
+  domain:domain-function("get-field-param-triple-value", 2)($field, $params)
 };
 
 (:~
@@ -804,7 +828,7 @@ declare function domain:get-field-reference(
   $field as element(),
   $current-node as node()
 ) {
-  domain:domain-function("get-field-reference#2")($field, $current-node)
+  domain:domain-function("get-field-reference", 2)($field, $current-node)
 };
 
 (:~
@@ -818,7 +842,7 @@ declare function domain:get-field-reference(
 declare function domain:get-field-reference-model(
   $field as element()
 ) {
-  domain:domain-function("get-field-reference-model#1")($field)
+  domain:domain-function("get-field-reference-model", 1)($field)
 };
 
 (:~
@@ -836,7 +860,7 @@ declare function domain:get-field-xpath(
   $field as element(),
   $relative as xs:boolean
 ) {
-  domain:domain-function("get-field-xpath#2")($field, $relative)
+  domain:domain-function("get-field-xpath", 2)($field, $relative)
 };
 
 (:~
@@ -847,13 +871,13 @@ declare function domain:get-field-xpath(
 declare function domain:get-field-absolute-xpath(
   $field as element()
 ) {
-  domain:domain-function("get-field-absolute-xpath#1")($field)
+  domain:domain-function("get-field-absolute-xpath", 1)($field)
 };
 
 declare function domain:get-field-qname(
   $field as element()
 ) {
-  domain:domain-function("get-field-qname#1")($field)
+  domain:domain-function("get-field-qname", 1)($field)
 };
 
 (:~
@@ -865,7 +889,7 @@ declare function domain:build-value-map(
   $doc as node()?,
   $retain as xs:string*
 ) as map:map? {
-  domain:domain-function("build-value-map#2")($doc, $retain)
+  domain:domain-function("build-value-map", 2)($doc, $retain)
 };
 
 (:~
@@ -880,7 +904,7 @@ declare private function domain:recurse(
   $map as map:map,
   $retain as xs:string*
 ) {
-  domain:domain-function("recurse#3")($node, $map, $retain)
+  domain:domain-function("recurse", 3)($node, $map, $retain)
 };
 
 declare function domain:get-model-by-xpath(
@@ -912,11 +936,11 @@ declare function domain:get-model-controller(
  : @param $model-name  - name of the model
  :)
 declare function domain:get-model-controller(
-  $application-name as xs:string,
+  $application as xs:string,
   $model-name as xs:string,
   $checked as xs:boolean
 ) as element(domain:controller)* {
-  domain:domain-function("get-model-controller#3")($application-name, $model-name, $checked)
+  domain:domain-function("get-model-controller", 3)($application, $model-name, $checked)
 };
 
 (:~
@@ -931,14 +955,14 @@ declare function domain:get-optionlist(
 
 (:~
  :  Returns an optionlist from the application by its name
- : @param $application-name  Name of the application
+ : @param $application  Name of the application
  : @param $listname  Name of the optionlist
  :)
 declare function domain:get-optionlist(
-  $application-name as xs:string,
+  $application as xs:string,
   $listname as xs:string
 ) {
-  domain:domain-function("get-optionlist#2")($application-name, $listname)
+  domain:domain-function("get-optionlist", 2)($application, $listname)
 };
 
 (:~
@@ -949,7 +973,7 @@ declare function domain:get-optionlist(
 declare function domain:get-field-optionlist(
   $field
 ) {
-  domain:domain-function("get-field-optionlist#1")($field)
+  domain:domain-function("get-field-optionlist", 1)($field)
 };
 (:~
  : Gets an application element specified by the application name
@@ -958,7 +982,7 @@ declare function domain:get-field-optionlist(
 declare function domain:get-application(
   $application as xs:string
 ) {
-  domain:domain-function("get-application#1")($application)
+  domain:domain-function("get-application", 1)($application)
 };
 (:~
  : Returns the key that represents the given model
@@ -969,7 +993,7 @@ declare function domain:get-application(
 declare function domain:get-model-reference-key(
   $model as element(domain:model)
 ) {
-  domain:domain-function("get-model-reference-key#1")($model)
+  domain:domain-function("get-model-reference-key", 1)($model)
 };
 (:~
  : Gets a list of domain models that reference a given model.
@@ -979,14 +1003,14 @@ declare function domain:get-model-reference-key(
 declare function domain:get-model-references(
   $model as element(domain:model)
 ) {
-  domain:domain-function("get-model-references#1")($model)
+  domain:domain-function("get-model-references", 1)($model)
 };
 
 declare function domain:get-models-reference-query(
   $model as element(domain:model),
   $instance as item()
 ) as cts:or-query {
-  domain:domain-function("get-models-reference-query#2")($model, $instance)
+  domain:domain-function("get-models-reference-query", 2)($model, $instance)
 };
 
 (:~
@@ -998,7 +1022,7 @@ declare function domain:is-model-referenced(
   $model as element(domain:model),
   $instance as element()
 ) as xs:boolean {
-  domain:domain-function("is-model-referenced#2")($model, $instance)
+  domain:domain-function("is-model-referenced", 2)($model, $instance)
 };
 
 (:~
@@ -1010,7 +1034,7 @@ declare function domain:get-model-reference-uris(
  $model as element(domain:model),
  $instance as element()
 ) {
-  domain:domain-function("get-model-reference-uris#2")($model, $instance)
+  domain:domain-function("get-model-reference-uris", 2)($model, $instance)
 };
 
 (:~
@@ -1026,7 +1050,7 @@ declare function domain:get-model-reference-query(
   $reference-key as xs:string,
   $reference-value as xs:anyAtomicType*
 ) as cts:and-query? {
-  domain:domain-function("get-model-reference-query#3")($reference-model, $reference-key, $reference-value)
+  domain:domain-function("get-model-reference-query", 3)($reference-model, $reference-key, $reference-value)
 };
 
 (:~
@@ -1037,7 +1061,7 @@ declare function domain:get-model-reference-query(
 declare function domain:get-field-collation(
   $field as element()
 ) as xs:string {
-  domain:domain-function("get-field-collation#1")($field)
+  domain:domain-function("get-field-collation", 1)($field)
 };
 
 (:~
@@ -1047,7 +1071,7 @@ declare function domain:get-field-collation(
 declare function domain:get-model-uniqueKey-constraint-fields(
   $model as element(domain:model)
 ) {
-  domain:domain-function("get-model-uniqueKey-constraint-fields#1")($model)
+  domain:domain-function("get-model-uniqueKey-constraint-fields", 1)($model)
 };
 
 (:~
@@ -1058,7 +1082,7 @@ declare function domain:get-model-uniqueKey-constraint-query(
   $params as item(),
   $mode as xs:string
 ) {
-  domain:domain-function("get-model-uniqueKey-constraint-query#3")($model, $params, $mode)
+  domain:domain-function("get-model-uniqueKey-constraint-query", 3)($model, $params, $mode)
 };
 
 (:~
@@ -1075,7 +1099,7 @@ declare function domain:get-model-unique-constraint-query(
   $params as item(),
   $mode as xs:string
 ) {
-  domain:domain-function("get-model-unique-constraint-query#3")($model, $params, $mode)
+  domain:domain-function("get-model-unique-constraint-query", 3)($model, $params, $mode)
 };
 
 (:~
@@ -1096,7 +1120,7 @@ declare function domain:get-model-search-expression(
   $query as cts:query?,
   $options as xs:string*
 ) {
-  domain:domain-function("get-model-search-expression#3")($model, $query, $options)
+  domain:domain-function("get-model-search-expression", 3)($model, $query, $options)
 };
 
 (:~
@@ -1106,14 +1130,14 @@ declare function domain:get-identity-query(
   $model as element(domain:model),
   $params as item()
 ) {
-  domain:domain-function("get-identity-query#2")($model, $params)
+  domain:domain-function("get-identity-query", 2)($model, $params)
 };
 
 declare function domain:get-keylabel-query(
   $model as element(domain:model),
   $params as item()
 ) {
-  domain:domain-function("get-keylabel-query#2")($model, $params)
+  domain:domain-function("get-keylabel-query", 2)($model, $params)
 };
 
 (:~
@@ -1121,9 +1145,9 @@ declare function domain:get-keylabel-query(
  : @param $model  name of the model for the given base-query
  :)
 declare function domain:get-base-query(
-  $model (:as element(domain:model):)
+  $model as element(domain:model)
 ) {
-  domain:domain-function("get-base-query#1")($model)
+  domain:domain-function("get-base-query", 1)($model)
 };
 
 (:~
@@ -1137,7 +1161,7 @@ declare function domain:get-model-estimate-expression(
   $query as cts:query?,
   $options as xs:string*
 ) {
-  domain:domain-function("get-model-estimate-expression#3")($model, $query, $options)
+  domain:domain-function("get-model-estimate-expression", 3)($model, $query, $options)
 };
 
 (:~
@@ -1146,7 +1170,7 @@ declare function domain:get-model-estimate-expression(
 declare function domain:model-root-query(
   $model as element(domain:model)
 ) {
-  domain:domain-function("model-root-query#1")($model)
+  domain:domain-function("model-root-query", 1)($model)
 };
 
 (:~
@@ -1156,7 +1180,7 @@ declare function domain:get-field-query(
   $field as element(),
   $value as xs:anyAtomicType*
 ) {
-  domain:domain-function("get-field-query#2")($field, $value)
+  domain:domain-function("get-field-query", 2)($field, $value)
 };
 
 declare function domain:get-field-tuple-reference(
@@ -1171,7 +1195,7 @@ declare function domain:get-field-tuple-reference(
   $field as element(),
   $add-options as xs:string*
 ) {
-  domain:domain-function("get-field-tuple-reference#2")($field, $add-options)
+  domain:domain-function("get-field-tuple-reference", 2)($field, $add-options)
 };
 
 (:~
@@ -1180,13 +1204,13 @@ declare function domain:get-field-tuple-reference(
 declare function domain:declared-namespaces(
   $model as element()
 ) as xs:string* {
-  domain:domain-function("declared-namespaces#1")($model)
+  domain:domain-function("declared-namespaces", 1)($model)
 };
 
 declare function domain:declared-namespaces-map(
   $model as element()
 ) {
-  domain:domain-function("declared-namespaces-map#1")($model)
+  domain:domain-function("declared-namespaces-map", 1)($model)
 };
 
 declare function domain:invoke-events(
@@ -1203,7 +1227,7 @@ declare function domain:invoke-events(
   $updated-values as item()*,
   $old-values as item()*
 ) {
-  domain:domain-function("invoke-events#4")($model, $events, $updated-values, $old-values)
+  domain:domain-function("invoke-events", 4)($model, $events, $updated-values, $old-values)
 };
 
 (:~
@@ -1230,7 +1254,7 @@ declare function domain:fire-before-event(
   $updated-values as item()*,
   $old-values as item()*
 ) {
-  domain:domain-function("fire-before-event#4")($model, $event-name, $updated-values, $old-values)
+  domain:domain-function("fire-before-event", 4)($model, $event-name, $updated-values, $old-values)
 };
 
 (:~
@@ -1257,13 +1281,13 @@ declare function domain:fire-after-event(
   $updated-values as item()*,
   $old-values as item()*
 ) {
-  domain:domain-function("fire-after-event#4")($model, $event-name, $updated-values, $old-values)
+  domain:domain-function("fire-after-event", 4)($model, $event-name, $updated-values, $old-values)
 };
 
 declare function domain:get-field-json-name(
   $field as element()
 ) as xs:string {
-  domain:domain-function("get-field-json-name#1")($field)
+  domain:domain-function("get-field-json-name", 1)($field)
 };
 
 (:~
@@ -1293,7 +1317,7 @@ declare function domain:get-field-jsonpath(
   $include-root as xs:boolean,
   $base-path as xs:string?
 ) {
-  domain:domain-function("get-field-jsonpath#3")($field, $include-root, $base-path)
+  domain:domain-function("get-field-jsonpath", 3)($field, $include-root, $base-path)
 };
 
 (:~
@@ -1311,7 +1335,7 @@ declare function domain:get-field-value(
   $value as item()*,
   $relative as xs:boolean
 ) as item()* {
-  domain:domain-function("get-field-value#3")($field, $value, $relative)
+  domain:domain-function("get-field-value", 3)($field, $value, $relative)
 };
 
 (:~
@@ -1329,35 +1353,35 @@ declare function domain:get-field-value-node(
   $value as item()*,
   $relative as xs:boolean
 ) as item()* {
-  domain:domain-function("get-field-value-node#3")($field, $value, $relative)
+  domain:domain-function("get-field-value-node", 3)($field, $value, $relative)
 };
 
 declare function domain:field-value-exists(
   $field as element(),
   $value as item()*
 ) as xs:boolean {
-  domain:domain-function("field-value-exists#2")($field, $value)
+  domain:domain-function("field-value-exists", 2)($field, $value)
 };
 
 declare function domain:field-param-exists(
   $field as element(),
   $params as map:map
 ) as xs:boolean {
-  domain:domain-function("field-param-exists#2")($field, $params)
+  domain:domain-function("field-param-exists", 2)($field, $params)
 };
 
 declare function domain:field-json-exists(
   $field as element(),
   $values as item()?
 ) as xs:boolean {
-  domain:domain-function("field-json-exists#2")($field, $values)
+  domain:domain-function("field-json-exists", 2)($field, $values)
 };
 
 declare function domain:field-xml-exists(
   $field as element(),
   $value as item()*
 ) as xs:boolean {
-  domain:domain-function("field-xml-exists#2")($field, $value)
+  domain:domain-function("field-xml-exists", 2)($field, $value)
 };
 
 (:~
@@ -1375,7 +1399,7 @@ declare function domain:get-field-json-value(
   $values as item()?,
   $relative as xs:boolean
 ) {
-  domain:domain-function("get-field-json-value#3")($field, $values, $relative)
+  domain:domain-function("get-field-json-value", 3)($field, $values, $relative)
 };
 
 (:~
@@ -1393,7 +1417,7 @@ declare function domain:get-field-xml-value(
   $value as item()*,
   $relative as xs:boolean
 ) {
-  domain:domain-function("get-field-xml-value#3")($field, $value, $relative)
+  domain:domain-function("get-field-xml-value", 3)($field, $value, $relative)
 };
 
 (:~
@@ -1411,7 +1435,7 @@ declare function domain:get-base-type(
   $field as element(),
   $safe as xs:boolean
 ) {
-  domain:domain-function("get-base-type#2")($field, $safe)
+  domain:domain-function("get-base-type", 2)($field, $safe)
 };
 
 (:~
@@ -1420,7 +1444,7 @@ declare function domain:get-base-type(
 declare function domain:field-is-multivalue(
   $field
 ) {
-  domain:domain-function("field-is-multivalue#1")($field)
+  domain:domain-function("field-is-multivalue", 1)($field)
 };
 
 (:~
@@ -1429,7 +1453,7 @@ declare function domain:field-is-multivalue(
 declare function domain:get-value-type(
   $type as item()?
 ) {
-  domain:domain-function("get-value-type#1")($type)
+  domain:domain-function("get-value-type", 1)($type)
 };
 (:~
  : Returns the value of collections given any object type
@@ -1437,7 +1461,7 @@ declare function domain:get-value-type(
 declare function domain:get-field-value-collections(
   $value
 ) {
-  domain:domain-function("get-field-value-collections#1")($value)
+  domain:domain-function("get-field-value-collections", 1)($value)
 };
 
 (:~
@@ -1446,7 +1470,7 @@ declare function domain:get-field-value-collections(
 declare function domain:get-param-keys(
   $params as item()
 ) {
-  domain:domain-function("get-param-keys#1")($params)
+  domain:domain-function("get-param-keys", 1)($params)
 };
 
 (:~
@@ -1464,7 +1488,7 @@ declare function domain:get-param-value(
   $key as xs:string*,
   $default
 ) {
-  domain:domain-function("get-param-value#3")($params, $key, $default)
+  domain:domain-function("get-param-value", 3)($params, $key, $default)
 };
 (:~
  :
@@ -1479,10 +1503,10 @@ declare function domain:model-exists(
  :
  :)
 declare function domain:model-exists(
-  $application-name as xs:string,
+  $application as xs:string,
   $model-name as xs:string?
 ) {
-  domain:domain-function("model-exists#2")($application-name, $model-name)
+  domain:domain-function("model-exists", 2)($application, $model-name)
 };
 
 (:~
@@ -1491,20 +1515,7 @@ declare function domain:model-exists(
 declare function domain:module-exists(
   $module-location as xs:string
 ) as xs:boolean {
-  domain:domain-function("module-exists#1")($module-location)
-};
-
-(:~
- : Checks that a given module function exists or not
- : $function-arity is optional
- :)
-declare function domain:module-function-exists(
-  $module-namespace as xs:string,
-  $module-location as xs:string,
-  $function-name as xs:string,
-  $function-arity as xs:integer?
-) as xs:boolean {
-  domain:domain-function("module-function-exists#4")($module-namespace, $module-location, $function-name, $function-arity)
+  domain:domain-function("module-exists", 1)($module-location)
 };
 
 declare function domain:get-function-key(
@@ -1513,7 +1524,7 @@ declare function domain:get-function-key(
   $function-name as xs:string,
   $function-arity as xs:integer
 ) as element() {
-  domain:domain-function("get-function-key#4")($module-namespace, $module-location, $function-name, $function-arity)
+  domain:domain-function("get-function-key", 4)($module-namespace, $module-location, $function-name, $function-arity)
 };
 
 (:
@@ -1523,12 +1534,14 @@ declare function domain:get-function-key(
  : @author jjl
  :)
 declare function domain:get-module-function(
+  $application as xs:string?,
+  $module-type as xs:string,
   $module-namespace as xs:string?,
-  $module-location as xs:string,
+  $module-location as xs:string?,
   $function-name as xs:string,
   $function-arity as xs:integer?
 ) as xdmp:function? {
-  domain:domain-function("get-module-function#4")($module-namespace, $module-location, $function-name, $function-arity)
+  domain:domain-function("get-module-function", 6)($application, $module-type, $module-namespace, $module-location, $function-name, $function-arity)
 };
 
 (:
@@ -1536,12 +1549,12 @@ declare function domain:get-module-function(
  : @author jjl
  :)
 declare function domain:get-model-module-function(
-  $application-name as xs:string?,
+  $application as xs:string?,
   $model-name as xs:string,
   $action as xs:string,
   $function-arity as xs:integer?
 ) as xdmp:function? {
-  domain:domain-function("get-model-module-function#2")($application-name, $model-name, $action, $function-arity)
+  domain:domain-function("get-model-module-function", 4)($application, $model-name, $action, $function-arity)
 };
 
  (:
@@ -1554,27 +1567,27 @@ declare function domain:get-model-base-function(
   $action as xs:string,
   $function-arity as xs:integer?
 ) as xdmp:function? {
-  domain:domain-function("get-model-base-function#2")($action, $function-arity)
+  domain:domain-function("get-model-base-function", 2)($action, $function-arity)
 };
 
  (:
  : get a model function, either from model-module or base-module
  :)
 declare function domain:get-model-function(
-  $application-name as xs:string?,
+  $application as xs:string?,
   $model-name as xs:string,
   $action as xs:string,
   $function-arity as xs:integer?,
   $fatal as xs:boolean?
 ) as xdmp:function? {
-  domain:domain-function("get-model-function#5")($application-name, $model-name, $action, $function-arity, $fatal)
+  domain:domain-function("get-model-function", 5)($application, $model-name, $action, $function-arity, $fatal)
 };
 
 declare function domain:get-model-extension-function(
   $action as xs:string,
   $function-arity as xs:integer?
 ) as xdmp:function? {
-  domain:domain-function("get-model-extension-function#2")($action, $function-arity)
+  domain:domain-function("get-model-extension-function", 2)($action, $function-arity)
 };
 
 (:~
@@ -1594,7 +1607,8 @@ declare function domain:get-models(
   $application as xs:string,
   $include-abstract as xs:boolean
 ) as element(domain:model)* {
-  domain:domain-function("get-models#2")($application, $include-abstract)
+  (:domain:domain-function("get-models", 2)($application, $include-abstract):)
+  config:get-domain($application)/domain:model[@persistence != 'abstract']
 };
 
 (:~
@@ -1604,7 +1618,7 @@ declare function domain:get-models(
 declare function domain:get-permissions(
   $model as element(domain:model)
 ) {
-  domain:domain-function("get-permissions#1")($model)
+  domain:domain-function("get-permissions", 1)($model)
 };
 
 (:~
@@ -1613,7 +1627,7 @@ declare function domain:get-permissions(
 declare function domain:get-descendant-models(
   $parent as element(domain:model)
 ) {
-  domain:domain-function("get-descendant-models#1")($parent)
+  domain:domain-function("get-descendant-models", 1)($parent)
 };
 
 (:~
@@ -1623,7 +1637,7 @@ declare function domain:get-descendant-models(
 declare function domain:get-descendant-model-query(
   $parent as element(domain:model)
 ) {
-  domain:domain-function("get-descendant-model-query#1")($parent)
+  domain:domain-function("get-descendant-model-query", 1)($parent)
 };
 
 (:~
@@ -1632,7 +1646,7 @@ declare function domain:get-descendant-model-query(
 declare function domain:get-default-language(
   $field as element()
 ) {
-  domain:domain-function("get-default-language#1")($field)
+  domain:domain-function("get-default-language", 1)($field)
 };
 
 (:~
@@ -1641,7 +1655,7 @@ declare function domain:get-default-language(
 declare function domain:get-field-languages(
   $field as element()
 ) {
-  domain:domain-function("get-field-languages#1")($field)
+  domain:domain-function("get-field-languages", 1)($field)
 };
 
 (:~
@@ -1651,39 +1665,39 @@ declare function domain:get-field-languages(
 declare function domain:get-model-sort-field(
   $model as element(domain:model)
 ) as element()* {
-  domain:domain-function("get-model-sort-field#1")($model)
+  domain:domain-function("get-model-sort-field", 1)($model)
 };
 
 declare function domain:get-parent-field-attribute(
   $field as element(domain:attribute)
 ) as element() {
-  domain:domain-function("get-parent-field-attribute#1")($field)
+  domain:domain-function("get-parent-field-attribute", 1)($field)
 };
 
 declare function domain:get-model-name-from-instance(
   $instance as element()
 ) as xs:string? {
-  domain:domain-function("get-model-name-from-instance#1")($instance)
+  domain:domain-function("get-model-name-from-instance", 1)($instance)
 };
 
 declare function domain:get-model-from-instance(
   $instance as element()
 ) as element(domain:model)? {
-  domain:domain-function("get-model-from-instance#1")($instance)
+  domain:domain-function("get-model-from-instance", 1)($instance)
 };
 
 declare function domain:find-field-in-model(
   $model as element(domain:model),
   $key as xs:string
 ) as element()* {
-  domain:domain-function("find-field-in-model#2")($model, $key)
+  domain:domain-function("find-field-in-model", 2)($model, $key)
 };
 
 declare function domain:build-field-xpath-from-model(
   $model as element(domain:model),
   $fields as element()*
 ) as xs:string* {
-  domain:domain-function("build-field-xpath-from-model#2")($model, $fields)
+  domain:domain-function("build-field-xpath-from-model", 2)($model, $fields)
 };
 
 declare function domain:find-field-from-path-model(
@@ -1698,5 +1712,5 @@ declare function domain:find-field-from-path-model(
   $key as xs:string,
   $accumulator as element()*
 ) as element()* {
-  domain:domain-function("find-field-from-path-model#3")($model, $key, $accumulator)
+  domain:domain-function("find-field-from-path-model", 3)($model, $key, $accumulator)
 };

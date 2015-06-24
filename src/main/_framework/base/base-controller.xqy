@@ -20,6 +20,8 @@ import module namespace domain = "http://xquerrail.com/domain" at "../domain.xqy
 
 import module namespace config = "http://xquerrail.com/config" at "../config.xqy";
 
+import module namespace module-loader = "http://xquerrail.com/module" at "../module.xqy";
+
 declare default collation "http://marklogic.com/collation/codepoint";
 
 (:Default Imports:)
@@ -29,6 +31,15 @@ declare namespace search = "http://marklogic.com/appservices/search";
 (:Global Option:)
 declare option xdmp:mapping "false";
 declare variable $collation := "http://marklogic.com/collation/codepoint";
+
+declare %config:module-location function controller:module-location(
+) as element(module)* {
+  element module {
+    attribute type {"base-controller"},
+    attribute namespace { "http://xquerrail.com/controller/base" },
+    attribute location { module-loader:normalize-uri((config:framework-path(), "/base/base-controller.xqy")) }
+  }
+};
 
 (:~
 : Helper function to extract params for REST endpoint
@@ -83,7 +94,7 @@ declare function controller:controller()
  : Invokes the action associated with the controller and matches the name to the appropriate action
  : @param $action - Name of the action to invoke
  :)
-declare function controller:invoke($action)
+(:declare function controller:invoke($action)
 {
   xdmp:log(text{"controller:invoke", $action}, "finest"),
   if($action eq "login") then controller:login()
@@ -121,7 +132,7 @@ declare function controller:invoke($action)
      else fn:error(xs:QName("CONTROLLER-NOT-EXISTS"),"Controller does not exist",request:controller())
     )
   )
-};
+};:)
 
 (:Controller Required Functions:)
 declare function controller:name() {

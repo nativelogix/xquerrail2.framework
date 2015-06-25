@@ -597,7 +597,10 @@ declare function config:resolve-path($base as xs:string, $path as xs:string?) as
 };
 
 declare function config:resolve-framework-path($path as xs:string?) as xs:string? {
-  config:resolve-path(config:framework-path(), $path)
+  if (fn:starts-with($path, config:framework-path())) then
+    $path
+  else
+    config:resolve-path(config:framework-path(), $path)
 };
 
 declare function config:resolve-config-path($path as xs:string?) as xs:string? {

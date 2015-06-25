@@ -50,26 +50,16 @@ declare %private function engine:find-by-namespace(
 
 declare function engine:load-function(
   $engine as element(config:engine),
-  $functions as xs:string*
-) {
-  let $import := "import module namespace fp = '" || $engine/@namespace || "'" || (if (fn:exists($engine/@uri)) then " at '" || $engine/@uri || "'" else "") || ";"
-  return xdmp:eval(
-    '
-    xquery version "1.0-ml";'
-    || $import ||
-    'declare variable $functions as xs:string* external;
-    for $f in xdmp:functions()
-      where
-        fn:namespace-uri-from-QName(xdmp:function-name($f)) eq "' || $engine/@namespace || '" and
-        fn:exists(fn:index-of($functions, fn:local-name-from-QName(xdmp:function-name($f))))
-      return
-        $f
-    ',
-    (
-    map:new(
-      map:entry("functions", $functions)
-    )),
-    engine:get-eval-options()
+  $function-name as xs:string,
+  $function-arity as xs:integer?
+) as xdmp:function? {
+  module:load-function-module(
+    config:default-application(),
+    (),
+    $function-name,
+    $function-arity,
+    fn:string($engine/@namespace),
+    fn:string($engine/@uri)
   )
 };
 
@@ -88,7 +78,7 @@ declare function engine:supported-engine(
 ) as element(config:engine)* {
   let $engine :=
     for $engine in config:get-engines()
-    let $is-supported-fn := engine:load-function($engine, $IS-SUPPORTED-ENGINE-FUNCTION)
+    let $is-supported-fn := engine:load-function($engine, $IS-SUPPORTED-ENGINE-FUNCTION, 2)
     return
       if (fn:exists($is-supported-fn) and $is-supported-fn($request, $response) eq fn:true()) then $engine
       else ()
@@ -104,12 +94,12 @@ declare function engine:initialize(
 ) {
     let $_ :=
       for $engine-extension in config:get-engine-extensions()
-      let $initialize-fn := engine:load-function($engine-extension, $INITIALIZE-ENGINE-FUNCTION)
+      let $initialize-fn := engine:load-function($engine-extension, $INITIALIZE-ENGINE-FUNCTION, 2)
       return
         if (fn:exists($initialize-fn)) then $initialize-fn($request, $response)
         else ()
 
-    let $initialize-fn := engine:load-function($engine, $INITIALIZE-ENGINE-FUNCTION)
+    let $initialize-fn := engine:load-function($engine, $INITIALIZE-ENGINE-FUNCTION, 2)
     return
       if (fn:exists($initialize-fn)) then $initialize-fn($request, $response)
       else ()
@@ -559,7 +549,7 @@ declare function engine:transform-dynamic($node as node())
   let $registered-tag := engine:registered-tag($engine-tag-qname)
   return
         if(fn:exists($registered-tag))
-        then engine:load-function(engine:find-by-namespace(fn:namespace-uri-from-QName($registered-tag)), $TRANSFORM-ENGINE-FUNCTION)($node)
+        then engine:load-function(engine:find-by-namespace(fn:namespace-uri-from-QName($registered-tag)), $TRANSFORM-ENGINE-FUNCTION, 1)($node)
         else
           let $name := fn:local-name($node)
           let $func-name := xs:QName(fn:concat("tag:apply"))

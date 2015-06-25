@@ -102,12 +102,12 @@ declare function module:get-modules-map(
 
 declare function module:load-function-module(
   $application as xs:string,
-  $module-type as xs:string,
+  $module-type as xs:string?,
   $function-name as xs:string,
   $function-arity as xs:integer,
   $namespace as xs:string?,
   $location as xs:string?
-) {
+) as xdmp:function? {
   let $function :=
     module:get-modules($application)/library[
       (if (fn:exists($module-type)) then @type eq $module-type else fn:true()) and
@@ -155,6 +155,30 @@ declare function module:load-controller-extensions(
     $domain:CONTROLLER-EXTENSION-NAMESPACE,
     $module-location,
     attribute type {"controller-extension"}
+  )
+};
+
+declare function module:load-engine-extensions(
+) as element(library)* {
+  for $engine in config:get-engine-extensions()/config:engines/config:engine
+  let $namespace := fn:string($engine/@namespace)
+  let $location := config:resolve-framework-path(fn:string($engine/@uri))
+  return module:load-module-definition(
+    $namespace,
+    $location,
+    attribute type {"engine-extension"}
+  )
+};
+
+declare function module:load-engine-functions(
+) as element(library)* {
+  for $engine in config:get-engines-configuration()/config:engines/config:engine
+  let $namespace := fn:string($engine/@namespace)
+  let $location := config:resolve-framework-path(fn:string($engine/@uri))
+  return module:load-module-definition(
+    $namespace,
+    $location,
+    attribute type {"engine"}
   )
 };
 
@@ -281,6 +305,8 @@ declare function module:load-modules(
         let $definition := module:get-modules-definition($module-namespace, $module-location)
         return module:load-modules-framework($definition)
         ,
+        module:load-engine-functions(),
+        module:load-engine-extensions(),
         module:load-domain-extensions(),
         module:load-controller-extensions(),
         module:load-model-extensions(),

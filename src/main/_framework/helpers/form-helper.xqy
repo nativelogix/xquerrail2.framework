@@ -66,7 +66,7 @@ as item()*
 {
     let $init := response:initialize($response)
     let $_ := xdmp:log(("form:build-form::",response:body()),"finest")
-    return 
+    return
       form:build-form-field($domain-model)
 };
 
@@ -88,7 +88,7 @@ declare function form:build-form-field(
    let $template := $field/domain:ui/@template
    return
    typeswitch($field)
-     case element(domain:model) return 
+     case element(domain:model) return
        if($template) then form:call-template($field)
        else
          <div class="{$field/@name}">{
@@ -96,10 +96,10 @@ declare function form:build-form-field(
             return
                form:build-form-field($f)
           }</div>
-           
+
      case element(domain:container) return
        if($template) then form:call-template($field)
-       else 
+       else
        <fieldset>
             {form:attributes($field)}
             <legend>{fn:data(($field/@label,$field/@name)[1])}</legend>
@@ -114,7 +114,7 @@ declare function form:build-form-field(
             else (form:control-group($field,$value))
      case element(domain:attribute) return
         if($template) then form:call-template($field)
-        else 
+        else
            <div class="form-group type_{$type}">{ (form:control-group($field,$value)) }</div>
      default return ()
 };
@@ -313,7 +313,7 @@ declare function form:values($field,$value)
                if(xs:boolean($value) eq fn:true())
                then attribute checked {"checked"}
                else ()
-       ) 
+       )
       else attribute value {fn:string-join($value ! fn:string(.),",")}
 };
 
@@ -470,7 +470,7 @@ declare function form:choice($field,$value)
 
 
 declare function form:time($field,$value)
-{ 
+{
          <div id="{form:get-field-name($field)}_time" class="input-append">
             <input id="{form:get-field-name($field)}" name="{form:get-field-id($field)}" type="text" data-format="hh:MM:ss">
             {form:attributes($field)}
@@ -853,7 +853,7 @@ $field
   let $template := processing-instruction{"template"}{fn:concat("name='",$field/domain:ui/@template,"'")}
   let $_ := response:set-context(form:get-field-id($field))
   let $engine := engine:supported-engine((), response:flush())
-  let $engine-func := engine:load-function($engine, $engine:TRANSFORM-ENGINE-FUNCTION)
+  let $engine-func := engine:load-function($engine, $engine:TRANSFORM-ENGINE-FUNCTION, 1)
   return
        xdmp:apply($engine-func,$template)
 };
@@ -875,9 +875,9 @@ declare function form:langString(
                   </input>,
                   <span class="input-group-btn">
                        <select id="{form:get-field-name($field)}[{$pos - 1}]" name="{form:get-field-id($field)}@lang" class="btn">
-                       {domain:get-field-languages($field) ! 
+                       {domain:get-field-languages($field) !
                          <option value="{.}">{
-                             if($val/@xml:lang = .) then attribute selected {"selected"} else (), 
+                             if($val/@xml:lang = .) then attribute selected {"selected"} else (),
                              .
                          }</option>
                        }</select>
@@ -889,9 +889,9 @@ declare function form:langString(
                   </input>,
                   <span class="input-group-btn">
                     <select id="{form:get-field-name($field)}[0]" name="{form:get-field-id($field)}@lang" class="btn">
-                    {domain:get-field-languages($field) ! 
+                    {domain:get-field-languages($field) !
                       <option value="{.}">{
-                          if(. = $value/@xml:lang) then attribute selected {"selected"} else (), 
+                          if(. = $value/@xml:lang) then attribute selected {"selected"} else (),
                           .
                       }</option>
                     }</select>

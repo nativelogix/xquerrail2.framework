@@ -214,13 +214,20 @@ declare function cache:remove-cache($type as xs:string, $key as xs:string, $user
       return
       xdmp:eval('
       declare variable $key external;
+      declare variable $CACHE-COLLECTION external;
       function() {
-        if (fn:doc-available($key)) then (
+        if (fn:exists($key)) then
+          (xdmp:collection-delete($CACHE-COLLECTION),
+                    xdmp:commit())
+        else
+          ()
+        (: if (fn:doc-available($key)) then (
          xdmp:document-delete($key),
          xdmp:commit()
-        ) else ()
+        ) else () :)
       }()',
-      (xs:QName("key"), $key),
+      (xs:QName("key"), $key,
+      xs:QName("CACHE-COLLECTION"),<x>{$CACHE-COLLECTION}</x>),
       <options xmlns="xdmp:eval">
        <isolation>different-transaction</isolation>
        <transaction-mode>update</transaction-mode>

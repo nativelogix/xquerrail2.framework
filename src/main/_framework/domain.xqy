@@ -39,8 +39,10 @@ declare function domain:domain-function(
   $name as xs:string,
   $arity as xs:integer
 ) as xdmp:function {
-  if (map:contains($FUNCTIONS-CACHE, $name)) then
-    map:get($FUNCTIONS-CACHE, $name)
+  let $key := fn:concat($name,"#",$arity)
+  return
+  if (map:contains($FUNCTIONS-CACHE, $key)) then
+    map:get($FUNCTIONS-CACHE, $key)
   else
     let $function :=
       module-loader:load-function-module(
@@ -57,7 +59,7 @@ declare function domain:domain-function(
       else
         $function
     return (
-      map:put($FUNCTIONS-CACHE, $name, $function),
+      map:put($FUNCTIONS-CACHE, $key, $function),
       $function
     )
 };
@@ -457,7 +459,7 @@ declare function domain:get-controller(
 declare function domain:get-controller-actions(
   $controller-name as xs:string
 ) {
-  domain:domain-function("get-controller-actions", 1)($controller-name)
+  domain:get-controller-actions(config:default-application(), $controller-name)
 };
 
 (:~

@@ -100,6 +100,95 @@ declare function module:get-modules-map(
   return $module-uris
 };
 
+declare function module:lookup-functions-module(
+  $application as xs:string,
+  $module-type as xs:string?,
+  $function-name as xs:string?,
+  $function-arity as xs:integer?,
+  $namespace as xs:string?,
+  $location as xs:string?
+) as xdmp:function* {
+  module:get-modules($application)/library[
+    cts:contains(
+      .,
+      cts:and-query((
+        if (fn:exists($module-type)) then
+          cts:element-attribute-value-query(
+            xs:QName("library"),
+            xs:QName("type"),
+            $module-type,
+            ("exact")
+          )
+        else
+          (),
+        if (fn:exists($namespace)) then
+          cts:element-attribute-value-query(
+            xs:QName("library"),
+            xs:QName("namespace"),
+            $namespace,
+            ("exact")
+          )
+        else
+          (),
+        if (fn:exists($location)) then
+          cts:element-attribute-value-query(
+            xs:QName("library"),
+            xs:QName("location"),
+            $location,
+            ("exact")
+          )
+        else
+          ()
+      ))
+    )
+  ]/function[
+    cts:contains(
+      .,
+      cts:and-query((
+        if (fn:exists($function-name)) then
+          cts:element-attribute-value-query(
+            xs:QName("function"),
+            xs:QName("name"),
+            $function-name,
+            ("exact")
+          )
+        else
+          (),
+        if (fn:exists($function-arity)) then
+          cts:element-attribute-value-query(
+            xs:QName("function"),
+            xs:QName("arity"),
+            xs:string($function-arity),
+            ("exact")
+          )
+        else
+          ()
+      ))
+    )
+  ] ! (
+    xdmp:function(fn:QName(./../@namespace, ./@name), ./../@location)
+  )
+};
+
+declare function module:function-key-cache(
+  $application as xs:string,
+  $module-type as xs:string?,
+  $function-name as xs:string,
+  $function-arity as xs:integer,
+  $namespace as xs:string?,
+  $location as xs:string?
+  ) as xs:string {
+  fn:concat(
+    "function-key-cache::",
+    $application,
+    $module-type,
+    $function-name,
+    $function-arity,
+    $namespace,
+    $location
+  )
+};
+
 declare function module:load-function-module(
   $application as xs:string,
   $module-type as xs:string?,
@@ -108,23 +197,37 @@ declare function module:load-function-module(
   $namespace as xs:string?,
   $location as xs:string?
 ) as xdmp:function? {
-  let $function :=
-    module:get-modules($application)/library[
-      (if (fn:exists($module-type)) then @type eq $module-type else fn:true()) and
-      (if (fn:exists($namespace)) then @namespace eq $namespace else fn:true()) and
-      (if (fn:exists($location)) then @location eq $location else fn:true())
-    ]/function[@name eq $function-name and @arity eq $function-arity]
+  let $key := module:function-key-cache($application, $module-type, $function-name, $function-arity, $namespace, $location)
   return
-    if (fn:exists($function)) then
-      let $function :=
-        if (fn:count($function) ne 1) then (
-          xdmp:trace("xquerrail.module", (text{"Found multiple functions with params", $function-name, $function-arity, $module-type}, $function)),
-          $function[1]
-        ) else
-          $function
-      return xdmp:function(fn:QName($function/../@namespace, $function-name), $function/../@location)
+    if (map:contains($CACHE, $key)) then
+      if (map:get($CACHE, $key) instance of xs:string and map:get($CACHE, $key) eq "FUNCTION-NOT-FOUND") then
+        ()
+      else
+        map:get($CACHE, $key)
     else
-      ()
+      let $functions :=
+        module:lookup-functions-module(
+          $application,
+          $module-type,
+          $function-name,
+          $function-arity,
+          $namespace,
+          $location
+        )
+      return
+        if (fn:exists($functions)) then
+          let $function :=
+            if (fn:count($functions) ne 1) then (
+              xdmp:trace("xquerrail.module", (text{"Found multiple functions with params", $function-name, $function-arity, $module-type}, $functions)),
+              $functions[1]
+            ) else
+              $functions
+          return (
+            map:put($CACHE, $key, $function),
+            $function
+          )
+        else
+          (map:put($CACHE, $key, "FUNCTION-NOT-FOUND"))
 };
 
 declare function module:load-modules-framework(

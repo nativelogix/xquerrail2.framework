@@ -1,0 +1,210 @@
+<domain xmlns="http://xquerrail.com/domain"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:search = "http://marklogic.com/appservices/search"
+  xsi:schemaLocation="http://xquerrail.com/domain https://raw.githubusercontent.com/nativelogix/xquerrail2.framework/master/src/main/_framework/schemas/domain.xsd">
+
+  <model name="model1" persistence="directory" label="Model #1" extends="base" namespace-uri="http://marklogic.com/model/model1" key="uuid" keyLabel="name">
+    <directory>/test/model1/</directory>
+    <element name="name" type="string" label="Name"/>
+    <element name="description" type="string" label="Description"/>
+    <element name="tags" type="string" label="Tags" occurrence="*"/>
+    <element name="id" type="id" label="Id"/>
+    <element name="anyURI" type="anyURI"/>
+  </model>
+
+  <model name="model2" persistence="document" label="Model #2" extends="base" namespace-uri="http://marklogic.com/model/model2" key="uuid" keyLabel="id">
+    <document root="templates">/test/model2.xml</document>
+    <element name="id" type="string" label="Id"/>
+    <element name="name" type="string" label="Name"/>
+    <element name="model1" type="reference" reference="model:model1:in-extension-reference-test" label="Model #1"/>
+  </model>
+
+  <model name="model3" persistence="document" label="Model #2" extends="base" namespace-uri="http://marklogic.com/model/model3" key="uuid" keyLabel="id">
+    <document root="templates">/test/model3.xml</document>
+    <element name="id" type="string" label="Id"/>
+    <element name="name" type="string" label="Name"/>
+    <element name="model1" type="reference" reference="model:model1:in-model-reference-test" label="Model #1"/>
+  </model>
+
+  <model name="model4" persistence="document" label="Model #4 - test search options" extends="base" key="uuid" keyLabel="id">
+    <document root="models4">/test/model4.xml</document>
+    <element name="id" type="string" label="Id"/>
+    <element name="name" type="string" label="Name"/>
+    <element name="tag" type="string" label="Tag">
+      <attribute name="title" type="string" label="Title">
+        <navigation searchable="true" sortable="true"/>
+      </attribute>
+    </element>
+    <element name="field7" type="model7">
+      <navigation searchable="true"/>
+    </element>
+  </model>
+
+  <model name="model5" persistence="directory" label="Model #5" extends="base" key="uuid" keyLabel="id">
+    <event
+      name="create"
+      mode="before"
+      module-namespace="http://xquerrail.com/app-test/events"
+      function="before-create-1"
+      module-uri="/test/_framework/model-test/app-test/events/events.xqy"
+    />
+    <event
+      name="create"
+      mode="before"
+      module-namespace="http://xquerrail.com/app-test/events"
+      function="before-create-2"
+      module-uri="/test/_framework/model-test/app-test/events/events.xqy"
+    />
+    <event
+      name="update"
+      mode="before"
+      module-namespace="http://xquerrail.com/app-test/events"
+      function="before-update-1"
+      module-uri="/test/_framework/model-test/app-test/events/events.xqy"
+    />
+    <directory>/test/model5/</directory>
+    <element name="id" type="string" label="Id"/>
+    <element name="name" type="string" label="Name"/>
+    <element name="firstName" type="string" />
+    <element name="lastName" type="string" />
+    <element name="updated-count" type="integer" default="0"/>
+  </model>
+
+  <model name="model6" key="id" keyLabel="name" persistence="directory">
+    <event
+      name="create"
+      mode="before"
+      module-namespace="http://xquerrail.com/app-test/events"
+      function="validate-constraint"
+      module-uri="/test/_framework/model-test/app-test/events/events.xqy"
+    />
+    <event
+      name="update"
+      mode="before"
+      module-namespace="http://xquerrail.com/app-test/events"
+      function="validate-constraint"
+      module-uri="/test/_framework/model-test/app-test/events/events.xqy"
+    />
+    <directory>/test/model6/</directory>
+    <element name="id" type="identity" identity="true" />
+    <element name="name" type="string" />
+    <element name="comment" type="string">
+      <constraint unique="true" />
+    </element>
+  </model>
+
+  <model name="model7" persistence="abstract">
+    <attribute name="id" identity="true" type="identity" label="Id">
+      <navigation searchable="true"/>
+    </attribute>
+    <element name="name" type="string">
+      <navigation searchable="true" sortable="true"/>
+    </element>
+    <element name="description" type="string">
+      <navigation searchable="false" />
+      <attribute name="order" type="string">
+        <navigation sortable="true"/>
+      </attribute>
+    </element>
+  </model>
+
+  <model name="program" persistence="directory" label="Program" key="id" keyLabel="id">
+    <directory>/test/program/</directory>
+    <options xmlns="http://marklogic.com/appservices/search">
+     <search:operator name="sort">
+       <search:state name="name-asc">
+          <search:sort-order direction="ascending" type="xs:string">
+             <search:element ns="http://xquerrail.com/app-test" name="name"/>
+          </search:sort-order>
+          <search:sort-order>
+             <search:score/>
+          </search:sort-order>
+       </search:state>
+       <search:state name="name-desc">
+          <search:sort-order direction="descending" type="xs:string">
+             <search:element ns="http://xquerrail.com/app-test" name="name"/>
+          </search:sort-order>
+          <search:sort-order>
+             <search:score/>
+          </search:sort-order>
+       </search:state>
+     </search:operator>
+    </options>
+    <attribute name="id" identity="true" type="identity" label="Id">
+      <navigation metadata="true" searchable="true"></navigation>
+    </attribute>
+    <container name="container1" label="Container #1">
+      <element name="type" type="string" label="Field #1">
+        <navigation exportable="true" searchable="true" facetable="false" metadata="true" searchType="range"></navigation>
+      </element>
+      <element name="field2" type="string" label="Field #2">
+        <navigation exportable="false" searchable="true" facetable="false" metadata="false" searchType="range"></navigation>
+      </element>
+    </container>
+    <element name="name" type="string" label="Name">
+      <navigation exportable="true" searchable="true" facetable="false" searchType="range"></navigation>
+    </element>
+  </model>
+
+  <model name="validate-model" persistence="directory" validation="true" key="id" keyLabel="id" >
+    <directory>/test/model/validation/</directory>
+    <collection>base-model-validation-test</collection>
+
+    <attribute name="id" type="identity" identity="true"/>
+
+    <attribute name="condition" type="string" description="Test Condition"/>
+
+    <element name="requiredString" type="string" label="Scalar String" >
+      <constraint required="true" unique="true" minLength="5" maxLength="10" pattern="ay$"/>
+    </element>
+
+    <element name="plusInteger" occurrence="+" type="integer" label="Plus Integer" >
+      <constraint minValue="1" maxValue="99"/>
+    </element>
+
+    <element name="optionalOption" occurrence="?" default="tall" type="string" label="One Option">
+      <constraint inList="latteSize"/>
+    </element>
+
+    <element name="defaultValue" occurrence="1" default="Default" type="string" label="Default Value" />
+
+    <optionlist name="latteSize" type="string">
+      <option label="Tall">tall</option>
+      <option label="Grande">grande</option>
+      <option label="Venti">venti</option>
+    </optionlist>
+  </model>
+
+  <model name="validate-model2" persistence="directory" validation="true" uniqueKey="firstName lastName" key="id" keyLabel="id" >
+    <directory>/test/model2/validation/</directory>
+    <attribute name="id" type="identity" identity="true"/>
+    <element name="firstName" type="string" />
+    <element name="lastName" type="string" />
+    <element name="birthDate" type="string">
+      <constraint validator="custom-validator"/>
+    </element>
+  </model>
+
+  <model name="validate-model3" persistence="directory" validation="true" key="id" keyLabel="id" >
+    <validator name="model-validator" function="model-validator" />
+    <directory>/test/model3/validation/</directory>
+    <attribute name="id" type="identity" identity="true"/>
+    <element name="firstName" type="string" />
+    <element name="lastName" type="string" />
+  </model>
+
+  <model name="base-validate-model" persistence="abstract" key="uuid" keyLabel="uuid" >
+    <validator name="base-model-validator" function="base-model-validator" />
+    <element name="uuid" type="identity" identity="true" label="Globally Unique Identifier" />
+    <element name="age" type="integer" />
+  </model>
+
+  <model name="validate-model4" persistence="directory" extends="base-validate-model" validation="true" key="uuid" keyLabel="uuid" >
+    <validator name="model-validator" function="model-validator" />
+    <directory>/test/model4/validation/</directory>
+    <element name="firstName" type="string" />
+    <element name="lastName" type="string" />
+  </model>
+
+  <controller name="programs" model="program" />
+</domain>

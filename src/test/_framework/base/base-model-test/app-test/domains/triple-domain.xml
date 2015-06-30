@@ -1,0 +1,52 @@
+<domain xmlns="http://xquerrail.com/domain"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:search = "http://marklogic.com/appservices/search"
+    xmlns:foaf="http://xmlns.com/foaf/0.1/"
+    xsi:schemaLocation="http://xquerrail.com/domain ../../_framework/schemas/domain.xsd">
+  <name>lookup</name>
+  <model name="triplable1" label="Triplable" persistence="directory" extends="base" key="uuid" keyLabel="name">
+    <directory>/test/triplables1/</directory>
+    <navigation triplable="true"/>
+    <element name="name" type="string" label="Name"/>
+    <!-- <container name="triples" namespace="http://marklogic.com/semantics">
+      <triple>
+        <subject>model:instance-sem-uuid()</subject>
+        <predicate>hasUri</predicate>
+        <object>model:node-uri()</object>
+      </triple>
+      <triple>
+        <subject>model:instance-sem-uuid()</subject>
+        <predicate>hasType</predicate>
+        <object>model:node-uri()</object>
+      </triple>
+     </container> -->
+  </model>
+  <model name="triplable2" label="Triplable" persistence="directory" extends="base" key="uuid" keyLabel="name">
+    <directory>/test/triplables2/</directory>
+    <navigation triplable="true"/>
+    <element name="name" type="string" label="Name"/>
+    <element name="friendOfFriend" type="triple" label="Friend of Friend">
+      <attribute name="confidence" type="integer" label="confidence"/>
+      <subject literal="true">model:instance-iri()</subject>
+      <predicate>foaf:knows</predicate>
+      <object model="triplable2"></object>
+      <!-- <graph/> -->
+    </element>
+    <!-- <element name="triple" type="triple" namespace="http://marklogic.com/semantics">
+      <attribute name="confidence" type="integer" label="confidence"/>
+      <element name="subject" namespace="http://marklogic.com/semantics">model:instance-sem-uuid()</element>
+      <element name="predicate" namespace="http://marklogic.com/semantics">foaf:knows</element>
+      <element name="object" namespace="http://marklogic.com/semantics">model:triple-object-from('triplable2')</element>
+    </element> -->
+  </model>
+  <model name="triplable3" label="Triplable" persistence="directory" extends="base" key="uuid" keyLabel="name">
+    <directory>/test/triplables3/</directory>
+    <navigation triplable="true"/>
+    <element name="name" type="string" label="Name"/>
+    <triple>
+      <subject literal="false">model:instance-iri()</subject>
+      <predicate>foaf:knows</predicate>
+      <object model="triplable2"></object>
+    </triple>
+  </model>
+</domain>

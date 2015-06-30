@@ -14,8 +14,11 @@
   <declare-namespace prefix="model5" namespace-uri="http://marklogic.com/model/model5"/>
   <declare-namespace prefix="model20" namespace-uri="http://marklogic.com/model/model20"/>
   <declare-namespace prefix="model21" namespace-uri="http://marklogic.com/model/model21"/>
+  <declare-namespace prefix="foaf" namespace-uri="http://xmlns.com/foaf/0.1/"/>
+  <declare-namespace prefix="sem" namespace-uri="http://marklogic.com/semantics"/>
   <import id="content" resource="content-domain.xml"/>
   <import id="lookups" resource="lookup-domain.xml"/>
+  <import id="triples" resource="triple-domain.xml"/>
   <!--Implement a base class to inherit metadata-->
   <model name="base" description="Base Extension Class" persistence="abstract">
     <navigation showable="false" removable="true"></navigation>

@@ -55,7 +55,7 @@ declare function field-defaultValue(
    $options as map:map
 ) {
  if($node/@default and $node/@default ne "")
- then fn:concat("'",$node/@default,"'")
+ then fn:concat('"',$node/@default,'"')
  else "()"
 };
 
@@ -217,7 +217,7 @@ declare function field-get-expression(
   let $variable := if($mode = "update") then "$update" else "$current"
   return
     switch($format)
-    case "map"  return fn:concat("map:get(",$variable,",'",domain:get-field-name-key($node),"')")
+    case "map"  return fn:concat('map:get(',$variable,',"',domain:get-field-name-key($node),'")')
     case "json" return fn:concat($variable,domain:get-field-jsonpath($node))
     default return     fn:concat($variable,domain:get-field-xpath($node))
 };
@@ -231,7 +231,7 @@ declare function field-exists-expression(
   let $variable := if($mode = "update") then "$update" else "$current"
   return
     switch($format)
-    case "map"  return fn:concat("map:contains(",$variable,",'",domain:get-field-name-key($node),"')")
+    case "map"  return fn:concat('map:contains(',$variable,',"',domain:get-field-name-key($node),'")')
     case "json" return fn:concat("fn:exists(",$variable,domain:get-field-jsonpath($node),")")
     default return     fn:concat($variable,domain:get-field-xpath($node))
 };
@@ -240,106 +240,117 @@ declare function field-exists-expression(
  : Creates an update expression as a recursive compiler
 ~:)
 declare function field-build-expression(
-$node as element(),
-$options as map:map
+  $node as element(),
+  $options as map:map
 ) as xs:string {
-   let $xs-type := domain:resolve-datatype($node)
-   let $is-multi := $node/@occurrence = ("+","*")
-   let $default-value := $node/@default[. ne ""]
-   let $type-func := fn:concat("type:",$node/@type)
-   let $format  := (map:get($options,"format"),"xml")[1]
-   let $persistence :=
-        if(map:contains($options,"persistence"))
-        then map:contains($options,"persistence")
-        else fn:data($node/ancestor::domain:model/@persistence)
-   let $is-model := domain:get-base-type($node,fn:true()) = ("instance","model")
-   return
-   fn:normalize-space(
-     (:Allow Injector from calling function:)
-     if(map:contains($options,$type-func))
-     then map:get($options,$type-func)($node,$options)
-     else
-     fn:normalize-space(
-     switch($node/@type)
-     case "identity" return
-        <template>
-        fn:string(if({field-exists-expression("update",$format,$node,$options)})
-                then {field-get-expression("update",$format,$node,$options)}
-                else if({field-exists-expression("create",$persistence,$node,$options)})
-                then {field-get-expression("create",$persistence,$node,$options)}
-                else base:generate-uuid())
-        </template>
-     case "create-timestamp" return
-        <template>
+  let $xs-type := domain:resolve-datatype($node)
+  let $is-multi := $node/@occurrence = ("+","*")
+  let $default-value := $node/@default[. ne ""]
+  let $type-func := fn:concat("type:",$node/@type)
+  let $format  := (map:get($options,"format"),"xml")[1]
+  let $persistence :=
+    if(map:contains($options,"persistence"))
+    then map:contains($options,"persistence")
+    else fn:data($node/ancestor::domain:model/@persistence)
+  let $is-model := domain:get-base-type($node,fn:true()) = ("instance","model")
+  return
+  fn:normalize-space(
+    (:Allow Injector from calling function:)
+    if(map:contains($options,$type-func))
+    then map:get($options,$type-func)($node,$options)
+    else
+      fn:normalize-space(
+        switch($node/@type)
+        case "identity" return
+          <template>
+            fn:string(if({field-exists-expression("update",$format,$node,$options)})
+              then {field-get-expression("update",$format,$node,$options)}
+              else if({field-exists-expression("create",$persistence,$node,$options)})
+              then {field-get-expression("create",$persistence,$node,$options)}
+              else base:generate-uuid())
+          </template>
+        case "create-timestamp" return
+          <template>
             if({field-exists-expression("create",$persistence,$node,$options)})
             then {field-get-expression("create",$persistence,$node,$options)}
-            else fn:current-dateTime()</template>
-     case "create-user"      return  <template>if({field-exists-expression("create",$persistence,$node,$options)}) then {field-get-expression("create",$persistence,$node,$options)} else context:user()</template>
-     case "update-timestamp" return  <template>fn:current-dateTime()</template>
-     case "update-user"      return  <template>context:user()</template>
-     case "binary"           return  fn:error(xs:QName("UNSUPPORTED-TYPE-EXCEPTION"),"binary type is not currently supported")
-     case "sequence"         return
-        <template>
-        if({field-exists-expression("update",$format,$node,$options)})
-        then {field-get-expression("update",$format,$node,$options)}
-        else if({field-exists-expression("create",$persistence,$node,$options)})
-        then {field-get-expression("create",$persistence,$node,$options) + 1}
-        else 1
-        </template>
-     case "reference" return
-       let $ref-type := $node/@reference
-       let $ref-parts := fn:tokenize($ref-type,":")
-       let $type := $ref-parts[1]
-       return
-          switch($ref-parts[1])
-          case "model"       return  model-reference-expression("update",$format,$node,$options)
-          case "application" return  application-reference-expression($node,$options)
-          case "extension"   return  extension-reference-expression($node,$options)
+            else fn:current-dateTime()
+          </template>
+        case "create-user" return
+          <template>
+            if({field-exists-expression("create",$persistence,$node,$options)})
+            then {field-get-expression("create",$persistence,$node,$options)}
+            else context:user()
+          </template>
+        case "update-timestamp" return
+          <template>fn:current-dateTime()</template>
+        case "update-user" return
+          <template>context:user()</template>
+        case "binary" return
+          fn:error(xs:QName("UNSUPPORTED-TYPE-EXCEPTION"),"binary type is not currently supported")
+        case "sequence" return
+          <template>
+            if({field-exists-expression("update",$format,$node,$options)})
+            then {field-get-expression("update",$format,$node,$options)}
+            else if({field-exists-expression("create",$persistence,$node,$options)})
+            then {field-get-expression("create",$persistence,$node,$options) + 1}
+            else 1
+          </template>
+        case "reference" return
+          let $ref-type := $node/@reference
+          let $ref-parts := fn:tokenize($ref-type,":")
+          let $type := $ref-parts[1]
+          return switch($type)
+            case "model" return
+              model-reference-expression("update",$format,$node,$options)
+            case "application" return
+              application-reference-expression($node,$options)
+            case "extension" return
+              extension-reference-expression($node,$options)
           default return fn:error(xs:QName("UNRESOLVED-REFERENCE-EXPRESSION"), "Cannot create reference expression",$ref-parts[1])
-     case "schema-element" return
-        <template>
+        case "schema-element" return
+          <template>
             if({field-exists-expression("update",$format,$node,$options)})
             then {field-get-expression("update",$format,$node,$options)}
             else if({field-exists-expression("create",$persistence,$node,$options)})
             then {field-get-expression("create",$persistence,$node,$options)}
             else {field-defaultValue($node,$options)}
-        </template>
-    case "sequence"         return
-        <template>
-        if({field-exists-expression("update",$format,$node,$options)})
-        then {field-get-expression("update",$format,$node,$options)}
-        else if({field-exists-expression("create",$persistence,$node,$options)})
-        then {field-get-expression("create",$persistence,$node,$options) + 1}
-        else 1
-        </template>
+          </template>
+        case "sequence" return
+          <template>
+            if({field-exists-expression("update",$format,$node,$options)})
+            then {field-get-expression("update",$format,$node,$options)}
+            else if({field-exists-expression("create",$persistence,$node,$options)})
+            then {field-get-expression("create",$persistence,$node,$options) + 1}
+            else 1
+          </template>
         default return
-       if($is-model) then
-          <template>(
-               if({field-exists-expression("update",$format,$node,$options)})
-               then {field-get-expression("update",$format,$node,$options)}
-               else if({field-exists-expression("create",$persistence,$node,$options)})
-               then {field-get-expression("create",$persistence,$node,$options)}
-               else {field-defaultValue($node,$options)}
-            )
-           </template>
-       else if($is-multi) then
-           <template>{$xs-type}(
-               if({field-exists-expression("update",$format,$node,$options)})
-               then {field-get-expression("update",$format,$node,$options)}
-               else if({field-exists-expression("create",$persistence,$node,$options)})
-               then {field-get-expression("create",$persistence,$node,$options)}
-               else {field-defaultValue($node,$options)}
-            )
-           </template>
-       else
-         <template>(
-               if({field-exists-expression("update",$format,$node,$options)})
-               then {field-get-expression("update",$format,$node,$options)}
-               else if({field-exists-expression("create",$persistence,$node,$options)})
-               then {field-get-expression("create",$persistence,$node,$options)}
-               else {field-defaultValue($node,$options)}
+          if($is-model) then
+            (:base:recursive-create():)
+            <template>
+              if({field-exists-expression("update",$format,$node,$options)})
+              then {field-get-expression("update",$format,$node,$options)}
+              else if({field-exists-expression("create",$persistence,$node,$options)})
+              then {field-get-expression("create",$persistence,$node,$options)}
+              else {field-defaultValue($node,$options)}
+            </template>
+          else if($is-multi) then
+            (:{$xs-type}:)
+            <template>
+              if({field-exists-expression("update",$format,$node,$options)})
+              then {field-get-expression("update",$format,$node,$options)}
+              else if({field-exists-expression("create",$persistence,$node,$options)})
+              then {field-get-expression("create",$persistence,$node,$options)}
+              else {field-defaultValue($node,$options)}
+            </template>
+          else
+            <template>(
+              if({field-exists-expression("update",$format,$node,$options)})
+              then {field-get-expression("update",$format,$node,$options)}
+              else if({field-exists-expression("create",$persistence,$node,$options)})
+              then {field-get-expression("create",$persistence,$node,$options)}
+              else {field-defaultValue($node,$options)}
             )[. ne ""] ! {$xs-type}(.)
-        </template>
+            </template>
     ))
 };
 (:~
@@ -383,7 +394,7 @@ declare function generate-build-expression-xml(
              ,
              fn:concat(" element {",xdmp:describe(domain:get-field-qname($node)),"}{"),
              fn:string-join((
-                    fn:concat("attribute xsi:type {'",$node/@name,"'}"),
+                    fn:concat('attribute xsi:type {"',$node/@name,'"}'),
                     $node/(domain:attribute)                ! generate-build-expression(.,$options),
                     $node/(domain:element|domain:container) ! generate-build-expression(.,$options)
                  )[fn:normalize-space(.) ne ""],",&#xA;"),
@@ -472,7 +483,7 @@ declare function generate-library-module(
     let $functions := map:get($options,"functions")
     let $generated :=
          fn:string-join((
-             "xquery version '1.0-ml';",
+             'xquery version "1.0-ml";',
              declare-module-expression($model,$options),
              $DEFAULT-IMPORTS,
              "(:Namespace Declarations:)",
@@ -496,9 +507,8 @@ declare function generate-function-module(
    $options as map:map
 ) {
     let $functions := map:get($options,"functions")
-    let $generated :=
-        xdmp:pretty-print(fn:string-join((
-             "xquery version '1.0-ml';",
+    let $expression := fn:string-join((
+             'xquery version "1.0-ml";',
              declare-module-expression($model,$options),
              $DEFAULT-IMPORTS,
              "(:Namespace Declarations:)",
@@ -507,14 +517,15 @@ declare function generate-function-module(
                 map:new((",
               fn:string-join((
 
-                 fn:concat("map:entry('build',", generate-build-expression($model,$options),")")
+                 fn:concat('map:entry("build",', generate-build-expression($model,$options),')')
               ),","),
               ")),?)"
-         ),$NL))
+         ),$NL)
       return try{
-          $generated
+        let $generated := xdmp:pretty-print($expression)
+        return $generated
        } catch($err) {
-         fn:error(xs:QName("COMPILATION-ERROR"),"Unable to compile module",($err,$generated))
+         fn:error(xs:QName("COMPILATION-ERROR"),"Unable to compile module",($err,$expression))
        }
 };
 (:~

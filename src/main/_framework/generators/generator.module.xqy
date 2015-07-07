@@ -151,6 +151,39 @@ declare function generator:get-module-definition(
         )
       } catch ($ex) {
         xdmp:log($ex, "warning"),
-        xdmp:trace("xquerrail.generator", $ex)
+        xdmp:trace("xquerrail.generator", $ex),
+        xdmp:rethrow()
       }
+};
+
+declare function generator:function-contains-annotation(
+  $function as element(function),
+  $annotations as xs:QName*
+) as xs:boolean {
+  cts:contains(
+    $function,
+    cts:and-query((
+      for $annotation in $annotations
+      return (
+        cts:element-attribute-value-query(
+          xs:QName("implements"),
+          xs:QName("name"),
+          fn:local-name-from-QName($annotation),
+          ("exact")
+        ),
+        cts:element-attribute-value-query(
+          xs:QName("implements"),
+          xs:QName("namespace"),
+          fn:namespace-uri-from-QName($annotation),
+          ("exact")
+        )
+      )
+    ))
+  )
+};
+
+declare function generator:get-xdmp-function(
+  $function as element(function)
+) as xdmp:function {
+  xdmp:function(fn:QName($function/../@namespace, $function/@name), $function/../@location)
 };

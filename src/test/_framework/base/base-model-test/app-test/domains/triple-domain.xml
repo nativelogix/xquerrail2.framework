@@ -3,50 +3,80 @@
     xmlns:search = "http://marklogic.com/appservices/search"
     xmlns:foaf="http://xmlns.com/foaf/0.1/"
     xsi:schemaLocation="http://xquerrail.com/domain ../../_framework/schemas/domain.xsd">
-  <name>lookup</name>
-  <model name="triplable1" label="Triplable" persistence="directory" extends="base" key="uuid" keyLabel="name">
+  <name>triple-domain</name>
+
+  <model name="triplable1" label="Triplable #1" persistence="directory" extends="base" key="uuid" keyLabel="name">
     <directory>/test/triplables1/</directory>
     <navigation triplable="true"/>
     <element name="name" type="string" label="Name"/>
-    <!-- <container name="triples" namespace="http://marklogic.com/semantics">
-      <triple>
-        <subject>model:instance-sem-uuid()</subject>
-        <predicate>hasUri</predicate>
-        <object>model:node-uri()</object>
-      </triple>
-      <triple>
-        <subject>model:instance-sem-uuid()</subject>
-        <predicate>hasType</predicate>
-        <object>model:node-uri()</object>
-      </triple>
-     </container> -->
   </model>
-  <model name="triplable2" label="Triplable" persistence="directory" extends="base" key="uuid" keyLabel="name">
+
+  <model name="triplable2" label="Triplable #2" persistence="directory" extends="base" key="uuid" keyLabel="name">
     <directory>/test/triplables2/</directory>
     <navigation triplable="true"/>
     <element name="name" type="string" label="Name"/>
-    <element name="friendOfFriend" type="triple" label="Friend of Friend">
+    <triple name="friendOfFriend">
       <attribute name="confidence" type="integer" label="confidence"/>
-      <subject literal="true">model:instance-iri()</subject>
+      <subject literal="true">{model:triple-identity-value#3}</subject>
       <predicate>foaf:knows</predicate>
       <object model="triplable2"></object>
       <!-- <graph/> -->
-    </element>
-    <!-- <element name="triple" type="triple" namespace="http://marklogic.com/semantics">
-      <attribute name="confidence" type="integer" label="confidence"/>
-      <element name="subject" namespace="http://marklogic.com/semantics">model:instance-sem-uuid()</element>
-      <element name="predicate" namespace="http://marklogic.com/semantics">foaf:knows</element>
-      <element name="object" namespace="http://marklogic.com/semantics">model:triple-object-from('triplable2')</element>
-    </element> -->
+    </triple>
   </model>
-  <model name="triplable3" label="Triplable" persistence="directory" extends="base" key="uuid" keyLabel="name">
+  <model name="triplable3" label="Triplable #3" persistence="directory" extends="base" key="uuid" keyLabel="name">
     <directory>/test/triplables3/</directory>
     <navigation triplable="true"/>
     <element name="name" type="string" label="Name"/>
-    <triple>
-      <subject literal="false">model:instance-iri()</subject>
+    <triple name="friendOfFriend">
+      <subject literal="false">{model:triple-identity-value#3}</subject>
       <predicate>foaf:knows</predicate>
       <object model="triplable2"></object>
     </triple>
+  </model>
+  <model name="triplable4" label="Triplable #4" persistence="directory" extends="base" key="uuid" keyLabel="name">
+    <directory>/test/triplables4/</directory>
+    <navigation triplable="true"/>
+    <element name="name" type="string" label="Name"/>
+    <container name="triples" namespace="http://marklogic.com/semantics">
+      <triple name="manualTriple">
+        <subject type="sem:iri">
+          <expression namespace="http://xquerrail.com/model/base/impl" function="triple-identity-value" location=""/>
+        </subject>
+        <predicate type="sem:iri" />
+        <object type="sem:iri" />
+      </triple>
+      <triple name="customTriple">
+        <subject type="sem:iri">
+          <expression namespace="http://xquerrail.com/model/base/impl" function="triple-identity-value" location=""/>
+        </subject>
+        <predicate type="sem:iri">customTriple</predicate>
+        <object type="sem:iri" model="triplable3">
+          <expression namespace="http://xquerrail.com/expression/custom" function="custom-expression" location="/test/_framework/base/base-model-test/app-test/expressions/custom-expressions.xqy" />
+        </object>
+      </triple>
+      <triple name="friendOfFriend">
+        <subject type="sem:iri">
+          <expression namespace="http://xquerrail.com/model/base/impl" function="triple-identity-value" location=""/>
+        </subject>
+        <predicate type="sem:iri">foaf:knows</predicate>
+        <object type="sem:iri" model="triplable3">
+          <expression namespace="http://xquerrail.com/expression/custom" function="link-to" location="/test/_framework/base/base-model-test/app-test/expressions/custom-expressions.xqy" />
+        </object>
+      </triple>
+      <triple name="literalTriple" autogenerate="true">
+        <subject>
+          <expression namespace="http://xquerrail.com/model/base/impl" function="triple-identity-value" location=""/>
+        </subject>
+        <predicate>literalTriple</predicate>
+        <object>object1</object>
+      </triple>
+      <triple name="iriTriple" autogenerate="true">
+        <subject type="sem:iri">
+          <expression namespace="http://xquerrail.com/model/base/impl" function="triple-identity-value" location=""/>
+        </subject>
+        <predicate type="sem:iri">iriTriple</predicate>
+        <object type="sem:iri">object2</object>
+      </triple>
+    </container>
   </model>
 </domain>

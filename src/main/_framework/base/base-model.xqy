@@ -31,6 +31,11 @@ declare default collation "http://marklogic.com/collation/codepoint";
 declare option xdmp:mapping "false";
 
 declare variable $FUNCTIONS-CACHE  := map:map();
+declare variable $HAS-URI-PREDICATE := "hasUri";
+declare variable $HAS-TYPE-PREDICATE := "hasType";
+
+declare variable $DEFAULT-PAGE-SIZE := 20;
+declare variable $EXPANDO-PATTERN := "\$\((\i\c*(/@?\i\c*)*)\)";
 
 declare %config:module-location function model:module-location(
 ) as element(module)* {
@@ -131,7 +136,7 @@ declare function model:generate-sequenceid($seed as xs:integer) {
  :  @param $instance - Instance of asset can be map or instance of element from domain
  :)
 declare function model:generate-iri(
-  $uri as xs:string,
+  $uri as xs:string?,
   $field as element(),
   $instance as item()
 ) {
@@ -153,10 +158,11 @@ declare function model:generate-uri(
 };
 
 declare function model:node-uri(
-  $model as element(domain:model),
-  $params as item()*
+  $context as element(),
+  $current as item()*,
+  $updates as item()*
 ) as xs:string? {
-  model:model-function("node-uri", 2)($model, $params)
+  model:model-function("node-uri", 3)($context, $current, $updates)
 };
 
 (:~
@@ -500,21 +506,29 @@ declare function model:recursive-build(
   model:model-function("recursive-build", 4)($context, $current, $updates, $partial)
 };
 
-declare function model:add-triples(
+(:declare function model:add-triples(
   $model as element(domain:model),
   $current as node()?,
   $updates as node()
 ) {
   model:model-function("add-triples", 3)($model, $current, $updates)
+};:)
+
+declare function model:triple-identity-value(
+  $context as element(),
+  $current as item(),
+  $updates as item()*
+) {
+  model:model-function("triple-identity-value", 3)($context, $current, $updates)
 };
 
-declare function model:build-triples(
+(:declare function model:build-triples(
   $model as element(domain:model),
   $current as node()?,
   $updates as item()
 ) as element(sem:triples) {
   model:model-function("build-triples", 3)($model, $current, $updates)
-};
+};:)
 
 declare function model:get-triple-identity(
   $model as element(domain:model),
@@ -602,7 +616,7 @@ declare function model:build-triple-subject(
   $field as element(),
   $params as item()*,
   $value as item()
-) {
+) as element(sem:subject) {
   model:model-function("build-triple-subject", 3)($field, $params, $value)
 };
 
@@ -610,7 +624,7 @@ declare function model:build-triple-predicate(
   $field as element(),
   $params as item()*,
   $value as item()
-) {
+) as element(sem:predicate) {
   model:model-function("build-triple-predicate", 3)($field, $params, $value)
 };
 
@@ -618,7 +632,7 @@ declare function model:build-triple-object(
   $field as element(),
   $params as item()*,
   $value as item()
-) {
+) as element(sem:object) {
   model:model-function("build-triple-object", 3)($field, $params, $value)
 };
 
@@ -626,8 +640,16 @@ declare function model:build-triple-graph(
   $field as element(),
   $params as item()*,
   $value as item()
-) {
+) as element(sem:graph) {
   model:model-function("build-triple-graph", 3)($field, $params, $value)
+};
+
+declare function model:get-model-expression(
+  $model as element(domain:model),
+  $expression as element(domain:expression),
+  $arity as xs:integer
+) as xdmp:function? {
+  model:model-function("get-model-expression", 3)($model, $expression, $arity)
 };
 
 (:~
@@ -638,7 +660,7 @@ declare function model:build-triple(
   $current as node()?,
   $updates as item()*,
   $partial as xs:boolean
-) {
+) as element(sem:triple)* {
   model:model-function("build-triple", 4)($context, $current, $updates, $partial)
 };
 

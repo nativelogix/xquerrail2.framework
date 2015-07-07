@@ -15,6 +15,8 @@ declare option xdmp:mapping "false";
 
 declare variable $TEST-COLLECTION := "base-model-triple-test";
 
+declare variable $TRIPLABLE3-MODEL := domain:get-model("triplable3");
+
 declare variable $TEST-APPLICATION :=
 <application xmlns="http://xquerrail.com/config">
   <base>/main</base>
@@ -36,10 +38,18 @@ declare variable $TRIPLABLES2 := (
 )
 ;
 
+declare variable $TRIPLABLES3 := (
+<triplable2 xmlns="http://xquerrail.com/app-test">
+  <name>triplable3-name-1</name>
+</triplable2>
+)
+;
+
 declare %test:setup function setup() {
   setup:setup($TEST-APPLICATION),
   setup:create-instances("triplable1", $TRIPLABLES1, $TEST-COLLECTION),
-  setup:create-instances("triplable2", $TRIPLABLES2, $TEST-COLLECTION)
+  setup:create-instances("triplable2", $TRIPLABLES2, $TEST-COLLECTION),
+  setup:create-instances("triplable3", $TRIPLABLES3, $TEST-COLLECTION)
 };
 
 declare %test:teardown function teardown() {
@@ -95,6 +105,35 @@ declare %test:case function model-generate-iri-with-curie-test() as item()*
   )
 };
 
+declare %private function has-triple-element-with-predicate(
+  $model as element(domain:model),
+  $predicate as xs:string
+) {
+  assert:not-empty($model/domain:container[@name="triples"], "$model must contain a container[@name eq 'triples']"),
+  assert:not-empty($model/domain:container[@name eq "triples"]/domain:triple/domain:predicate[. eq $predicate], "$model must have a triple with predicate value '" || $predicate || "'")
+};
+
+declare %test:case function compiled-model-is-triplable-test() as item()*
+{
+  let $model := domain:get-model("triplable1")
+  return (
+    assert:not-empty($model),
+    has-triple-element-with-predicate($model, "hasUri"),
+    has-triple-element-with-predicate($model, "hasType")
+  )
+};
+
+declare %test:case function compiled-model-is-triplable-with-triples-container-test() as item()*
+{
+  let $model := domain:get-model("triplable4")
+  return (
+    assert:not-empty($model),
+    has-triple-element-with-predicate($model, "hasUri"),
+    has-triple-element-with-predicate($model, "hasType"),
+    has-triple-element-with-predicate($model, "foaf:knows")
+  )
+};
+
 declare %test:case function model-is-triplable-test() as item()*
 {
   let $model := domain:get-model("triplable1")
@@ -112,7 +151,8 @@ declare %test:case function model-has-type-triple-test() as item()*
 {
   let $model := domain:get-model("triplable1")
   let $params := map:new((
-    map:entry("name", setup:random("triple"))
+    map:entry("name", setup:random("triple")),
+    map:entry("hasType", map:new())
   ))
   let $instance := model:new($model, $params)
   return (
@@ -154,3 +194,148 @@ declare %test:case function model-is-triplable-keep-uuid-test() as item()*
   )
 };
 
+declare %test:case function domain-get-field-param-triple-value-test() as item()*
+{
+  let $model := domain:get-model("triplable2")
+  let $params := map:new((
+    map:entry("friendOfFriend", (sem:uuid-string(), "foaf:knows", sem:iri("richard")))
+  ))
+  let $triple-value := sem:triple(domain:get-field-param-triple-value($model/domain:triple[@name eq "friendOfFriend"], $params))
+  return (
+    assert:not-empty($triple-value),
+    assert:equal(sem:triple-subject($triple-value), map:get($params, "friendOfFriend")[1], "Triple subject should be the same"),
+    assert:equal(sem:triple-predicate($triple-value), map:get($params, "friendOfFriend")[2], "Triple predicate should be the same"),
+    assert:equal(sem:triple-object($triple-value), map:get($params, "friendOfFriend")[3], "Triple object should be the same")
+  )
+};
+
+declare %test:case function domain-get-field-param-triple-value-from-map-test() as item()*
+{
+  let $model := domain:get-model("triplable2")
+  let $params := map:new((
+    map:entry(
+      "friendOfFriend",
+      map:new((
+        map:entry(
+          "@",
+          map:new((
+            map:entry("confidence", 50)
+          ))
+        ),
+        map:entry("subject", sem:iri("subject")),
+        map:entry("predicate", "foaf:knows"),
+        map:entry("object", "gary")
+      ))
+    )
+  ))
+  let $triple-value := domain:get-field-param-triple-value($model/domain:triple[@name eq "friendOfFriend"], $params)
+  return (
+    assert:not-empty($triple-value),
+    assert:equal(sem:triple-subject(sem:triple($triple-value)), map:get(map:get($params, "friendOfFriend"), "subject"), "Triple subject should be the same"),
+    assert:equal(sem:triple-predicate(sem:triple($triple-value)), map:get(map:get($params, "friendOfFriend"), "predicate"), "Triple predicate should be the same"),
+    assert:equal(sem:triple-object(sem:triple($triple-value)), map:get(map:get($params, "friendOfFriend"), "object"), "Triple object should be the same"),
+    assert:equal(fn:data($triple-value/@confidence), map:get(map:get(map:get($params, "friendOfFriend"), "@"), "confidence"), "triple/@confidence should be the same")
+  )
+};
+
+declare %test:case function model-triplable-custom-expression-test() as item()*
+{
+  let $model := domain:get-model("triplable4")
+  let $params := map:new((
+    map:entry("name", setup:random("triple")),
+    map:entry("customTriple", "pippo")
+  ))
+  let $instance := model:new($model, $params)
+  let $triple-value := $instance/sem:triples/sem:triple[@name eq "customTriple"]
+  let $has-uri-triple-value := $instance/sem:triples/sem:triple[@name eq "hasUri"]
+  return (
+    assert:not-empty($instance),
+    assert:not-empty($instance/sem:triples, "$instance must contain sem:triples"),
+    assert:not-empty($triple-value),
+    assert:equal(sem:triple-subject(sem:triple($triple-value)), sem:triple-subject(sem:triple($has-uri-triple-value)), "Triple subject should be the same"),
+    assert:true(fn:starts-with(sem:triple-object(sem:triple($triple-value)), "triplable3-"), "Triple should start with 'triplable3-'")
+  )
+};
+
+declare %test:case function model-triplable-manual-test() as item()*
+{
+  let $model := domain:get-model("triplable4")
+  let $params := map:new((
+    map:entry("name", setup:random("triple")),
+    map:entry(
+      "manualTriple",
+      map:new((
+        map:entry("predicate", "http://xmlns.com/foaf/0.1/knows/"),
+        map:entry("object", "my-object")
+      ))
+    )
+  ))
+  let $instance := model:new($model, $params)
+  let $triple-value := $instance/sem:triples/sem:triple[@name eq "manualTriple"]
+  let $has-uri-triple-value := $instance/sem:triples/sem:triple[@name eq "hasUri"]
+  return (
+    assert:not-empty($instance),
+    assert:not-empty($instance/sem:triples, "$instance must contain sem:triples"),
+    assert:not-empty($triple-value),
+    assert:equal(sem:triple-subject(sem:triple($triple-value)), sem:triple-subject(sem:triple($has-uri-triple-value)), "Triple subject should be the same"),
+    assert:equal(sem:triple-predicate(sem:triple($triple-value)), map:get(map:get($params, "manualTriple"), "predicate"), "Triple predicate should be the same"),
+    assert:equal(sem:triple-object(sem:triple($triple-value)), map:get(map:get($params, "manualTriple"), "object"), "Triple object should be the same")
+  )
+};
+
+declare %test:case function model-triplable-link-to-custom-expression-test() as item()*
+{
+  let $model := domain:get-model("triplable4")
+  let $params := map:new((
+    map:entry("name", setup:random("triple")),
+    map:entry("friendOfFriend", fn:string($TRIPLABLES3[1]/app-test:name))
+  ))
+  let $instance3 := model:get($TRIPLABLE3-MODEL, fn:string($TRIPLABLES3[1]/app-test:name))
+  let $uri := model:node-uri($TRIPLABLE3-MODEL, $instance3, ())
+  let $instance := model:new($model, $params)
+  let $triple-value := $instance/sem:triples/sem:triple[@name eq "friendOfFriend"]
+  let $has-uri-triple-value := $instance/sem:triples/sem:triple[@name eq "hasUri"]
+  return (
+    assert:not-empty($instance),
+    assert:not-empty($instance/sem:triples, "$instance must contain sem:triples"),
+    assert:not-empty($triple-value),
+    assert:equal(sem:triple-subject(sem:triple($triple-value)), sem:triple-subject(sem:triple($has-uri-triple-value)), "Triple subject should be the same"),
+    assert:equal(sem:triple-object(sem:triple($triple-value)), $uri, "Triple should start with 'triplable3-'")
+  )
+};
+
+declare %test:case function model-triple-is-literal-test() as item()*
+{
+  let $model := domain:get-model("triplable4")
+  let $params := map:new((
+    map:entry("name", setup:random("triple"))
+  ))
+  let $instance := model:new($model, $params)
+  let $triple-value := $instance/sem:triples/sem:triple[@name eq "literalTriple"]
+  return (
+    assert:not-empty($instance),
+    assert:not-empty($instance/sem:triples, "$instance must contain sem:triples"),
+    assert:not-empty($triple-value),
+    assert:true(sem:isLiteral(sem:triple-subject(sem:triple($triple-value))), "Triple subject should be a literal"),
+    assert:true(sem:isLiteral(sem:triple-predicate(sem:triple($triple-value))), "Triple predicate should be a literal"),
+    assert:true(sem:isLiteral(sem:triple-object(sem:triple($triple-value))), "Triple object should be a literal")
+  )
+};
+
+declare %test:case function model-triple-is-iri-test() as item()*
+{
+  let $model := domain:get-model("triplable4")
+  let $params := map:new((
+    map:entry("name", setup:random("triple"))
+  ))
+  let $instance := model:new($model, $params)
+  let $triple-value := $instance/sem:triples/sem:triple[@name eq "iriTriple"]
+  return (
+    assert:not-empty($instance),
+    assert:not-empty($instance/sem:triples, "$instance must contain sem:triples"),
+    assert:not-empty($triple-value),
+    assert:true(sem:isIRI(sem:triple-subject(sem:triple($triple-value))), "Triple subject should be an RDF IRI"),
+    assert:true(sem:isIRI(sem:triple-predicate(sem:triple($triple-value))), "Triple predicate should be an RDF IRI"),
+    assert:true(sem:isIRI(sem:triple-object(sem:triple($triple-value))), "Triple object should be an RDF IRI")
+  )
+};

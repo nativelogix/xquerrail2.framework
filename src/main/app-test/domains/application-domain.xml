@@ -20,24 +20,19 @@
         <element name="created" type="create-timestamp" label="Created Date">
             <ui type="hidden" colWidth="0"/>
         </element>
-    </model>  
-    
+    </model>
+
     <model name="country" description="Country Codes for test change" persistence="directory" extends="base" key="uuid" keyLabel="name">
         <directory root="countries">/config/countries/</directory>
         <element name="name" type="string"></element>
     </model>
-    
+
     <model name="countryProvince" persistence="directory" extends="base" key="uuid" keyLabel="name">
         <directory >/config/provinces/</directory>
         <element name="name" type="string"></element>
         <element name="country" type="reference" reference="model:country:reference"></element>
     </model>
-    
-    <model name="tripleTest" persistence="directory" extends="base" key="uuid" keyLabel="uuid">
-        <element name="triple" type="triple"></element>
-        <element name="country" type="reference" reference="model:country:reference" occurrence="*">
-        </element>
-    </model>
+
     <model name="node" persistence="directory" extends="base"  key="uuid" keyLabel="name">
         <element name="name" type="string"></element>
         <element name="node" type="node" occurrence="*"></element>
@@ -62,8 +57,8 @@
     </model>
     <model name="extends1" extends="baseClass" description="Base Extension Class" persistence="directory" key="uuid" keyLabel="uuid">
         <directory>/extends/1/</directory>
-    </model>  
+    </model>
     <model name="extends2" extends="baseClass" description="Base Extension Class" persistence="directory" key="uuid" keyLabel="uuid">
         <directory>/extends/2/</directory>
-    </model> 
+    </model>
 </domain>

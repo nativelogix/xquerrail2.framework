@@ -808,14 +808,14 @@ declare function domain:get-field-param-match-key(
 declare function domain:get-field-param-langString-value(
   $field as element(),
   $params as map:map
-) {
+) as rdf:langString? {
   domain:domain-function("get-field-param-langString-value", 2)($field, $params)
 };
 
 declare function domain:get-field-param-triple-value(
   $field as element(),
   $params as map:map
-) {
+) as element(sem:triple)? {
   domain:domain-function("get-field-param-triple-value", 2)($field, $params)
 };
 

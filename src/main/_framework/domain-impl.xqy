@@ -8,6 +8,7 @@ module namespace domain-impl = "http://xquerrail.com/domain/impl";
 
 import module namespace config = "http://xquerrail.com/config" at "config.xqy";
 import module namespace domain = "http://xquerrail.com/domain" at "domain.xqy";
+import module namespace model = "http://xquerrail.com/model/base" at "base/base-model.xqy";
 import module namespace module-loader = "http://xquerrail.com/module" at "module.xqy";
 
 import module namespace functx = "http://www.functx.com" at "/MarkLogic/functx/functx-1.0-doc-2007-01.xqy";
@@ -25,7 +26,7 @@ declare variable $UNDEFINED-FUNCTION := "$UNDEFINED-FUNCTION$";
  :)
 declare variable $DOMAIN-FIELDS :=
   xdmp:eager(
-    for  $fld in ("domain:model","domain:container","domain:element","domain:attribute")
+    for  $fld in ("domain:model","domain:container","domain:element","domain:attribute","domain:triple")
     return xs:QName($fld)
   );
 
@@ -34,7 +35,7 @@ declare variable $DOMAIN-FIELDS :=
  :)
 declare variable $DOMAIN-NODE-FIELDS :=
   xdmp:eager(
-    for  $fld in ("domain:container","domain:element","domain:attribute")
+    for  $fld in ("domain:container","domain:element","domain:attribute","domain:triple")
     return  xs:QName($fld)
   );
 
@@ -44,7 +45,7 @@ declare variable $COMPLEX-TYPES := (
   (:GeoSpatial:)
   "lat-long", "longitude", "latitude",
   (:Others:)
-  "query", "schema-element","triple","binary","reference","langString"
+  "query", "schema-element", "binary", "reference", "langString"
 );
 
 declare variable $SIMPLE-TYPES := (
@@ -849,6 +850,58 @@ declare %private function domain-impl:is-ns-override(
   ))
 };
 
+declare function domain-impl:build-model-triples(
+  $application as xs:string,
+  $domain as element(domain:domain),
+  $model as element(domain:model)
+) as element(domain:container)? {
+  if (domain:navigation($model)/@triplable eq 'true') then
+    let $container := fn:head((
+      $model/domain:container[@name eq 'triples' and @namespace eq 'http://marklogic.com/semantics'],
+      element domain:container {attribute namespace { "http://marklogic.com/semantics" }, attribute name {"triples"}}
+    ))
+    return
+      element domain:container {
+        $container/namespace::*,
+        $container/attribute::*,
+        element domain:triple {
+          attribute name {$model:HAS-URI-PREDICATE},
+          attribute autogenerate {fn:true()},
+          element domain:subject {
+            attribute type {"sem:iri"},
+            "{model:triple-identity-value#3}"
+          },
+          element domain:predicate {
+            attribute type {"sem:iri"},
+            $model:HAS-URI-PREDICATE
+          },
+          element domain:object {
+            attribute type {"sem:iri"},
+            "{model:node-uri#3}"
+          }
+        },
+        element domain:triple {
+          attribute name {$model:HAS-TYPE-PREDICATE},
+          attribute autogenerate {fn:true()},
+          element domain:subject {
+            attribute type {"sem:iri"},
+            "{model:triple-identity-value#3}"
+          },
+          element domain:predicate {
+            attribute type {"sem:iri"},
+            $model:HAS-TYPE-PREDICATE
+          },
+          element domain:object {
+            attribute type {"sem:iri"},
+            fn:string($model/@name)
+          }
+        },
+        $container/node()
+      }
+  else
+    $model/domain:container[@name eq 'triples' and @namespace eq 'http://marklogic.com/semantics']
+};
+
 (:~
  : Recursively construct an extended domain model
  : @param $model - Model to return, after optionally merging in extension fields
@@ -932,7 +985,8 @@ declare %private function domain-impl:extend-model(
                   $field/node()
                 },
           $model-validators,
-          $model/node()
+          $model/node()[. except $model/domain:container[@name eq 'triples' and @namespace eq 'http://marklogic.com/semantics']],
+          domain-impl:build-model-triples($application, $domain, $model)
         }
   else $model
 };
@@ -1181,24 +1235,29 @@ declare function domain-impl:set-model-field-attributes(
       element { fn:node-name($field) } {
         $field/namespace::*,
         $field/@*,
-        $field/*[. except $field/(domain:element | domain:container | domain:attribute)],
-        for $f in  $field/(domain:element | domain:container | domain:attribute)
-          return domain-impl:set-model-field-attributes($f)
+        $field/*[. except $field/(domain:triple| domain:element | domain:container | domain:attribute)],
+        for $f in  $field/(domain:triple | domain:element | domain:container | domain:attribute)
+          return domain:set-model-field-attributes($f)
       }
     case element(domain:container) return
       element { fn:node-name($field) } {
-        domain-impl:set-field-attributes($field),
-        $field/* ! (domain-impl:set-model-field-attributes(.))
+        domain:set-field-attributes($field),
+        $field/* ! (domain:set-model-field-attributes(.))
       }
     case element(domain:element) return
       element { fn:node-name($field) } {
-        domain-impl:set-field-attributes($field),
-        $field/* ! (domain-impl:set-model-field-attributes(.))
+        domain:set-field-attributes($field),
+        $field/* ! (domain:set-model-field-attributes(.))
+      }
+    case element(domain:triple) return
+      element { fn:node-name($field) } {
+        domain:set-field-attributes($field),
+        $field/* ! (domain:set-model-field-attributes(.))
       }
     case element(domain:attribute) return
       element { fn:node-name($field) } {
-        domain-impl:set-field-attributes($field),
-        $field/* ! (domain-impl:set-model-field-attributes(.))
+        domain:set-field-attributes($field),
+        $field/* ! (domain:set-model-field-attributes(.))
       }
     default return $field
 };
@@ -1234,10 +1293,10 @@ declare function domain-impl:set-field-attributes(
         else
           ()
     ),
-    attribute xpath {domain-impl:get-field-xpath($field)},
-    attribute absXpath {domain-impl:get-field-absolute-xpath($field)},
-    attribute jsonName {domain-impl:get-field-json-name($field)},
-    attribute jsonPath {domain-impl:get-field-jsonpath($field)}
+    attribute xpath {domain:get-field-xpath($field)},
+    attribute absXpath {domain:get-field-absolute-xpath($field)},
+    attribute jsonName {domain:get-field-json-name($field)},
+    attribute jsonPath {domain:get-field-jsonpath($field)}
     )
 };
 
@@ -1348,28 +1407,32 @@ declare function domain-impl:get-field-key(
  : (ex.  <b>Customer.Address.Line1)</b>.  This is useful for creating ID field in an html form.
  : @param $field - Field in a <b>domain:model</b>
  :)
-declare function domain-impl:get-field-name-key($field as node()) {
+declare function domain-impl:get-field-name-key(
+  $field as node()
+) {
   if($field/@keyName) then fn:string($field/@keyName) else
   let $key   := fn:concat("field-name-key::",fn:generate-id($field))
   let $cache := domain-impl:get-identity-cache($key)
   return
-       if($cache) then $cache
-       else
-        let $value := $field/@keyName/fn:string()
-        return domain-impl:set-identity-cache($key,$value)
+    if($cache) then
+      $cache
+    else
+      let $value := $field/@keyName/fn:string()
+      return domain-impl:set-identity-cache($key,$value)
 };
 
-declare %private function domain-impl:build-field-name-key($field as node()) {
-    (:let $items := $field/ancestor-or-self::*[fn:node-name(.) = $DOMAIN-NODE-FIELDS]:)
-    let $ns := domain-impl:get-field-namespace($field)
-    let $path :=
-    fn:string-join(
-        for $item in domain-impl:get-field-node-ancestors($field)
-        (:$items:)
-        return  fn:concat($item/@name)
-        ,"."
-    )
-    return $path
+declare %private function domain-impl:build-field-name-key(
+  $field as node()
+) {
+  let $ns := domain-impl:get-field-namespace($field)
+  let $path :=
+  fn:string-join(
+    for $item in domain-impl:get-field-node-ancestors($field)
+    (:$items:)
+    return  fn:concat($item/@name)
+    ,"."
+  )
+  return $path
 };
 
 declare function domain-impl:hash($field as node()) {
@@ -1493,15 +1556,27 @@ declare function domain-impl:get-field-param-value(
   $relative as xs:boolean,
   $cast as xs:boolean
 ) {
-  let $key := domain-impl:get-field-id($field)
-  let $namekey := domain-impl:get-field-name-key($field)
-  let $key-value := map:get($params,$key)
-  let $namekey-value := map:get($params,$namekey)
-  let $name-value := map:get($params,$field/@name)
+  let $key := domain:get-field-id($field)
+  let $namekey := domain:get-field-name-key($field)
+  let $key-value :=
+    if (fn:exists($key)) then
+      map:get($params,$key)
+    else
+      ()
+  let $namekey-value :=
+    if (fn:exists($namekey)) then
+      map:get($params,$namekey)
+    else
+      ()
+  let $name-value :=
+    if (fn:exists($field/@name)) then
+      map:get($params,$field/@name)
+    else
+      ()
   return
     if ($cast) then
       if($field/@type eq "langString") then
-        domain-impl:get-field-param-langString-value($field,$params)
+        domain:get-field-param-langString-value($field,$params)
       else
         domain-impl:cast-value(
           $field,
@@ -1527,12 +1602,12 @@ declare function domain-impl:get-field-param-match-key(
 declare function domain-impl:get-field-param-langString-value(
   $field as element(),
   $params as map:map
-) {
+) as rdf:langString? {
   let $matched-key :=
     if(map:contains($params,domain-impl:get-field-name-key($field)))
-    then  domain-impl:get-field-name-key($field)
+    then domain-impl:get-field-name-key($field)
     else if(map:contains($params,domain-impl:get-field-id($field))) then domain-impl:get-field-id($field)
-    else if(map:contains($params,$field/@name)) then  fn:data($field/@name)
+    else if(map:contains($params,$field/@name)) then fn:data($field/@name)
     else () (:No data match key:)
   let $lang-value :=
     (map:get($params,fn:concat($matched-key,"@lang")),domain-impl:get-default-language($field))[1]
@@ -1544,15 +1619,45 @@ declare function domain-impl:get-field-param-langString-value(
 declare function domain-impl:get-field-param-triple-value(
   $field as element(),
   $params as map:map
-) {
-  let $key := domain-impl:get-field-id($field)
-  let $name-key := domain-impl:get-field-name-key($field)
-  let $key-value := map:get($params,$key)
-  let $name-value := map:get($params,$field/@name)
-  let $namekey-value := map:get($params,$name-key)
+) as element(sem:triple)? {
+  let $matched-key :=
+    if(map:contains($params, domain-impl:get-field-name-key($field)))
+    then domain-impl:get-field-name-key($field)
+    else if(map:contains($params, domain-impl:get-field-id($field))) then domain-impl:get-field-id($field)
+    else if(map:contains($params, $field/@name)) then fn:data($field/@name)
+    else () (:No data match key:)
+  let $triple-value := map:get($params, $matched-key)
   return
-    if(fn:exists($key-value)) then $key-value
-    else if(fn:exists($namekey-value)) then $namekey-value else $name-value
+    if ($triple-value instance of map:map) then
+      element sem:triple {
+        let $attributes := map:get($triple-value, config:attribute-prefix())
+        return
+          if ($attributes instance of map:map) then
+            map:keys($attributes) ! (
+              attribute {.} {map:get($attributes, .)}
+            )
+          else
+            ()
+        ,
+        element sem:subject {
+          map:get($triple-value, "subject")
+        },
+        element sem:predicate {
+          map:get($triple-value, "predicate")
+        },
+        element sem:object {
+          map:get($triple-value, "object")
+        }
+      }
+    else if (fn:count($triple-value) eq 3) then
+      <x>{
+        xdmp:with-namespaces(
+          domain:declared-namespaces($field),
+          sem:triple($triple-value[1], $triple-value[2], $triple-value[3])
+        )
+      }</x>/*
+    else
+      ()
 };
 
 (:~
@@ -2497,18 +2602,18 @@ declare function domain-impl:get-field-json-name(
 (:~
  : Gets the json path for a given field definition. The path expression by default is relative to the root of the json type
 :)
-declare function domain-impl:get-field-jsonpath(
+(:declare function domain-impl:get-field-jsonpath(
   $field as element()
 ) {
   domain-impl:get-field-jsonpath($field,fn:false(),())
-};
+};:)
 
-declare function domain-impl:get-field-jsonpath(
+(:declare function domain-impl:get-field-jsonpath(
   $field as element(),
   $include-root as xs:boolean
 ) {
   domain-impl:get-field-jsonpath($field,$include-root,())
-};
+};:)
 
 (:~
  : Returns the path of field instance from a json object.
@@ -2537,7 +2642,7 @@ declare function domain-impl:get-field-jsonpath(
             return fn:data($path/@name)
       return
         let $is-multi := ("+","*") = $path/@occurrence
-        let $base-type := domain-impl:get-base-type($path)
+        let $base-type := domain:get-base-type($path)
         return
           switch($base-type)
             case "instance" return
@@ -2555,7 +2660,10 @@ declare function domain-impl:get-field-jsonpath(
             case "model" return
               if($include-root) then "/json:object"
               else ""
-            case "container" return fn:concat("json:entry[@key = ('",$key,"','",$json-name,"')]/json:value/json:object")
+            case "container" return
+              fn:concat("json:entry[@key = ('",$key,"','",$json-name,"')]/json:value/json:object")
+            case "triple" return
+              fn:concat("json:entry[@key = ('",$key,"','",$json-name,"')]/json:value/json:object")
             default return fn:error(xs:QName("JSON-PATH-ERROR"),"Unknown Path Type",$base-type)
    ) ,"/")
 };
@@ -2568,16 +2676,18 @@ declare function domain-impl:get-field-value(
   $value as item()*,
   $relative as xs:boolean
 ) as item()* {
-  if ($field instance of element(domain:model)) then () else
-  let $return-value := domain:get-field-value-node($field, $value, $relative)
-  return
-  domain-impl:cast-value(
-    $field,
-    if (fn:exists($return-value)) then
-      $return-value
-    else
-      ()
-  )
+  if ($field instance of element(domain:model)) then
+    ()
+  else
+    let $return-value := domain:get-field-value-node($field, $value, $relative)
+    return
+    domain-impl:cast-value(
+      $field,
+      if (fn:exists($return-value)) then
+        $return-value
+      else
+        ()
+    )
 };
 
 (:~
@@ -2647,11 +2757,11 @@ declare function domain-impl:field-json-exists(
     if(domain-impl:exists-field-function-cache($field,"json-exists"))
     then domain-impl:get-field-function-cache($field,"json-exists")($value)
     else
-      let $type := domain-impl:get-base-type($field)
-      let $path := domain-impl:get-field-jsonpath($field)
+      let $type := domain:get-base-type($field)
+      let $path := domain:get-field-jsonpath($field)
       let $path :=
         if (domain-impl:field-is-multivalue($field)) then
-          if (domain-impl:get-base-type($field) eq "instance") then
+          if ($type eq "instance") then
             fn:substring($path, 1, fn:string-length($path) - fn:string-length("/json:value/json:object"))
           else
             fn:substring($path, 1, fn:string-length($path) - fn:string-length("/json:value"))
@@ -2668,7 +2778,7 @@ declare function domain-impl:field-xml-exists(
   $field as element(),
   $value as item()*
 ) as xs:boolean {
-  let $type := domain-impl:get-base-type($field)
+  let $type := domain:get-base-type($field)
   let $path := domain-impl:get-field-xpath($field, fn:false())
   let $expr := fn:concat("$value", $path)
   let $func :=
@@ -2698,8 +2808,8 @@ declare function domain-impl:get-field-json-value(
     if(domain-impl:exists-field-function-cache($field,"json")) then
       domain-impl:get-field-function-cache($field,"json")($value)
     else
-      let $type := domain-impl:get-base-type($field)
-      let $path := domain-impl:get-field-jsonpath($field)
+      let $type := domain:get-base-type($field)
+      let $path := domain:get-field-jsonpath($field)
       let $func :=
           switch($type)
           case "simple" return xdmp:value(fn:concat("function($value) { $value",$path, "}"))
@@ -2718,7 +2828,7 @@ declare function domain-impl:get-field-xml-value(
   (:if(domain-impl:exists-field-function-cache($field,"xml")):)
   (:then domain-impl:get-field-function-cache($field,"xml")($value):)
   (:else:)
-  let $type := domain-impl:get-base-type($field)
+  let $type := domain:get-base-type($field)
   let $path := domain-impl:get-field-xpath($field, $relative)
   let $expr := fn:concat("$value", $path)
   let $func :=
@@ -2734,15 +2844,6 @@ declare function domain-impl:get-field-xml-value(
  : Returns the base type of field definition.  The base type of the domain
  :)
 declare function domain-impl:get-base-type(
-  $field as element()
-) {
-  domain-impl:get-base-type($field,fn:true())
-};
-
-(:~
- : Returns the base type of field definition.  The base type of the domain
- :)
-declare function domain-impl:get-base-type(
   $field as element(),
   $safe as xs:boolean
 ) {
@@ -2750,6 +2851,7 @@ declare function domain-impl:get-base-type(
   else if($field/@type = $COMPLEX-TYPES) then "complex"
   else if($field instance of element(domain:model)) then "model"
   else if($field instance of element(domain:container)) then "container"
+  else if($field instance of element(domain:triple)) then "triple"
   else if(domain:model-exists($field/@type)) then "instance"
   else if($safe) then fn:error(xs:QName("UNKNOWN-BASE-TYPE"),"Unknown Base Type",$field)
   else "unknown"
@@ -3214,7 +3316,7 @@ declare function domain-impl:find-field-in-model(
       let $value := (
         domain:get-model-field($model, $key),
         for $field in $model//(domain:element)
-        where domain-impl:get-base-type($field) = "instance"
+        where domain:get-base-type($field) = "instance"
         return domain-impl:find-field-in-model(domain:get-model($field/@type), $key)
       )
       return domain-impl:set-identity-cache($cache-key, $value)
@@ -3261,7 +3363,7 @@ declare function domain-impl:find-field-from-path-model(
     let $field := domain:get-model-field($model, $path, fn:true())
     return
       if (fn:exists($field)) then
-        if (domain-impl:get-base-type($field) eq "instance") then
+        if (domain:get-base-type($field) eq "instance") then
           domain-impl:find-field-from-path-model(domain:get-model($field/@type), $key, ($accumulator, $field))
         else if ($field/@type eq "reference") then
           domain-impl:find-field-from-path-model(domain-impl:get-field-reference-model($field), $key, ($accumulator, $field))

@@ -17,6 +17,8 @@ import module namespace config = "http://xquerrail.com/config" at "../config.xqy
 
 import module namespace xdmp-api = "http://xquerrail.com/xdmp/api" at "../lib/xdmp-api.xqy";
 
+import module namespace module-loader = "http://xquerrail.com/module" at "../module.xqy";
+
 import module namespace functx = "http://www.functx.com" at "/MarkLogic/functx/functx-1.0-doc-2007-01.xqy";
 
 import module namespace model = "http://xquerrail.com/model/base" at "base-model.xqy";
@@ -32,7 +34,6 @@ declare default collation "http://marklogic.com/collation/codepoint";
 (:Options Definition:)
 declare option xdmp:mapping "false";
 
-
 declare variable $binary-dependencies := map:map();
 declare variable $binary-deletes := map:map();
 declare variable $reference-dependencies := map:map();
@@ -42,10 +43,6 @@ declare variable $current-identity := ();
 declare variable $REFERENCE-CACHE := map:map();
 declare variable $INSTANCE-CACHE  := map:map();
 declare variable $FUNCTION-CACHE  := map:map();
-
-declare variable $EXPANDO-PATTERN := "\$\((\i\c*(/@?\i\c*)*)\)";
-
-declare variable $DEFAULT-PAGE-SIZE := 20;
 
 declare function model-impl:uuid-string(
   $seed as xs:integer?
@@ -122,36 +119,50 @@ declare function model-impl:generate-sequenceid($seed as xs:integer) {
  :  @param $instance - Instance of asset can be map or instance of element from domain
  :)
 declare function model-impl:generate-iri(
-  $uri as xs:string,
+  $uri as xs:string?,
   $field as element(),
   $instance as item()
-) as sem:iri {
-  (:let $is-literal := xs:boolean($field/@literal):)
-  let $model := $field/ancestor-or-self::domain:model
-  let $token-pattern := $EXPANDO-PATTERN
-  let $patterns := fn:analyze-string($uri,$token-pattern)
-  let $expanded :=
-    fn:string-join(
-      for $p in $patterns/*
-      return
-      typeswitch($p)
-        case element(as:non-match) return $p
-        case element(as:match) return
-          let $field-name := fn:data($p/*:group[@nr=1]/text()[1])
-          let $field := $model//(domain:attribute|domain:element)[@name eq $field-name]
-          let $data := domain:get-field-value($field,$instance)
-          return
-            if($data) then fn:data($data)
-            else if($field/@type eq "identity") then model-impl:get-identity()
-            else fn:error(xs:QName("EMPTY-URI-VARIABLE"),"URI Variables must not be empty",$field-name)
-        default return ""
-     ,""
-    )
-  let $is-curied := fn:matches($expanded,"\i\c*:\i\c")
-  return
-    if($is-curied) then
-      sem:curie-expand($expanded,domain:declared-namespaces-map($model))
-    else sem:iri($expanded)
+) {
+  if (fn:exists($uri)) then
+    let $type := fn:head((
+      if (fn:not($field instance of element(domain:model))) then fn:string($field/@type) else (),
+      "sem:iri"
+    ))
+    let $_ := xdmp:log(text{"generate-iri", xdmp:describe($field, (), ()), "$type", $type})
+    let $model := $field/ancestor-or-self::domain:model
+    let $token-pattern := $model:EXPANDO-PATTERN
+    let $patterns := fn:analyze-string($uri,$token-pattern)
+    let $expanded :=
+      fn:string-join(
+        for $p in $patterns/*
+        return
+        typeswitch($p)
+          case element(as:non-match) return $p
+          case element(as:match) return
+            let $field-name := fn:data($p/*:group[@nr=1]/text()[1])
+            let $field := $model//(domain:attribute|domain:element)[@name eq $field-name]
+            let $data := domain:get-field-value($field,$instance)
+            return
+              if($data) then fn:data($data)
+              else if($field/@type eq "identity") then model:get-identity()
+              else fn:error(xs:QName("EMPTY-URI-VARIABLE"),"URI Variables must not be empty",$field-name)
+          default return ""
+       ,""
+      )
+    let $is-curied := fn:matches($expanded,"\i\c*:\i\c")
+    return
+      if ($type eq "sem:iri") then
+        if($is-curied) then
+          sem:curie-expand($expanded,domain:declared-namespaces-map($model))
+        else
+          sem:iri($expanded)
+      else
+      (
+        attribute datatype {sem:datatype($expanded)},
+        $expanded
+      )
+  else
+    ()
 };
 
 (:~
@@ -165,7 +176,7 @@ declare function model-impl:generate-uri(
   $model as element(domain:model),
   $instance as item()
 ) {
-  let $token-pattern := $EXPANDO-PATTERN
+  let $token-pattern := $model:EXPANDO-PATTERN
   let $patterns := fn:analyze-string($uri,$token-pattern)
   return
     fn:string-join(
@@ -179,7 +190,7 @@ declare function model-impl:generate-uri(
           let $data := domain:get-field-value($field,$instance)
           return
             if($data) then $data
-            else if($field/@type eq "identity") then model-impl:get-identity()
+            else if($field/@type eq "identity") then model:get-identity()
             else fn:error(xs:QName("EMPTY-URI-VARIABLE"),"URI Variables must not be empty",$field-name)
         default return ""
       ,""
@@ -187,21 +198,28 @@ declare function model-impl:generate-uri(
 };
 
 declare function model-impl:node-uri(
-  $model as element(domain:model),
-  $params as item()*
+  $context as element(),
+  $current as item()*,
+  $updates as item()*
 ) as xs:string? {
+  let $model := $context/ancestor-or-self::domain:model
   let $persistence := $model/@persistence
   return switch($persistence)
     case "document"
       return $model/domain:document/text()
     case "directory"
       return
-        let $field-id := domain:get-field-value(domain:get-model-identity-field($model), $params)
+        let $field-id := domain:get-field-value(domain:get-model-identity-field($model), $current)
+        let $field-id :=
+          if (fn:exists($field-id)) then
+            $field-id
+          else
+            model:get-identity()
         let $base-path := $model/domain:directory/text()
         let $sub-path := $model/domain:directory/@subpath
         let $ext-path :=
           if($sub-path) then
-            model-impl:generate-uri($sub-path, $model, $params)
+            model-impl:generate-uri($sub-path, $model, $current)
           else ""
         return model-impl:normalize-path(
           fn:concat(
@@ -376,7 +394,7 @@ declare function model-impl:create(
       let $computed-permissions := functx:distinct-deep((domain:get-permissions($model),$permissions))
       let $name := $model/@name
       let $persistence := $model/@persistence
-      let $uri := model:node-uri($model, $update)
+      let $uri := model:node-uri($model, $update, ())
       return (
         switch($persistence)
           (: Creation for document persistence :)
@@ -842,9 +860,9 @@ declare function model-impl:recursive-build(
       let $ns := domain:get-field-namespace($context)
 
       let $nses := model-impl:get-namespaces($context)
-      return model-impl:add-triples(
+      return (:model-impl:add-triples(
         $context,
-        $current,
+        $current,:)
         element {domain:get-field-qname($context)} {
           for $nsi in $nses
           return namespace {$nsi/@prefix}{$nsi/@namespace-uri},
@@ -852,7 +870,7 @@ declare function model-impl:recursive-build(
           for $n in $context/(domain:element|domain:container)
           return model-impl:recursive-build($n, $current, $updates, $partial)
         }
-      )
+      (:):)
       (: Build out any domain Elements :)
       case element(domain:element) return
         (:Process Complex Types:)
@@ -860,7 +878,7 @@ declare function model-impl:recursive-build(
           case "reference"      return model:build-reference($context, $current, $updates, $partial)
           case "binary"         return model:build-binary($context,$current,$updates,$partial)
           case "schema-element" return model:build-schema-element($context,$current,$updates,$partial)
-          case "triple"         return model:build-triple($context,$current-value,$updates,$partial)
+          (:case "triple"         return model:build-triple($context,$current-value,$updates,$partial):)
           case "langString"     return model:build-langString($context,$current-value,$updates,$partial)
           default               return model:build-element($context, $current, $updates, $partial)
       (: Build out any domain Attributes :)
@@ -875,12 +893,32 @@ declare function model-impl:recursive-build(
            element {domain:get-field-qname($context)} {
             for $a in $context/domain:attribute
             return model-impl:build-attribute($a, $current, $updates, $partial, fn:false()),
-            for $n in $context/(domain:element|domain:container)
+            for $n in $context/(domain:element|domain:triple|domain:container)
             return
               model-impl:recursive-build($n, $current, $updates, $partial)
             }
       (: Return nothing if the type is not of Model, Element, Attribute or Container :)
       default return fn:error(xs:QName("UNKNOWN-TYPE"),"The type of " || $type || " is unknown ",$context)
+};
+
+declare function model-impl:triple-identity-value(
+  $context as element(),
+  $current as item()*,
+  $updates as item()*
+) {
+  let $model := $context/ancestor-or-self::domain:model
+  let $triple-identity-value :=
+    fn:head((
+      model:get-triple-identity($model, $current),
+      if (domain:get-model-identity-field($model)/@type eq "identity") then domain:get-field-value(domain:get-model-identity-field($model), $current) else (),
+      model:get-identity(),
+      sem:uuid-string()
+    ))
+  return
+    if ($context/@type eq "sem:iri") then
+      sem:iri($triple-identity-value)
+    else
+      $triple-identity-value
 };
 
 (:~
@@ -889,7 +927,7 @@ declare function model-impl:recursive-build(
  : @param $model - domain element for the given document
  : @return - description of return
  :)
-declare function model-impl:add-triples(
+(:declare function model-impl:add-triples(
   $model as element(domain:model),
   $current as node()?,
   $updates as node()
@@ -902,9 +940,9 @@ declare function model-impl:add-triples(
     }
   else
     $updates
-};
+};:)
 
-declare function model-impl:build-triples(
+(:declare function model-impl:build-triples(
   $model as element(domain:model),
   $current as node()?,
   $updates as item()
@@ -920,16 +958,16 @@ declare function model-impl:build-triples(
     element sem:triples {
       sem:triple(
         $triple-subject,
-        model:generate-iri("hasUri", $model, $updates),
+        model:generate-iri($model:HAS-URI-PREDICATE, $model, $updates),
         model:node-uri($model, $updates)
       ),
       sem:triple(
         $triple-subject,
-        model:generate-iri("hasType", $model, $updates),
+        model:generate-iri($model:HAS-TYPE-PREDICATE, $model, $updates),
         model:generate-iri($model/@name, $model, $updates)
       )
     }
-};
+};:)
 
 declare function model-impl:get-triple-identity(
   $model as element(domain:model),
@@ -937,9 +975,10 @@ declare function model-impl:get-triple-identity(
 ) as xs:string? {
   if (fn:exists($params)) then
     if ($params instance of node()) then
-      $params/sem:triples/sem:triple[sem:predicate eq "hasUri"]/sem:subject
+      $params/sem:triples/sem:triple[sem:predicate eq $model:HAS-URI-PREDICATE]/sem:subject
     else
-      fn:error(xs:QName("GET-TRIPLE-IDENTITY-ERROR"), text{"$params format not supported"})
+      (:fn:error(xs:QName("GET-TRIPLE-IDENTITY-ERROR"), text{"$params format not supported"}, $params):)
+      ()
   else
     ()
 };
@@ -1266,7 +1305,7 @@ declare function model-impl:build-langString(
   $partial as xs:boolean
 ) {
    if(fn:exists($updates)) then
-     for $value in  domain:get-field-value($context,$updates)
+     for $value in domain:get-field-value($context,$updates)
      let $lang := (sem:lang($value),$context/@defaultLanguage,"en")[1]
      return
         element {domain:get-field-qname($context)} {
@@ -1287,36 +1326,140 @@ declare function model-impl:build-triple-subject(
   $field as element(),
   $params as item()*,
   $value as item()
-) {
+) as element(sem:subject) {
   let $model := $field/ancestor-or-self::domain:model
-  let $triple-uri := domain:get-field-value($model//domain:triple[domain:predicate eq "hasUri"], $params)
-  return ($value/*:subject, $field/domain:subject, $field/domain:element[name eq "subject"], sem:triple-subject(sem:triple($triple-uri)))[1]
+  let $subject-definition := fn:string($field/domain:subject)
+  return
+    element sem:subject {
+      model:generate-iri(
+        if (fn:exists($subject-definition)) then
+          if (fn:starts-with($subject-definition, "{") and fn:ends-with($subject-definition, "}")) then
+            xdmp:value(fn:substring($subject-definition, 2, fn:string-length($subject-definition) - 2))($field, $params, $value)
+          else if (fn:exists($field/domain:subject/domain:expression)) then
+            model-impl:get-model-expression($model, $field/domain:subject/domain:expression, 3)($field/domain:subject, $params, $value)
+          else
+            $subject-definition
+        else
+          let $has-uri-triple-definition := $model//domain:triple[domain:predicate eq $model:HAS-URI-PREDICATE]
+          return
+            if (fn:exists($has-uri-triple-definition)) then
+              let $triple-uri := domain:get-field-value($has-uri-triple-definition, $params)
+              return if ($triple-uri instance of sem:triple) then sem:triple-graph(sem:triple($triple-uri)) else ()
+            else
+              (),
+        $field/domain:subject,
+        $params
+      )
+    }
 };
 
 declare function model-impl:build-triple-predicate(
   $field as element(),
   $params as item()*,
   $value as item()
-) {
-  ($value/*:predicate, $field/domain:predicate, $field/domain:element[name eq "predicate"])[1]
+) as element(sem:predicate) {
+  let $predicate-value :=
+    if ($value instance of map:map) then
+      map:get($value, "predicate")
+    else if ($value instance of node()) then
+      $value/sem:predicate
+    else
+      ()
+  return
+    element sem:predicate {
+      model:generate-iri(
+        if (fn:exists($predicate-value)) then
+          $predicate-value
+        else
+          fn:head((if($value instance of node()) then $value/*:predicate else (), $field/domain:predicate, $field/domain:element[name eq "predicate"]))
+        ,
+        $field/domain:predicate,
+        $params
+      )
+    }
 };
 
 declare function model-impl:build-triple-object(
   $field as element(),
   $params as item()*,
   $value as item()
-) {
-  ($value/*:object, $field/domain:object, $field/domain:element[name eq "object"])[1]
+) as element(sem:object) {
+  let $model := $field/ancestor-or-self::domain:model
+  let $object-definition := fn:string($field/domain:object)
+  let $object-value :=
+    if ($value instance of map:map) then
+      map:get($value, "object")
+    else if ($value instance of node()) then
+      $value/sem:object
+    else
+      ()
+  return
+    element sem:object {
+      model:generate-iri(
+        if (fn:exists($object-value)) then
+          $object-value
+        else if (fn:exists($object-definition)) then
+          if (fn:starts-with($object-definition, "{") and fn:ends-with($object-definition, "}")) then
+            xdmp:value(fn:substring($object-definition, 2, fn:string-length($object-definition) - 2))($field, $params, $value)
+          else if (fn:exists($field/domain:object/domain:expression)) then
+            model-impl:get-model-expression($model, $field/domain:object/domain:expression, 3)($field/domain:object, $params, $value)
+          else
+            $object-definition
+        else
+          (),
+        $field/domain:object,
+        $params
+      )
+    }
 };
 
 declare function model-impl:build-triple-graph(
   $field as element(),
   $params as item()*,
   $value as item()
-) {
+) as element(sem:graph) {
   let $model := $field/ancestor-or-self::domain:model
-  let $triple-uri := domain:get-field-value($model//domain:triple[domain:predicate eq "hasUri"], $params)
-  return ($value/*:graph, $field/domain:graph, $field/domain:element[name eq "graph"], sem:triple-graph(sem:triple($triple-uri)))[1]
+  let $triple-uri := domain:get-field-value($model//domain:triple[domain:predicate eq $model:HAS-URI-PREDICATE], $params)
+  return
+    element sem:graph {
+      model:generate-iri(
+        (
+          if ($value instance of node()) then $value/*:graph else (),
+          $field/domain:graph,
+          $field/domain:element[name eq "graph"],
+          if ($triple-uri instance of sem:triple) then sem:triple-graph(sem:triple($triple-uri)) else ()
+        )[1],
+        $field,
+        $params
+      )
+    }
+};
+
+declare function model-impl:get-model-expression(
+  $model as element(domain:model),
+  $expression as element(domain:expression),
+  $arity as xs:integer
+) as xdmp:function? {
+  let $function := module-loader:load-function-module(
+    domain:get-default-application(),
+    "model-expression",
+    $expression/@function,
+    $arity,
+    $expression/@namespace,
+    $expression/@location
+  )
+  return
+    if (fn:exists($function)) then
+      $function
+    else
+      module-loader:load-function-module(
+        domain:get-default-application(),
+        (),
+        $expression/@function,
+        $arity,
+        $expression/@namespace,
+        ()
+      )
 };
 
 (:~
@@ -1327,49 +1470,47 @@ declare function model-impl:build-triple(
   $current as node()?,
   $updates as item()*,
   $partial as xs:boolean
-) {
-  let $values := domain:get-field-value($context, $updates)
-  let $subject-def   := ($values/*:subject, $context/@subject)[1]
-  let $predicate-def := $context/@predicate
-  let $object-def := $context/@object
-  let $graph-def  := $context/@graph
-  (:let $subject   :=  "http://marklogic.com/mdm/$(uuid)"
-  let $predicate  := "foaf:knows"
-  let $object     := "http://marklogic.com/mdm/$(country/@refId)"
-  let $graph      := "dc:graph":)
+) as element(sem:triple)* {
+  let $values := fn:head((
+    domain:get-field-value($context, $updates),
+    if (fn:exists($current)) then
+      domain:get-field-value($context, $current)
+    else
+      (),
+    (: Required for hasUri and hasType triple :)
+    if (xs:boolean($context/@autogenerate)) then
+      $context
+    else
+      ()
+  ))
   return
     if(domain:field-is-multivalue($context) and fn:count($values) > 1) then
       fn:error(xs:QName("BUILD-TRIPLE-ERROR"), text{"Invalid occurence", $context/@occurrence, "but $value count greater than 1."}, ($context, $values))
     else
       for $value in $values
-      let $subject := model:generate-iri(
-        model:build-triple-subject($context, $updates, $value),
-        $context,
-        $updates
-      )
-      let $predicate := model:generate-iri(
-        model:build-triple-predicate($context, $updates, $value),
-        $context,
-        $updates
-      )
-      let $object := model:generate-iri(
-        model:build-triple-object($context, $updates, $value),
-        $context,
-        $updates
-      )
-      let $graph := model:generate-iri(
-        model:build-triple-graph($context, $updates, $value),
-        $context,
-        $updates
-      )
+      let $subject := model:build-triple-subject($context, $updates, $value)
+      let $predicate := model:build-triple-predicate($context, $updates, $value)
+      let $object := model:build-triple-object($context, $updates, $value)
+      let $graph := model:build-triple-graph($context, $updates, $value)
       return
-        element {domain:get-field-qname($context)} {
-          sem:triple(
-            $subject,
-            $predicate,
-            $object,
+        element sem:triple {
+          if (fn:exists($context/@name)) then $context/@name else (),
+          $context/domain:attribute ! (
+            model:build-attribute(
+              .,
+              $current,
+              $value,
+              $partial,
+              fn:false()
+            )
+          ),
+          $subject,
+          $predicate,
+          $object,
+          if (fn:exists($subject/node()) and fn:exists($predicate/node()) and fn:exists($object/node()) and fn:exists($graph/node())) then
             $graph
-          )
+          else
+            ()
         }
 };
 
@@ -1839,7 +1980,7 @@ declare function model-impl:page-size(
       $param-name
     else
       "ps"
-  return xs:unsignedLong((domain:get-param-value($params, $param-name), domain:navigation($model)/@pageSize, $DEFAULT-PAGE-SIZE)[1])
+  return xs:unsignedLong((domain:get-param-value($params, $param-name), domain:navigation($model)/@pageSize, $model:DEFAULT-PAGE-SIZE)[1])
 };
 
 declare function model-impl:sort-field(

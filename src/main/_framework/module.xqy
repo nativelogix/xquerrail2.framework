@@ -122,9 +122,90 @@ declare function module:load-function-module(
           $function[1]
         ) else
           $function
-      return xdmp:function(fn:QName($function/../@namespace, $function-name), $function/../@location)
+      return generator:get-xdmp-function($function)
+      (:xdmp:function(fn:QName($function/../@namespace, $function-name), $function/../@location):)
     else
       ()
+};
+
+declare function module:get-function-module-definition(
+  $application as xs:string,
+  $module-type as xs:string?,
+  $function-name as xs:string,
+  $function-arity as xs:integer,
+  $namespace as xs:string?,
+  $location as xs:string?
+) as element(function)? {
+  module:get-modules($application)/library[
+    (if (fn:exists($module-type)) then @type eq $module-type else fn:true()) and
+    (if (fn:exists($namespace)) then @namespace eq $namespace else fn:true()) and
+    (if (fn:exists($location)) then @location eq $location else fn:true())
+  ]/function[@name eq $function-name and @arity eq $function-arity]
+};
+
+declare function module:apply-function-module(
+  $application as xs:string,
+  $module-type as xs:string?,
+  $function-name as xs:string,
+  $function-arguments,
+  $namespace as xs:string?,
+  $location as xs:string?
+) {
+  let $function :=
+    module:get-function-module-definition(
+      $application,
+      $module-type,
+      $function-name,
+      fn:count($function-arguments),
+      $namespace,
+      $location
+    )
+  let $function :=
+    if (fn:empty($function)) then
+      fn:error(xs:QName("APPLY-FUNCTION-MODULE-ERROR"), text{"Function", $function-name, fn:count($function-arguments), "from", $module-type ,"module type not found."})
+    else
+      $function
+  return
+    if (generator:function-contains-annotation($function, xs:QName("module:memoize"))) then
+      module:memoize(generator:get-xdmp-function($function), $function-arguments)
+    else
+    module:apply-function(generator:get-xdmp-function($function), $function-arguments)
+};
+
+declare function module:apply-function(
+  $funct,
+  $arguments
+) {
+  if (fn:count($arguments) eq 1) then
+    $funct($arguments)
+  else
+    module:apply-function(
+      $funct(fn:head($arguments), ?),
+      fn:tail($arguments)
+    )
+};
+
+(:~ TODO: Handle function returning empty-sequence() :)
+declare function module:memoize(
+  $function,
+  $arguments as item()*
+) {
+  let $key := xs:string(xdmp:hash64(
+      $arguments ! (
+        fn:string(.)
+      )
+  ))
+  return
+    if (map:contains($CACHE, $key)) then
+    (
+      map:get($CACHE, $key)
+    )
+    else
+      let $value := module:apply-function($function, $arguments)
+      return (
+        map:put($CACHE, $key, $value),
+        $value
+      )
 };
 
 declare function module:load-modules-framework(
@@ -226,7 +307,7 @@ declare function module:load-model-event-functions(
   for $event in $model/domain:event
   let $model-namespace := fn:string($event/@module-namespace)
   let $model-location := fn:string($event/@module-uri)
-  let $function-name := fn:string($event/@function)
+  (:let $function-name := fn:string($event/@function):)
   return module:load-module-definition(
     $model-namespace,
     $model-location,
@@ -237,6 +318,26 @@ declare function module:load-model-event-functions(
   )
 };
 
+declare function module:load-model-expression-functions(
+  $application as xs:string
+) as element(library)* {
+  for $model in domain:get-models($application, fn:false())
+    for $expression in $model//domain:expression
+    let $model-namespace := fn:string($expression/@namespace)
+    let $model-location := fn:string($expression/@location)
+    return
+      if ($model-location ne "") then
+        module:load-module-definition(
+          $model-namespace,
+          $model-location,
+          (
+            attribute name {$model/@name},
+            attribute type {"model-expression"}
+          )
+        )
+      else
+        ()
+};
 
 declare function module:load-model-extensions(
 ) as element(library)* {
@@ -312,12 +413,11 @@ declare function module:load-modules(
         module:load-model-extensions(),
         if ($transient) then
           ()
-        else
+        else (
+          module:load-model-expression-functions($application),
           module:load-controller-functions($application),
-        if ($transient) then
-          ()
-        else
           module:load-model-functions($application)
+        )
       }
     return
       if ($transient) then

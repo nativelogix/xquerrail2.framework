@@ -22,11 +22,14 @@
     "event-stream": "*",
     "gulp": "^3.8.11",
     "gulp-bump": "^0.3.0",
+    "gulp-data": "^1.2.0",
+    "gulp-exec": "^2.1.1",
     "gulp-git": "*",
     "gulp-gitinfo": "*",
     "gulp-inject-string": "*",
     "gulp-mocha": "^2.0.0",
     "gulp-plumber": "*",
+    "gulp-run": "^1.6.8",
     "gulp-template": "*",
     "gulp-util": "^3.0.4",
     "gulp-watch": "*",
@@ -36,6 +39,7 @@
     "request": "^2.35.0",
     "run-sequence": "*",
     "tough-cookie": "^0.12.1",
+    "vinyl-map": "^1.0.1",
     "xml2js": "^0.4.6",
     "yargs": "^1.2.1"
   }

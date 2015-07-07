@@ -1576,7 +1576,7 @@ declare function domain-impl:get-field-param-value(
   return
     if ($cast) then
       if($field/@type eq "langString") then
-        domain-impl:get-field-param-langString-value($field,$params)
+        domain:get-field-param-langString-value($field,$params)
       else
         domain-impl:cast-value(
           $field,

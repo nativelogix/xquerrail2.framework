@@ -16,10 +16,11 @@ var plumber = require('gulp-plumber');
 var runSequence = require('run-sequence');
 var inject = require('gulp-inject-string');
 var nconf = require('nconf');
-var run = require('gulp-run');
-var map = require('vinyl-map');
+// var run = require('gulp-run');
+// var map = require('vinyl-map');
 var exec = require('gulp-exec');
-var data = require('gulp-data');
+// var data = require('gulp-data');
+var install = require('gulp-install');
 
 nconf
   .argv()
@@ -183,6 +184,11 @@ gulp.task('mocha', function (cb) {
     .on('end', cb);
 });
 
+gulp.task('install', function (cb) {
+  gulp.src('src/**/package.json')
+    .pipe(install());
+});
+
 gulp.task('clean', function (cb) {
   del(['./dist'], cb);
 });
@@ -233,7 +239,7 @@ gulp.task('test', function(cb) {
 });
 
 gulp.task('default', function() {
-    runSequence('test', 'clean', 'build', function() {
+    runSequence('install', 'test', 'clean', 'build', function() {
         console.log('Build completed.');
     });
 });

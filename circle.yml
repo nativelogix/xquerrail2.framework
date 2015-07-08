@@ -3,6 +3,8 @@ machine:
     - docker
   ruby:
     #version: rbx-2.0.0-p451
+  node:
+    version: 0.12.0
 
 dependencies:
   override:

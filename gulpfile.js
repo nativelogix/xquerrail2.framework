@@ -32,7 +32,7 @@ var roxy = nconf.get('roxy');
 
 var getRoxyProperties = function() {
   var options = {
-    'cwd': roxy.path
+    'cwd': roxy.path || 'roxy'
   }
   var exec = require('child_process').execSync;
   var stdout = exec('ml ' + roxy.env + ' info --format=json', options)
@@ -146,8 +146,8 @@ gulp.task('roxy:watch', function() {
 
   watch(['src/**/*.xqy'], {read: false})
     .pipe(plumber())
-    .pipe(exec('echo <%= options.normalize(file.path) %>', options))
-    // .pipe(exec('ml <%= options.roxy.environment %> load <%= options.normalize(file.path) %> --db=<%= options.roxy.modulesDB %> --remove-prefix=<%= options.normalize(options.join(file)) %> -v', options))
+    // .pipe(exec('echo <%= options.normalize(file.path) %>', options))
+    .pipe(exec('ml <%= options.roxy.environment %> load <%= options.normalize(file.path) %> --db=<%= options.roxy.modulesDB %> --remove-prefix=<%= options.normalize(options.join(file)) %> -v', options))
     .pipe(exec.reporter(reportOptions));
 });
 
@@ -185,8 +185,9 @@ gulp.task('mocha', function (cb) {
 });
 
 gulp.task('install', function (cb) {
-  gulp.src('src/**/package.json')
-    .pipe(install());
+  gulp.src('src/test/mocha/package.json')
+    .pipe(install())
+    .on('end', cb);
 });
 
 gulp.task('clean', function (cb) {
@@ -239,7 +240,7 @@ gulp.task('test', function(cb) {
 });
 
 gulp.task('default', function() {
-    runSequence('install', 'test', 'clean', 'build', function() {
+    runSequence('test', 'clean', 'build', function() {
         console.log('Build completed.');
     });
 });

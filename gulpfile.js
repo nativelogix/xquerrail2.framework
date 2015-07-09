@@ -35,7 +35,8 @@ var getRoxyProperties = function() {
     'cwd': roxy.path || 'roxy'
   }
   var exec = require('child_process').execSync;
-  var stdout = exec('./ml ' + roxy.env + ' info --format=json', options)
+  var roxyCommand = 'ruby -Ideploy -Ideploy/lib deploy/lib/ml.rb ' + roxy.env;
+  var stdout = exec(roxyCommand + ' info --format=json', options)
   return JSON.parse(stdout).properties;
 };
 

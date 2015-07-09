@@ -611,7 +611,7 @@ declare function domain-impl:resolve-datatype(
     case element(duration) return "xs:duration"
     case element(dayTime) return "xs:dayTimeDuration"
     case element(yearMonth) return "xs:yearMonthDuration"
-    case element(monthDay) return "xs:monthDayDuration"
+    case element(monthDay) return "xs:gMonthDay" (:"xs:monthDayDuration":)
     case element(reference) return "xs:string"
     case element(langString) return "rdf:langString"
     default return

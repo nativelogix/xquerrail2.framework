@@ -391,7 +391,8 @@ declare %test:case function model-new-yearMonth-type-test() {
   return (
     assert:not-empty($instance),
     assert:not-empty($yearMonth-value, "yearMonth field value should not be empty"),
-    assert:true(($yearMonth-value instance of xs:gYearMonth), "yearMonth field should be xs:gYearMonth")
+    assert:true(($yearMonth-value instance of xs:gYearMonth), "yearMonth field should be xs:gYearMonth"),
+    assert:equal($yearMonth-value, map:get($params, "yearMonth"), "yearMonth field should be the same")
   )
 };
 
@@ -407,7 +408,8 @@ declare %test:case function model-new-monthDay-type-test() {
   return (
     assert:not-empty($instance),
     assert:not-empty($monthDay-value, "monthDay field value should not be empty"),
-    assert:true(($monthDay-value instance of xs:gMonthDay), "monthDay field should be xs:gMonthDay")
+    assert:true(($monthDay-value instance of xs:gMonthDay), "monthDay field should be xs:gMonthDay"),
+    assert:equal($monthDay-value, map:get($params, "monthDay"), "monthDay field should be the same")
   )
 };
 

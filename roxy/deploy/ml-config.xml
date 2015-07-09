@@ -154,6 +154,8 @@
       <collection-lexicon>true</collection-lexicon>
       <directory-creation>manual</directory-creation>
       <maintain-last-modified>false</maintain-last-modified>
+      <triple-index>true</triple-index>
+      <triple-positions>true</triple-positions>
 <!--
       <fragment-roots>
         <fragment-root>
@@ -539,107 +541,155 @@
           <privilege-name>xdmp:set-server-field</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-set-server-field</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>xdmp:invoke</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-invoke</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
+          <privilege-name>xdmp:spawn-in</privilege-name>
+          <action>http://marklogic.com/xdmp/privileges/xdmp-spawn-in</action>
+          <kind>execute</kind>
+        </privilege>
+        <privilege>
+          <privilege-name>xdmp:invoke-in</privilege-name>
+          <action>http://marklogic.com/xdmp/privileges/xdmp-invoke-in</action>
+          <kind>execute</kind>
+        </privilege>
+        <!-- Begin: Only required when modules db is filesystem -->
+        <privilege>
+          <privilege-name>xdmp:save</privilege-name>
+          <action>http://marklogic.com/xdmp/privileges/xdmp-save</action>
+          <kind>execute</kind>
+        </privilege>
+        <privilege>
+          <privilege-name>xdmp:filesystem-directory-create</privilege-name>
+          <action>http://marklogic.com/xdmp/privileges/xdmp-filesystem-directory-create</action>
+          <kind>execute</kind>
+        </privilege>
+        <!-- End: Only required when modules db is filesystem -->
+        <privilege>
           <privilege-name>xdmp:set-session-field</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-set-session-field</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>xdmp:get-server-field</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-get-server-field</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>xdmp:eval-in</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-eval-in</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>xdmp:add-response-header</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-add-response-header</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>xdmp:filesystem-file</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-filesystem-file</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>xdmp:user-roles</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-user-roles</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>get-role-ids</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/get-role-ids</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>unprotected-collections</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/unprotected-collections</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>unprotect-collection</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/unprotect-collection</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>xdmp:with-namespaces</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-with-namespaces</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>xdmp:filesystem-directory</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-filesystem-directory</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>xdmp:eval</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-eval</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>xdmp:get-session-field</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-get-session-field</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>role-get-roles</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/role-get-roles</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>xdmp:value</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-value</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>xdmp:external-binary</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-external-binary</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>xdmp:spawn</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-spawn</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>any-uri</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/any-uri</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>xdmp:username</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-username</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>get-role-names</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/get-role-names</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>any-collection</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/any-collection</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>xdmp:filesystem-file-exists</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-filesystem-file-exists</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>get-user-names</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/get-user-names</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>xdmp:get-session-field-names</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/xdmp-get-session-field-names</action>
           <kind>execute</kind>
-        </privilege><privilege>
+        </privilege>
+        <privilege>
           <privilege-name>get-privilege</privilege-name>
           <action>http://marklogic.com/xdmp/privileges/get-privilege</action>
           <kind>execute</kind>

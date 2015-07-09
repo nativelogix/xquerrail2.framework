@@ -217,21 +217,22 @@ declare function domain-impl:resolve-cts-type(
  : Gets the domain model from the given cache
  :)
 declare %private function domain-impl:get-model-cache(
-  $application,
-  $model-name
+  $application as xs:string,
+  $model-name as xs:string+
 ) {
-  map:get($DOMAIN-MODEL-CACHE, fn:concat($application, ":" , $model-name))
+  map:get($DOMAIN-MODEL-CACHE, fn:concat($application, ":" , fn:string-join($model-name, "")))
 };
 
 (:~
  : Sets the cache for a domain model
  :)
 declare %private function domain-impl:set-model-cache(
-  $application,
-  $model-name,
-  $model as element(domain:model)?
-) {
-  map:put($DOMAIN-MODEL-CACHE, fn:concat($application, ":" , $model-name), $model)
+  $application as xs:string,
+  $model-name as xs:string+,
+  $model as element(domain:model)+
+) as element(domain:model)+ {
+  map:put($DOMAIN-MODEL-CACHE, fn:concat($application, ":" , fn:string-join($model-name, "")), $model),
+  $model
 };
 
 (:~
@@ -700,16 +701,6 @@ declare function domain-impl:get-controller(
 };
 
 (:~
- : Returns the actions associated with the controller. The function assumes the controller lives in the default application.
- : @param $controller-name - Name of the controller
- :)
-declare function domain-impl:get-controller-actions(
-  $controller-name as xs:string
-) {
-  domain-impl:get-controller-actions(config:default-application(),$controller-name)
-};
-
-(:~
  : Returns all the available functions for a given controller.
  : @param $application - Name of the application
  : @param $controller-name - Name of the controller
@@ -779,10 +770,20 @@ declare function domain-impl:get-domain-model(
   $model-names as xs:string+,
   $extension as xs:boolean
 ) as element(domain:model)+ {
-  domain-impl:find-model-by-name(
-    config:get-domain($application),
-    $model-names
-  )
+  (:if (fn:count($model-names) eq 1) then:)
+    let $cached := domain-impl:get-model-cache($application, $model-names)
+    return
+      if(fn:exists($cached)) then
+        $cached
+      else
+        let $domain := config:get-domain($application)
+        let $model := domain-impl:find-model-by-name($domain, $model-names)
+        return domain-impl:set-model-cache($application, $model-names, $model)
+  (:else
+    domain-impl:find-model-by-name(
+      config:get-domain($application),
+      $model-names
+    ):)
   (:let $domain := config:get-domain($application)
   let $models :=
     for $modelName in $model-names
@@ -1399,7 +1400,7 @@ declare function domain-impl:model-fields(
 declare function domain-impl:get-field-key(
   $node as node()
 ) {
-   domain-impl:get-field-id($node)
+   domain:get-field-id($node)
 };
 
 (:~
@@ -3035,7 +3036,7 @@ declare function domain-impl:model-exists(
 declare function domain-impl:module-exists(
   $module-location as xs:string
 ) as xs:boolean {
-	module-loader:resource-exists($module-location)
+  module-loader:resource-exists($module-location)
 };
 
 declare function domain-impl:get-function-key(

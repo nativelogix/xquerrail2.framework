@@ -1,0 +1,47 @@
+<domain xmlns="http://xquerrail.com/domain"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:search = "http://marklogic.com/appservices/search"
+  xsi:schemaLocation="http://xquerrail.com/domain https://raw.githubusercontent.com/nativelogix/xquerrail2.framework/master/src/main/_framework/schemas/domain.xsd">
+
+  <model name="model1" persistence="directory" label="Model #1" extends="base" namespace-uri="http://marklogic.com/model/model1" key="uuid" keyLabel="name">
+    <directory>/test/model1/</directory>
+    <element name="name" type="string" label="Name"/>
+    <element name="description" type="string" label="Description"/>
+    <element name="tags" type="string" label="Tags" occurrence="*"/>
+    <element name="id" type="id" label="Id"/>
+    <element name="anyURI" type="anyURI"/>
+    <element name="string" type="string"/>
+    <element name="integer" type="integer"/>
+    <element name="long" type="long"/>
+    <element name="decimal" type="decimal"/>
+    <element name="double" type="double"/>
+    <element name="float" type="float"/>
+    <element name="boolean" type="boolean"/>
+    <element name="dateTime" type="dateTime"/>
+    <element name="date" type="date"/>
+    <element name="time" type="time"/>
+    <element name="duration" type="duration"/>
+    <element name="yearMonth" type="yearMonth"/>
+    <element name="monthDay" type="monthDay"/>
+    <element name="schema-element" type="schema-element"/>
+    <element name="tag" type="string" label="Tag">
+      <attribute name="title" type="string" label="Title"/>
+    </element>
+    <element name="model2" type="reference" reference="model:model2:reference"/>
+    <container name="models">
+      <element name="model3" type="model3"/>
+    </container>
+  </model>
+
+  <model name="model2" persistence="directory" label="Model #2" extends="base" namespace-uri="http://marklogic.com/model/model2" key="uuid" keyLabel="id">
+    <directory>/test/model2/</directory>
+    <element name="id" type="string" label="Id"/>
+    <element name="name" type="string" label="Name"/>
+  </model>
+
+  <model name="model3" persistence="abstract" label="Model #3" namespace-uri="http://marklogic.com/model/model3" key="id" keyLabel="name">
+    <element name="id" type="string" identity="true" label="Id"/>
+    <element name="name" type="string" label="Name"/>
+  </model>
+
+</domain>

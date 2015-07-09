@@ -588,7 +588,9 @@ declare function config:register-domain($domain as element(domain:domain)) {
 
 declare function config:resolve-path($base as xs:string, $path as xs:string?) as xs:string? {
   if ($path) then
-    if (fn:starts-with($path, "/")) then
+    if (fn:starts-with($path, "$(framework.path)/")) then
+      config:resolve-framework-path(fn:substring-after($path, "$(framework.path)/"))
+    else if (fn:starts-with($path, "/")) then
       $path
     else
       fn:concat($base, "/", $path)

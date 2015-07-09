@@ -23,6 +23,8 @@ import module namespace functx = "http://www.functx.com" at "/MarkLogic/functx/f
 
 import module namespace model = "http://xquerrail.com/model/base" at "base-model.xqy";
 
+import module namespace generator = "http://xquerrail.com/generator/base" at "../generators/generator-base.xqy";
+
 import module namespace sem = "http://marklogic.com/semantics" at "/MarkLogic/semantics.xqy";
 
 declare namespace module = "http://xquerrail.com/module";
@@ -41,6 +43,7 @@ declare variable $current-identity := ();
 
 (:Stores a cache of any references resolved :)
 declare variable $REFERENCE-CACHE := map:map();
+
 declare variable $INSTANCE-CACHE  := map:map();
 declare variable $FUNCTION-CACHE  := map:map();
 
@@ -829,8 +832,15 @@ declare function model-impl:recursive-create(
 ) {
   let $mode := if (fn:exists($updates)) then "update" else "create"
   return (
-    model-impl:recursive-build($model, $current, $updates, $partial),
-    model-impl:validate-params($model, $updates, $mode)
+    let $model-key := xdmp:key-from-QName(domain:get-field-qname($model))
+    return
+      if(domain:get-value-type($updates) eq "xml" and generator:has-generator($model-key, "build")) then (
+        xdmp:trace("xquerrail.generator", "Generator:" || $model-key),
+        generator:get-generator($model-key, "build")($current, $updates)
+      )
+      else
+        model:recursive-build($model, $current, $updates, $partial),
+      model:validate-params($model, $updates, $mode)
   )
 };
 
@@ -3104,7 +3114,7 @@ declare function model-impl:build-value(
         if(fn:exists($current))
         then $current
         else if(fn:exists($value)) then $value
-        else model-impl:generate-fnid(($value,<x>{xdmp:random()}</x>)[1])
+        else model:generate-fnid(($value,<x>{xdmp:random()}</x>)[1])
     case "identity" return
         if(fn:exists($current))
         then fn:data($current)
@@ -3570,3 +3580,4 @@ declare function model-impl:normalize-path($path as xs:string) {
     then $computed
     else fn:concat("/",$computed)
 };
+

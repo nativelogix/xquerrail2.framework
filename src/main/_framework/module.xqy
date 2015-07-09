@@ -100,6 +100,95 @@ declare function module:get-modules-map(
   return $module-uris
 };
 
+declare function module:lookup-functions-module(
+  $application as xs:string,
+  $module-type as xs:string?,
+  $function-name as xs:string?,
+  $function-arity as xs:integer?,
+  $namespace as xs:string?,
+  $location as xs:string?
+) as xdmp:function* {
+  module:get-modules($application)/library[
+    cts:contains(
+      .,
+      cts:and-query((
+        if (fn:exists($module-type)) then
+          cts:element-attribute-value-query(
+            xs:QName("library"),
+            xs:QName("type"),
+            $module-type,
+            ("exact")
+          )
+        else
+          (),
+        if (fn:exists($namespace)) then
+          cts:element-attribute-value-query(
+            xs:QName("library"),
+            xs:QName("namespace"),
+            $namespace,
+            ("exact")
+          )
+        else
+          (),
+        if (fn:exists($location)) then
+          cts:element-attribute-value-query(
+            xs:QName("library"),
+            xs:QName("location"),
+            $location,
+            ("exact")
+          )
+        else
+          ()
+      ))
+    )
+  ]/function[
+    cts:contains(
+      .,
+      cts:and-query((
+        if (fn:exists($function-name)) then
+          cts:element-attribute-value-query(
+            xs:QName("function"),
+            xs:QName("name"),
+            $function-name,
+            ("exact")
+          )
+        else
+          (),
+        if (fn:exists($function-arity)) then
+          cts:element-attribute-value-query(
+            xs:QName("function"),
+            xs:QName("arity"),
+            xs:string($function-arity),
+            ("exact")
+          )
+        else
+          ()
+      ))
+    )
+  ] ! (
+    xdmp:function(fn:QName(./../@namespace, ./@name), ./../@location)
+  )
+};
+
+declare function module:function-key-cache(
+  $application as xs:string,
+  $module-type as xs:string?,
+  $function-name as xs:string,
+  $function-arity as xs:integer,
+  $namespace as xs:string?,
+  $location as xs:string?
+  ) as xs:string {
+  fn:concat(
+    "function-key-cache::",
+    $application,
+    $module-type,
+    $function-name,
+    $function-arity,
+    $namespace,
+    $location
+  )
+};
+
 declare function module:load-function-module(
   $application as xs:string,
   $module-type as xs:string?,
@@ -123,7 +212,6 @@ declare function module:load-function-module(
         ) else
           $function
       return generator:get-xdmp-function($function)
-      (:xdmp:function(fn:QName($function/../@namespace, $function-name), $function/../@location):)
     else
       ()
 };

@@ -48,8 +48,7 @@ declare function app:bootstrap($application as element(config:application)?) as 
 
 declare %private function app:load-application(
   $application-name as xs:string
-) as element(domain:domain)?
-{
+) as element(domain:domain)? {
   let $application-path := fn:concat(config:application-directory($application-name), "/domains/application-domain.xml")
   let $_ := xdmp:log(text{"config:load-domain", $application-name, "$application-path", $application-path}, "debug")
   let $domain-config := config:get-resource($application-path)
@@ -66,13 +65,16 @@ declare %private function app:load-application(
 declare %private function app:custom-bootstrap(
   $application-name as xs:string
 ) {
-  let $path := config:get-application($application-name)/config:bootstrap/@resource
+  for $path in fn:string(config:get-application($application-name)/config:bootstrap/@resource)
   return
-    if (fn:exists($path)) then
+    if ($path ne "") then
       try {
-        xdmp:apply(xdmp:function(xs:QName("extension:initialize"), $path))
+        (
+          xdmp:lock-for-update(xdmp:integer-to-hex(xdmp:random())),
+          xdmp:apply(xdmp:function(xs:QName("extension:initialize"), $path))
+        )
       }
-      catch ($exception) {xdmp:log($exception, "debug")}
+      catch ($exception) {xdmp:log($exception, "warning")}
     else ()
 };
 
@@ -162,6 +164,11 @@ declare %private function app:get-base-safe($path as xs:string) as element(confi
 };
 
 declare function app:reset() as item()* {
+  try {
+    xdmp:function(xs:QName("extension:reset"), "generators/bootstrap-generator.xqy")()
+  } catch ($ex) {
+    xdmp:log($ex)
+  },
   config:clear-cache()
 };
 

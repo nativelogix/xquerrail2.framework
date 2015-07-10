@@ -11,6 +11,7 @@ import module namespace context = "http://xquerrail.com/context" at "/main/_fram
 import module namespace domain = "http://xquerrail.com/domain" at "/main/_framework/domain.xqy";
 import module namespace model = "http://xquerrail.com/model/base" at "/main/_framework/base/base-model.xqy";
 
+declare namespace model1 = "http://marklogic.com/model/model1";
 declare namespace model3 = "http://marklogic.com/model/model3";
 
 declare option xdmp:mapping "false";
@@ -48,20 +49,6 @@ declare %test:setup function setup() as empty-sequence()
 declare %test:teardown function teardown() as empty-sequence()
 {
   setup:teardown($TEST-COLLECTION)
-};
-
-(: TODO domain:get-field-key seems to be deprecated it looks at $model/@keyId :)
-declare %test:ignore function model-new-key-field-test() {
-  let $key-field := domain:get-field-key($MODEL1)
-  let $params := map:new((
-    map:entry("uuid", sem:uuid-string()),
-    map:entry("name", setup:random("model1-name"))
-  ))
-  let $instance := model:new($MODEL1, $params)
-  return (
-    assert:not-empty($instance),
-    assert:equal(domain:get-field-value($key-field, $instance), map:get($params, "uuid"), "key field should be the same")
-  )
 };
 
 declare %test:case function model-new-identity-field-test() {
@@ -161,17 +148,19 @@ declare %test:case function model-new-update-user-type-test() {
   )
 };
 
-declare %test:ignore function model-new-query-type-test() {
-  let $field := domain:get-model-field($MODEL1, "update-user")
-  let $_ := context:user("user-test")
+declare %test:case function model-new-query-type-test() {
+  let $field := domain:get-model-field($MODEL1, "query")
   let $params := map:new((
     map:entry("name", setup:random("model1-name")),
-    map:entry("id", fn:generate-id(<x>{setup:random("model1-name")}</x>))
+    map:entry("query", <x>{cts:element-query(xs:QName("model1:name"), cts:and-query(()))}</x>/*)
   ))
   let $instance := model:new($MODEL1, $params)
+  let $query-value := domain:get-field-value($field, $instance)
   return (
     assert:not-empty($instance),
-    assert:equal(domain:get-field-value($field, $instance), context:user(), "update-user field should be the same as $context:user()")
+    assert:not-empty($query-value, "query field value should not be empty"),
+    assert:true(($query-value instance of element(cts:element-query)), "query field should be cts:query"),
+    assert:equal($query-value, map:get($params, "query"), "query field should be the same")
   )
 };
 

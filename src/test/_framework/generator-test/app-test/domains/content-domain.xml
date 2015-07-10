@@ -23,6 +23,7 @@
     <element name="duration" type="duration"/>
     <element name="yearMonth" type="yearMonth"/>
     <element name="monthDay" type="monthDay"/>
+    <element name="query" type="query"/>
     <element name="schema-element" type="schema-element"/>
     <element name="tag" type="string" label="Tag">
       <attribute name="title" type="string" label="Title"/>

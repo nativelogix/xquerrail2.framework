@@ -1702,12 +1702,6 @@ declare function domain-impl:get-field-reference-model(
  : @param $field - instance of a field
  :)
 declare function domain-impl:get-field-xpath(
-  $field as element()
-) {
-  domain-impl:get-field-xpath($field, fn:false())
-};
-
-declare function domain-impl:get-field-xpath(
   $field as element(),
   $relative as xs:boolean
 ) {
@@ -1716,15 +1710,19 @@ declare function domain-impl:get-field-xpath(
     let $namespaces := domain:declared-namespaces-map($field)
     return
         fn:string-join(
-          for $path in domain-impl:get-field-node-ancestors($field)
-          (:$field/ancestor-or-self::*[fn:node-name(.) = $DOMAIN-NODE-FIELDS]:)
-          return
-           typeswitch($path)
-            case element(domain:attribute)
-              return fn:concat("/@",$path/@name)
-            default
-              return fn:concat("/",domain-impl:get-field-prefix($path),":",$path/@name)
-          ,
+          (
+            for $path in domain-impl:get-field-node-ancestors($field)
+            return typeswitch($path)
+              case element(domain:attribute)
+                return fn:concat("/@",$path/@name)
+              default
+                return fn:concat("/",domain-impl:get-field-prefix($path),":",$path/@name)
+            ,
+            if ($field/@type eq "query") then
+              "/element()"
+            else
+              ()
+          ),
           ""
         )
   return
@@ -2780,7 +2778,7 @@ declare function domain-impl:field-xml-exists(
   $value as item()*
 ) as xs:boolean {
   let $type := domain:get-base-type($field)
-  let $path := domain-impl:get-field-xpath($field, fn:false())
+  let $path := domain:get-field-xpath($field, fn:false())
   let $expr := fn:concat("$value", $path)
   let $func :=
     switch($type)
@@ -2830,7 +2828,7 @@ declare function domain-impl:get-field-xml-value(
   (:then domain-impl:get-field-function-cache($field,"xml")($value):)
   (:else:)
   let $type := domain:get-base-type($field)
-  let $path := domain-impl:get-field-xpath($field, $relative)
+  let $path := domain:get-field-xpath($field, $relative)
   let $expr := fn:concat("$value", $path)
   let $func :=
     switch($type)
@@ -3345,7 +3343,7 @@ declare function domain-impl:build-field-xpath-from-model(
               if ($index eq 1) then
                 domain-impl:get-field-absolute-xpath($f)
               else
-                domain-impl:get-field-xpath($f)
+                domain:get-field-xpath($f)
           ),
           "")
         else

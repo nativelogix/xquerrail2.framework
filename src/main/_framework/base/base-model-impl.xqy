@@ -3136,7 +3136,7 @@ declare function model-impl:build-value(
         then $current
         else context:user()
     case "query" return
-        cts:query($value)
+        if (fn:exists($value)) then cts:query($value) else ()
     default return
      if($type = $domain:SIMPLE-TYPES) then fn:data($value)
      else fn:error((),"UNKNOWN-TYPE",$type)

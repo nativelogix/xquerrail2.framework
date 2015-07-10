@@ -177,7 +177,7 @@ gulp.task('xray', function (cb) {
 gulp.task('mocha', function (cb) {
   validateMlSettings();
   var mochaOptions = {
-    timeout: 0,
+    enableTimeouts: false,
     reporter: 'spec'
   };
   gulp.src('src/test/mocha/test/*.js')

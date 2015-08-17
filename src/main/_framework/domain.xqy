@@ -140,7 +140,7 @@ declare function domain:cast-value(
 declare function domain:get-field-scalar-type(
   $field as element()
 ) {
-  domain:domain-function("get-field-scalar-type", 2)($field)
+  domain:domain-function("get-field-scalar-type", 1)($field)
 };
 
 (:~
@@ -1609,8 +1609,8 @@ declare function domain:get-models(
   $application as xs:string,
   $include-abstract as xs:boolean
 ) as element(domain:model)* {
-  (:domain:domain-function("get-models", 2)($application, $include-abstract):)
-  config:get-domain($application)/domain:model[@persistence != 'abstract']
+  domain:domain-function("get-models", 2)($application, $include-abstract)
+  (:config:get-domain($application)/domain:model[@persistence != 'abstract']:)
 };
 
 (:~
@@ -1715,4 +1715,158 @@ declare function domain:find-field-from-path-model(
   $accumulator as element()*
 ) as element()* {
   domain:domain-function("find-field-from-path-model", 3)($model, $key, $accumulator)
+};
+
+declare function domain:generate-schema(
+  $model as element(domain:model)
+) as element()* {
+  <xs:schema
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="{domain:get-field-namespace($model)}" xmlns="http://xquerrail.com" elementFormDefault="qualified">
+    <xs:element name="{$model/@name}">
+      <xs:complexType>
+        <xs:sequence>
+        {
+          for $field in $model/node()
+          return domain:generate-schema-field($field)
+        }
+        </xs:sequence>
+      </xs:complexType>
+    </xs:element>
+  </xs:schema>
+};
+
+declare function domain:generate-schema-field(
+  $field as element()
+) as element()? {
+  typeswitch ($field)
+  case element(domain:element)
+  return domain:generate-schema-element($field)
+  case element(domain:attribute)
+  return domain:generate-schema-attribute($field)
+  default
+  return ()
+};
+
+declare function domain:generate-schema-element(
+  $field as element(domain:element)
+) as element(xs:element) {
+  <xs:element>
+  {
+    attribute name {$field/@name},
+    attribute type {'xs:' ||domain:get-field-scalar-type($field)},
+    domain:generate-schema-occurence-constraints($field)
+  }
+  </xs:element>
+};
+
+declare function domain:generate-schema-attribute(
+  $field as element(domain:attribute)
+) as element(xs:attribute) {
+  <xs:attribute>
+  {
+    attribute name {$field/@name},
+    attribute type {'xs:' ||domain:get-field-scalar-type($field)},
+    domain:generate-schema-occurence-constraints($field)
+  }
+  </xs:attribute>
+};
+
+declare function domain:generate-schema-occurence-constraints(
+  $field as element()
+) as attribute()* {
+  if ($field/@name = ($field/ancestor::domain:model/@key, $field/ancestor::domain:model/@keyLabel)) then
+  (
+    typeswitch($field)
+      case element(domain:element) return
+      (
+        attribute minOccurs {1},
+        attribute maxOccurs {1}
+      )
+      case element(domain:attribut) return
+        attribute use {"required"}
+      default return
+        ()
+  )
+  else if (fn:exists($field/@occurrence)) then
+  (
+    typeswitch($field)
+      case element(domain:element) return
+      (
+        attribute minOccurs {
+          if ($field/@occurrence = ("?", "*")) then
+            0
+          else if (fn:data($field/@occurrence) castable as xs:integer) then
+            fn:data($field/@occurrence)
+          else
+            fn:error(xs:QName("GENERATE-SCHEMA-OCCURS-ERROR"), text{"Unsupported occurrence value", $field/@occurrence})
+        },
+        attribute maxOccurs {
+          if ($field/@occurrence eq ("?")) then
+            1
+          else if ($field/@occurrence eq ("*")) then
+            "unbounded"
+          else if (fn:data($field/@occurrence) castable as xs:integer) then
+            fn:data($field/@occurrence)
+          else
+            fn:error(xs:QName("GENERATE-SCHEMA-OCCURS-ERROR"), text{"Unsupported occurrence value", $field/@occurrence})
+        }
+      )
+      case element(domain:attribut) return
+        attribute use {
+          if ($field/@occurrence = "?") then
+            "optional"
+          else if ($field/@occurrence = "*") then
+            fn:error(xs:QName("GENERATE-SCHEMA-OCCURS-ERROR"), text{"Unsupported occurrence value", $field/@occurrence, "for", $field/@name}, $field)
+          else
+            "required"
+        }
+      default return
+        ()
+  )
+  else if (xs:boolean($field/domain:constraint/@required)) then
+  (
+    typeswitch($field)
+      case element(domain:element) return
+      (
+        attribute minOccurs {1},
+        attribute maxOccurs {1}
+      )
+      case element(domain:attribut) return
+        attribute use {"required"}
+      default return
+        ()
+  )
+  else
+  (
+    typeswitch($field)
+      case element(domain:element) return
+      (
+        attribute minOccurs {0},
+        attribute maxOccurs {1}
+      )
+      case element(domain:attribut) return
+        attribute use {"optional"}
+      default return
+        ()
+  ),
+  domain:generate-schema-default($field)
+};
+
+declare function domain:generate-schema-default(
+  $field as element()
+) as attribute()? {
+  if (fn:exists($field/@default)) then
+    typeswitch($field)
+      case element(domain:element) return
+        $field/@default
+      case element(domain:attribut) return
+        if (xs:boolean($field/domain:constraint/@required) or fn:data($field/@occurrence) eq 1) then
+          fn:error(xs:QName("GENERATE-SCHEMA-DEFAULT-ERROR"), text{"Attribute field", $field/@name,"cannot be required and have default defined"}, $field)
+        else
+          $field/@default
+      default return
+        ()
+  else
+    ()
 };

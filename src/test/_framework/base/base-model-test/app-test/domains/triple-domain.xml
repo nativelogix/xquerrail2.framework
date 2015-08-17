@@ -23,6 +23,7 @@
       <!-- <graph/> -->
     </triple>
   </model>
+
   <model name="triplable3" label="Triplable #3" persistence="directory" extends="base" key="uuid" keyLabel="name">
     <directory>/test/triplables3/</directory>
     <navigation triplable="true"/>
@@ -33,6 +34,7 @@
       <object model="triplable2"></object>
     </triple>
   </model>
+
   <model name="triplable4" label="Triplable #4" persistence="directory" extends="base" key="uuid" keyLabel="name">
     <directory>/test/triplables4/</directory>
     <navigation triplable="true"/>
@@ -79,4 +81,12 @@
       </triple>
     </container>
   </model>
+
+  <model name="triplable5" label="Triplable #5" persistence="directory" key="uuid" keyLabel="name">
+    <directory>/test/triplables5/</directory>
+    <navigation triplable="true"/>
+    <element name="uuid" type="identity" identity="true" label="Globally Unique Identifier"/>
+    <element name="name" type="string" label="Name"/>
+  </model>
+
 </domain>

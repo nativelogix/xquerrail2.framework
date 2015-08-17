@@ -6,3 +6,4 @@ xquerrail2.framework.xpr
 *.sublime-project
 *.sublime-workspace
 /dist
+_generated_

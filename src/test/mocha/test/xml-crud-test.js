@@ -53,7 +53,7 @@ describe('XML CRUD features', function() {
     var namespace;
     before(function(done) {
       xquerrailCommon.login(function() {
-        xquerrailCommon.model.schema('model1', function(error, response, entity) {
+        xquerrailCommon.model.definition('model1', function(error, response, entity) {
           namespace = entity.model.namespace;
           done();
         });

@@ -74,6 +74,15 @@ declare function controller:model()
 };
 
 (:~
+ : Action returns the model as an endpoint representing the definition
+ :)
+declare function controller:definition() {
+  response:set-model(controller:model()),
+  response:set-body(controller:model()),
+  response:flush()
+};
+
+(:~
  : Action returns the model as an endpoint representing the schema
  :)
 declare function controller:schema() {
@@ -85,9 +94,8 @@ declare function controller:schema() {
 (:~
  : Action returns
  :)
-declare function controller:controller()
-{
-    domain:get-controller(request:application(),request:controller())
+declare function controller:controller() {
+  domain:get-controller(request:application(),request:controller())
 };
 
 (:~

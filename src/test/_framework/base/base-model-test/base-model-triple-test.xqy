@@ -20,6 +20,7 @@ declare variable $TRIPLABLE1-MODEL := domain:get-model("triplable1");
 declare variable $TRIPLABLE2-MODEL := domain:get-model("triplable2");
 declare variable $TRIPLABLE3-MODEL := domain:get-model("triplable3");
 declare variable $TRIPLABLE4-MODEL := domain:get-model("triplable4");
+declare variable $TRIPLABLE5-MODEL := domain:get-model("triplable5");
 
 declare variable $TEST-APPLICATION :=
 <application xmlns="http://xquerrail.com/config">
@@ -115,6 +116,14 @@ declare %private function has-triple-element-with-predicate(
 };
 
 declare %test:case function compiled-model-is-triplable-test() as item()*
+{
+  (
+    has-triple-element-with-predicate($TRIPLABLE5-MODEL, "hasUri"),
+    has-triple-element-with-predicate($TRIPLABLE5-MODEL, "hasType")
+  )
+};
+
+declare %test:case function extended-compiled-model-is-triplable-test() as item()*
 {
   (
     has-triple-element-with-predicate($TRIPLABLE1-MODEL, "hasUri"),

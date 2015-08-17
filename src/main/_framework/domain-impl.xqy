@@ -851,9 +851,7 @@ declare %private function domain-impl:is-ns-override(
   ))
 };
 
-declare function domain-impl:build-model-triples(
-  $application as xs:string,
-  $domain as element(domain:domain),
+declare function domain-impl:build-model-triples-container(
   $model as element(domain:model)
 ) as element(domain:container)? {
   if (domain:navigation($model)/@triplable eq 'true') then
@@ -944,7 +942,6 @@ declare %private function domain-impl:extend-model(
           $model/namespace::*,
           attribute compiled {fn:true()},
           $model-attr,
-          (:$model/@*[. except ($model/@namespace, $model/@namespace-uri)],:)
           attribute namespace { $model-ns },
           attribute domain:extension { fn:string-join( ($base-model-name, $base-model/@extension), ' ' ) },
           for $field in  $base-model/(domain:element|domain:container|domain:attribute|domain:triple|domain:optionlist)
@@ -986,8 +983,7 @@ declare %private function domain-impl:extend-model(
                   $field/node()
                 },
           $model-validators,
-          $model/node()[. except $model/domain:container[@name eq 'triples' and @namespace eq 'http://marklogic.com/semantics']],
-          domain-impl:build-model-triples($application, $domain, $model)
+          $model/node()
         }
   else $model
 };
@@ -997,7 +993,7 @@ declare function domain-impl:compile-model(
   $model as element(domain:model)
 ) as element(domain:model) {
   let $domain := $model/ancestor::domain:domain
-  let $model := domain-impl:sort-model(domain-impl:extend-model($application, $domain, $model))
+  let $model := domain-impl:build-model-triples(domain-impl:sort-model(domain-impl:extend-model($application, $domain, $model)))
   let $model :=
     element domain:domain {
       $domain/*[. except $domain/domain:model[@name = $model/@name]],
@@ -1025,6 +1021,17 @@ declare %private function domain-impl:sort-model(
     for $node in $model/*
       order by $node/@sortValue/fn:number()
       return $node
+  }
+};
+
+declare %private function domain-impl:build-model-triples(
+  $model as element(domain:model)
+) as element(domain:model) {
+  element { fn:node-name($model) } {
+    $model/namespace::*,
+    $model/attribute::*,
+    $model/node()[. except $model/domain:container[@name eq 'triples' and @namespace eq 'http://marklogic.com/semantics']],
+    domain-impl:build-model-triples-container($model)
   }
 };
 
@@ -1743,17 +1750,16 @@ declare function domain-impl:get-field-xpath(
 declare function domain-impl:get-field-absolute-xpath(
   $field as element()
 ) {
-    if($field/@absXpath) then $field/@absXpath else
-    let $namespaces := domain:declared-namespaces-map($field)
+  if($field/@absXpath) then
+    $field/@absXpath
+  else
+    fn:string-join(
+    for $path in domain-impl:get-field-ancestors($field)
     return
-        fn:string-join(
-        for $path in domain-impl:get-field-ancestors($field)
-        (:$field/ancestor-or-self::*[fn:node-name(.) = $DOMAIN-FIELDS]:)
-        return
-         typeswitch($path)
-          case element(domain:attribute) return fn:concat("/@",$path/@name)
-          default return  fn:concat("/",domain-impl:get-field-prefix($path),":",$path/@name)
-        ,"")
+     typeswitch($path)
+      case element(domain:attribute) return fn:concat("/@",$path/@name)
+      default return  fn:concat("/",domain-impl:get-field-prefix($path),":",$path/@name)
+    ,"")
 };
 
 declare function domain-impl:get-field-qname(

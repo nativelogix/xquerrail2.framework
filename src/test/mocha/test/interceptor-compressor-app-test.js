@@ -61,7 +61,7 @@ describe('Compress feature', function() {
     xquerrailCommon.initialize(function(error, response, body) {
       // expect(response.statusCode).to.equal(200);
       xquerrailCommon.login(function() {
-        xquerrailCommon.model.schema('model1', function(error, response, entity) {
+        xquerrailCommon.model.definition('model1', function(error, response, entity) {
           namespace = entity.model.namespace;
           done();
         });

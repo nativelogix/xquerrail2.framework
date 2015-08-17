@@ -70,8 +70,8 @@ declare %test:case function view-uri-default-base-application-test() as item()*
 declare %test:case function view-uri-framework-base-test() as item()*
 {
   let $controller := "models1"
-  let $action := "schema"
+  let $action := "definition"
   let $format := "json"
   let $view-uri := engine:view-uri($controller, $action, $format, fn:true())
-  return assert:equal($view-uri, fn:concat(config:default-view-directory(), "/base.schema.json.xqy"), "$view-uri must be default framework base.")
+  return assert:equal($view-uri, fn:concat(config:default-view-directory(), "/base.definition.json.xqy"), "$view-uri must be default framework base.")
 };

@@ -222,8 +222,8 @@ var xquerrailCommon = (function(){
     }
   };
 
-  var schema = function (model, callback, format, options) {
-    httpMethod('GET', model, 'schema', undefined, undefined, callback, format, options);
+  var definition = function (model, callback, format, options) {
+    httpMethod('GET', model, 'definition', undefined, undefined, callback, format, options);
   };
 
   var create = function(model, data, callback, format, options) {
@@ -278,7 +278,7 @@ var xquerrailCommon = (function(){
     lookup: lookup,
     suggest: suggest,
     search: search,
-    schema: schema,
+    definition: definition,
     stripRoot: stripRoot
   };
 

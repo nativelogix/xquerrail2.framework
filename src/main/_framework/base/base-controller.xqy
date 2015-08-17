@@ -87,7 +87,7 @@ declare function controller:definition() {
  :)
 declare function controller:schema() {
   response:set-model(controller:model()),
-  response:set-body(controller:model()),
+  response:set-body(domain:generate-schema(controller:model())),
   response:flush()
 };
 

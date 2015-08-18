@@ -50,10 +50,7 @@ function validateSearch(model, response) {
 describe('JSON CRUD features', function() {
 
   before(function(done) {
-    xquerrailCommon.initialize(done/*function(error, response, body) {
-      expect(response.statusCode).to.equal(200);
-      done();
-    }*/);
+    xquerrailCommon.initialize(done);
   });
 
   describe('user not authenticated', function() {

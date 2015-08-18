@@ -21,7 +21,8 @@ declare variable $MODULES-DB := xdmp:modules-database();
 declare variable $XQUERRAIL-MODULES := map:new((
   map:entry("http://xquerrail.com/domain", "domain.xqy"),
   map:entry("http://xquerrail.com/model/base", "base/base-model.xqy"),
-  map:entry("http://xquerrail.com/controller/base", "base/base-controller.xqy")
+  map:entry("http://xquerrail.com/controller/base", "base/base-controller.xqy"),
+  map:entry("http://xquerrail.com/controller/domains", "services/domains-controller.xqy")
 ));
 
 declare function module:resource-exists(

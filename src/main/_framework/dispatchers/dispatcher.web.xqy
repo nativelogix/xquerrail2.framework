@@ -47,6 +47,8 @@ declare function dispatcher:get-controller-action(
       "controller-extension"
     else if ($controller-namespace eq $BASE-CONTROLLER-NAMESPACE) then
       "base-controller"
+    else if ($controller-namespace eq $domain:DOMAINS-CONTROLLER-NAMESPACE) then
+      "domains-controller"
     else
       "controller"
   return module-loader:load-function-module(
@@ -92,17 +94,31 @@ declare function dispatcher:get-controller-action(
           $function
         else
           let $function :=
-            dispatcher:get-controller-action(
-            $application,
-            $action,
-            $BASE-CONTROLLER-NAMESPACE,
-            ()
-          )
+            if ($controller eq "domains") then
+              dispatcher:get-controller-action(
+              $application,
+              $action,
+              $domain:DOMAINS-CONTROLLER-NAMESPACE,
+              ()
+            )
+            else
+              ()
           return
-          if (fn:exists($function)) then
-            $function
-          else
-            ()
+            if (fn:exists($function)) then
+              $function
+            else
+              let $function :=
+                dispatcher:get-controller-action(
+                $application,
+                $action,
+                $BASE-CONTROLLER-NAMESPACE,
+                ()
+              )
+              return
+                if (fn:exists($function)) then
+                  $function
+                else
+                  ()
 };
 
 (:~

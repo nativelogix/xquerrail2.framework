@@ -52,6 +52,10 @@
       <stylesheet-directory resource="resources/css/"/>
       <default-template value="main"/>
     </application>
+
+    <application name="app-test-2" namespace="http://xquerrail.com/app-test-2" uri="/test/mocha/test/common-app-test/app2">
+      <domain resource="domains/application-domain.xml" />
+    </application>
     <!--
     <application name="application" namespace="http://my-application-namespace" uri="/application">
         <domain resource="/application/domains/application-domain.xml" />

@@ -14,6 +14,18 @@ declare %private variable $INITIALIZE-ROUTE :=
   </route>
 ;
 
+declare %private variable $APPLICATIONS-ROUTE :=
+  <route id="xquerrail_applications" pattern="^/applications(/(get|list))?\.(xml|json)?$" is-resource="true" xmlns="http://xquerrail.com/routing">
+    <to>{config:resolve-path(config:framework-path(), "services/applications-controller.xqy")}</to>
+  </route>
+;
+
+declare %private variable $DOMAINS-ROUTE :=
+  <route xmlns="http://xquerrail.com/routing" id="xquerrail_domains" pattern="^/applications/(\i\c*)/domains/(\i\c*)\.(xml|json)$">
+    <default key="_controller">$1:domains:$2:$3</default>
+  </route>
+;
+
 declare variable $routes := config:get-routes();
 
 declare function routing:get-routes() {
@@ -21,6 +33,8 @@ declare function routing:get-routes() {
     $routes/namespace::*,
     $routes/attribute::*,
     $routing:INITIALIZE-ROUTE,
+    $routing:APPLICATIONS-ROUTE,
+    $routing:DOMAINS-ROUTE,
     $routes/node()
   }
 };
@@ -113,7 +127,11 @@ declare function routing:get-route($url as xs:string)
         let $value := fn:string(fn:subsequence($parts,$i,1))
         return (:Need to support regex parameters:)
           if ($i eq 1) then
-            map:put($params-map,"_application",$value)
+            if(fn:matches($value,"^\$\d+")) then
+              let $application := fn:replace($path,$matching-route/@pattern,$value)
+              return map:put($params-map,"_application",fn:concat(fn:lower-case(fn:substring($application, 1, 1)),fn:substring($application, 2, fn:string-length($application))))
+            else
+              map:put($params-map,"_application",$value)
           else if($i eq 2) then
             if(fn:matches($value,"^\$\d+")) then
               let $controller := fn:replace($path,$matching-route/@pattern,$value)

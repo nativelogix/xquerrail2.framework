@@ -19,6 +19,7 @@ declare option xdmp:mapping "false";
 declare variable $FUNCTIONS-CACHE := map:map();
 declare variable $FUNCTION-KEYS := "$FUNCTION-KEYS$";
 declare variable $UNDEFINED-FUNCTION := "$UNDEFINED-FUNCTION$";
+declare variable $DOMAINS-CONTROLLER-NAMESPACE := "http://xquerrail.com/controller/domains";
 declare variable $CONTROLLER-EXTENSION-NAMESPACE := "http://xquerrail.com/controller/extension";
 declare variable $DOMAIN-EXTENSION-NAMESPACE := "http://xquerrail.com/domain/extension";
 declare variable $MODEL-EXTENSION-NAMESPACE := "http://xquerrail.com/model/extension";

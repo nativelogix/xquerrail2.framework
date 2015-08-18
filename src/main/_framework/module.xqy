@@ -16,6 +16,7 @@ declare option xdmp:mapping "false";
 
 declare variable $CACHE := map:new();
 declare variable $MODULES-DB := xdmp:modules-database();
+declare variable $DOMAIN-EXTENSION-TYPE := "domain-extension";
 
 (: List of XQuerrail modules dynamically loaded :)
 declare variable $XQUERRAIL-MODULES := map:new((
@@ -314,7 +315,7 @@ declare function module:load-domain-extensions(
   return module:load-module-definition(
     $domain:DOMAIN-EXTENSION-NAMESPACE,
     $module-location,
-    attribute type {"domain-extension"}
+    attribute type { $module:DOMAIN-EXTENSION-TYPE }
   )
 };
 

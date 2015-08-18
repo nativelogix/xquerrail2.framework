@@ -45,6 +45,5 @@ declare function controller:initialize(
  :)
 declare function controller:get(
 ) {
-  xdmp:log(text{"controller:get", request:application(), xdmp:describe(request:params(), (), ())}),
   config:get-domain(request:application())
 };

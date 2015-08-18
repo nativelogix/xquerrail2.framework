@@ -1,0 +1,25 @@
+<config xmlns="http://xquerrail.com/config"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://xquerrail.com/domain file:../_framework/schemas/config.xsd"
+    >
+    <!--Configurations-->
+    <!--Routing Module and Configuration-->
+    <routes-config resource="routes.xml"/>
+    <routes-module resource="routing.xqy"/>
+    <cache-location value="server-field"/>
+
+    <domain-extension resource="/test/mocha/test/domain-extension-app-test/app/extensions/domain.extension.xqy"/>
+
+    <anonymous-user value="xquerrail2-anonymous-user"/>
+
+    <default-application value="app-test"/>
+
+    <!--Register Your Application(s) Here-->
+    <application name="app-test" namespace="http://xquerrail.com/app-test" uri="/test/mocha/test/domain-extension-app-test/app">
+      <domain resource="domains/application-domain.xml" />
+    </application>
+
+    <!--Interceptors-->
+    <interceptors/>
+    <properties/>
+</config>

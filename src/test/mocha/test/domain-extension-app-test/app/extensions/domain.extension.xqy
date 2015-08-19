@@ -32,7 +32,7 @@ declare function extension:build-domain-extension(
     <controller name="dynamic-model1" model="dynamic-model1"/>
     <model name="dynamic-model2" persistence="directory" label="Dynamic Model #2" extends="base" namespace-uri="http://marklogic.com/model/model2" key="uuid" keyLabel="id">
       <directory>/test/dynamic-model1/</directory>
-      <element name="id" type="string" label="Id"/>
+      <element name="id" type="string" absXpath="/dynamic-model2/*:id" label="Id"/>
       <element name="name" type="string" label="Name"/>
     </model>
     <controller name="dynamic-model2" model="dynamic-model2"/>

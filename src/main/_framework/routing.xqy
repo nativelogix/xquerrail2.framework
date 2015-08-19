@@ -21,7 +21,7 @@ declare %private variable $APPLICATIONS-ROUTE :=
 ;
 
 declare %private variable $DOMAINS-ROUTE :=
-  <route xmlns="http://xquerrail.com/routing" id="xquerrail_domains" pattern="^/applications/(\i\c*)/domains/(\i\c*)\.(xml|json)$">
+  <route xmlns="http://xquerrail.com/routing" id="xquerrail_domains" pattern="^/applications/(\i\c*)/domain/(\i\c*)\.(xml|json)$">
     <default key="_controller">$1:domains:$2:$3</default>
   </route>
 ;

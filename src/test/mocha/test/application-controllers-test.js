@@ -54,8 +54,11 @@ describe('Application controllers (applications, domains)', function() {
 
     it ('should return domain for the first application in json format', function(done) {
       xquerrailCommon.httpMethod('GET', 'applications', 'get', undefined, undefined, function(error, response, entity) {
-        var appName = entity.applications[0];
-        xquerrailCommon.httpMethod('GET', 'applications/' + appName + '/domains', 'get', undefined, undefined, function(error, response, entity) {
+        var application = entity.applications[0];
+        expect(application).to.have.property('name');
+        expect(application).to.have.property('domain');
+        expect(application.domain).to.equal('/applications/' + application.name + '/domain/get.json');
+        xquerrailCommon.httpMethod('GET', 'applications/' + application.name + '/domain', 'get', undefined, undefined, function(error, response, entity) {
           expect(response.statusCode).to.equal(200);
           expect(entity).to.have.property('domain');
           expect(entity.domain).to.not.be.empty;
@@ -69,8 +72,11 @@ describe('Application controllers (applications, domains)', function() {
 
     it ('should return domain for the first application in xml format', function(done) {
       xquerrailCommon.httpMethod('GET', 'applications', 'get', undefined, undefined, function(error, response, entity) {
-        var appName = entity.applications.application[0];
-        xquerrailCommon.httpMethod('GET', 'applications/' + appName + '/domains', 'get', undefined, undefined, function(error, response, entity) {
+        var application = entity.applications.application[0];
+        expect(application).to.have.property('name');
+        expect(application).to.have.property('domain');
+        expect(application.domain).to.equal('/applications/' + application.name + '/domain/get.xml');
+        xquerrailCommon.httpMethod('GET', 'applications/' + application.name + '/domain', 'get', undefined, undefined, function(error, response, entity) {
           expect(response.statusCode).to.equal(200);
           expect(entity).to.have.property('domain');
           expect(entity.domain).to.not.be.empty;

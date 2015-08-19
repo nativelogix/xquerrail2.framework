@@ -16,7 +16,15 @@ declare option xdmp:mapping "false";
 
 declare variable $CACHE := map:new();
 declare variable $MODULES-DB := xdmp:modules-database();
+declare variable $CONTROLLER-EXTENSION-TYPE := "controller-extension";
 declare variable $DOMAIN-EXTENSION-TYPE := "domain-extension";
+declare variable $ENGINE-EXTENSION-TYPE := "engine-extension";
+declare variable $MODEL-EXTENSION-TYPE := "model-extension";
+declare variable $MODEL-EXPRESSION-TYPE := "model-expression";
+declare variable $CONTROLLER-TYPE := "controller";
+declare variable $ENGINE-TYPE := "engine";
+declare variable $EVENT-TYPE := "event";
+declare variable $MODEL-TYPE := "model";
 
 (: List of XQuerrail modules dynamically loaded :)
 declare variable $XQUERRAIL-MODULES := map:new((
@@ -305,7 +313,7 @@ declare function module:load-modules-framework(
   return module:load-module-definition(
     $module/@namespace,
     $module/@location,
-    attribute type {$module/@type}
+    attribute type { $module/@type }
   )
 };
 
@@ -325,7 +333,7 @@ declare function module:load-controller-extensions(
   return module:load-module-definition(
     $domain:CONTROLLER-EXTENSION-NAMESPACE,
     $module-location,
-    attribute type {"controller-extension"}
+    attribute type { $module:CONTROLLER-EXTENSION-TYPE }
   )
 };
 
@@ -337,7 +345,7 @@ declare function module:load-engine-extensions(
   return module:load-module-definition(
     $namespace,
     $location,
-    attribute type {"engine-extension"}
+    attribute type { $module:ENGINE-EXTENSION-TYPE }
   )
 };
 
@@ -349,7 +357,7 @@ declare function module:load-engine-functions(
   return module:load-module-definition(
     $namespace,
     $location,
-    attribute type {"engine"}
+    attribute type { $module:ENGINE-TYPE }
   )
 };
 
@@ -365,7 +373,7 @@ declare function module:load-controller-functions(
     $controller-location,
     (
       attribute name {$controller-name},
-      attribute type {"controller"}
+      attribute type { $module:CONTROLLER-TYPE }
     )
   )
 };
@@ -383,7 +391,7 @@ declare function module:load-model-functions(
       $model-location,
       (
         attribute name {$model-name},
-        attribute type {"model"}
+        attribute type { $module:MODEL-TYPE }
       )
     ),
     module:load-model-event-functions($application, $model)
@@ -397,13 +405,12 @@ declare function module:load-model-event-functions(
   for $event in $model/domain:event
   let $model-namespace := fn:string($event/@module-namespace)
   let $model-location := fn:string($event/@module-uri)
-  (:let $function-name := fn:string($event/@function):)
   return module:load-module-definition(
     $model-namespace,
     $model-location,
     (
       attribute name {$model/@name},
-      attribute type {"event"}
+      attribute type { $module:EVENT-TYPE }
     )
   )
 };
@@ -422,7 +429,7 @@ declare function module:load-model-expression-functions(
           $model-location,
           (
             attribute name {$model/@name},
-            attribute type {"model-expression"}
+            attribute type { $module:MODEL-EXPRESSION-TYPE }
           )
         )
       else
@@ -435,7 +442,7 @@ declare function module:load-model-extensions(
   return module:load-module-definition(
     $domain:MODEL-EXTENSION-NAMESPACE,
     $module-location,
-    attribute type {"model-extension"}
+    attribute type { $module:MODEL-EXTENSION-TYPE }
   )
 };
 

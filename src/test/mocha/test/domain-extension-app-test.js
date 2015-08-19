@@ -39,4 +39,24 @@ describe('Domain extension features', function() {
 
   });
 
+  describe('dynamic-model2', function() {
+
+    before(function(done) {
+      xquerrailCommon.login(function() {
+        done();
+      });
+    });
+
+    it('should get the custom value attribute of the model', function(done) {
+      xquerrailCommon.model.definition('dynamic-model2', function(error, response, entity) {
+        expect(response.statusCode).to.equal(200);
+        var field = _.find(entity.model.fields, {'name': 'id'});
+        expect(field).to.exist;
+        expect(field.absXpath).to.equal('/dynamic-model2/*:id');
+        done();
+      });
+    });
+
+  });
+
 });

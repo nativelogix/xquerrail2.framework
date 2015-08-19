@@ -3176,7 +3176,7 @@ declare function domain-impl:get-model-extension-function(
  ) as xdmp:function? {
   domain:get-module-function(
     (),
-    "model-extension",
+    $module-loader:MODEL-EXTENSION-TYPE,
     (),
     (),
     $action,

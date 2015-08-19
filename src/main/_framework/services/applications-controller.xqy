@@ -17,7 +17,15 @@ return
     xdmp:set-response-content-type("application/xml"),
     element {fn:QName("http://xquerrail.com/application", "applications")} {
       for $application in config:get-applications()
-      return element {fn:QName("http://xquerrail.com/application", "application")} {fn:string($application/@name)}
+      let $domain-link := fn:concat("/applications/", fn:string($application/@name) , "/domain/get.", $format)
+      return element {fn:QName("http://xquerrail.com/application", "application")} {
+        element {fn:QName("http://xquerrail.com/application", "name")} {
+          fn:string($application/@name)
+        },
+        element {fn:QName("http://xquerrail.com/application", "domain")} {
+          $domain-link
+        }
+      }
     }
   ) else if ($format eq "json") then (
     xdmp:set-response-content-type("application/json"),
@@ -27,7 +35,11 @@ return
       "applications",
       json:to-array(
         for $application in config:get-applications()
-        return fn:string($application/@name)
+        let $domain-link := fn:concat("/applications/", fn:string($application/@name) , "/domain/get.", $format)
+        let $json-application := json:object()
+        let $_ := map:put($json-application, "name", fn:string($application/@name))
+        let $_ := map:put($json-application, "domain", $domain-link)
+        return $json-application
       )
     )
     return xdmp:to-json($json)

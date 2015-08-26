@@ -572,21 +572,11 @@ declare function config:get-domain() as element(domain:domain)? {
    config:get-domain(config:default-application())
 };
 
-(:~
- : Registers a dynamic domain for inclusion in application domain
-~:)
-declare function config:register-domain($domain as element(domain:domain)) {
-  fn:error(xs:QName("NOT-IMPLEMENTED"))
-(:  let $application-name := $domain/domain:name
-  let $_ := if($application-name) then () else fn:error(xs:QName("DOMAIN-MISSING-NAME"),"Domain must have a name")
-  let $cache-key := fn:concat($DOMAIN-CACHE-KEY,$application-name)
-  return (
-    cache:set-cache($cache-key,config:_load-domain($domain)),
-    $domain
-  )
-:)};
+declare function config:resolve-path($path as xs:string?) as xs:string? {
+  config:resolve-path((), $path)
+};
 
-declare function config:resolve-path($base as xs:string, $path as xs:string?) as xs:string? {
+declare function config:resolve-path($base as xs:string?, $path as xs:string?) as xs:string? {
   if ($path) then
     if (fn:starts-with($path, "$(framework.path)/")) then
       config:resolve-framework-path(fn:substring-after($path, "$(framework.path)/"))

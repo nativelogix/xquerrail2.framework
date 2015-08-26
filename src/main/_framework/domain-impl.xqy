@@ -629,6 +629,7 @@ declare function domain-impl:resolve-ctstype(
   let $data-type := element{$field/@type}{$field}
   return
     typeswitch($data-type)
+    case element(id) return "xs:string"
     case element(uuid) return "xs:string"
     case element(identity) return "xs:string"
     case element(create-timestamp) return "xs:dateTime"
@@ -657,7 +658,7 @@ declare function domain-impl:resolve-ctstype(
     case element(yearMonth) return "xs:yearMonthDuration"
     case element(monthDay) return "xs:monthDayDuration"
     case element(reference) return "xs:string"
-    default return fn:error(xs:QName("UNRESOLVED-DATATYPE"),$field)
+    default return fn:error(xs:QName("UNRESOLVED-DATATYPE"),(),$field)
 };
 
 (:~

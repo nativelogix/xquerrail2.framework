@@ -2400,13 +2400,6 @@ declare function model-impl:build-search-options(
   return $options
 };
 
-(:declare function model-impl:build-search-constraints(
-  $model as element(domain:model),
-  $params as item()
-) {
-  model-impl:build-search-constraints($model, $params, ())
-};:)
-
 declare function model-impl:build-search-constraints(
   $model as element(domain:model),
   $params as item(),
@@ -2414,18 +2407,18 @@ declare function model-impl:build-search-constraints(
 ) {
   for $prop in $model//(domain:element|domain:attribute)
     for $prop-nav in $prop/domain:navigation[xs:boolean(fn:data(./@searchable)) or xs:boolean(fn:data(./@facetable))]
-    let $name :=
-      fn:string-join(
-        (
-          $prefix,
-          if($prop-nav/@constraintName) then $prop-nav/@constraintName else $prop/@name
-        ),
-        "."
-      )
+    let $name := (
+      $prefix,
+      if($prop-nav/@constraintName) then
+        $prop-nav/@constraintName
+      else if (fn:empty($prefix) and xs:boolean(fn:data($model/ancestor::domain:domain/@useModelInConstraintName))) then
+        ($model/@name, $prop/@name)
+      else $prop/@name
+    )
     let $base-type := domain:get-base-type($prop)
     return
       if ($base-type eq "instance") then
-        model-impl:build-search-constraints(domain:get-model($prop/@type), $params, $name)
+        model:build-search-constraints(domain:get-model($prop/@type), $params, $name)
       else
         let $search-type := (
           $prop-nav/@searchType,
@@ -2437,33 +2430,36 @@ declare function model-impl:build-search-constraints(
         let $facet-options := $prop-nav/search:facet-option
         let $term-options := $prop-nav/(search:term-option|search:weight)
         let $term-options := if($term-options) then $term-options else domain:get-param-value($params, "search:term-options")
+        let $prop-type := domain:resolve-ctstype($prop)
         return
-          <search:constraint name="{$name}" label="{$prop/@label}">{
+          element search:constraint {
+            attribute name {fn:string-join($name, '.')},
             element { fn:QName("http://marklogic.com/appservices/search",$search-type) } {
-              attribute collation {domain:get-field-collation($prop)},
+              if ($prop-type eq "xs:string") then
+                attribute collation {domain:get-field-collation($prop)}
+              else
+                (),
+              attribute facet { xs:boolean((fn:data($prop-nav/@facetable), fn:false())[1]) }
+              ,
               if ($search-type eq "range") then
-                attribute type { domain:resolve-ctstype($prop) }
+                attribute type { $prop-type }
+              else if ($search-type eq "path") then (
+                attribute type { $prop-type },
+                element search:path-index {
+                  attribute {"xmlns:" || domain:get-field-prefix($prop)} {domain:get-field-namespace($prop)},
+                  fn:string(domain:get-field-absolute-xpath($prop))
+                }
+              )
               else
                 (: According to search:search documentation @type is not needed for value constraint :)
                 attribute type {"xs:string"}
               ,
-              if (xs:boolean(fn:data($prop-nav/@facetable))) then
-                attribute facet { fn:true() }
-              else
-                attribute facet { fn:false() }
-              ,
-              model-impl:build-search-element($prop, $prefix[fn:last()]),
+              model-impl:build-search-element($prop, $name[fn:last()]),
               $term-options,
               $facet-options
             }
-          }</search:constraint>
+          }
 };
-
-(:declare function model-impl:build-search-element(
-  $field as element()
-) as element()* {
-  model-impl:build-search-element($field, ())
-};:)
 
 declare function model-impl:build-search-element(
   $field as element(),
@@ -2479,13 +2475,6 @@ declare function model-impl:build-search-element(
   else
     <search:element ns="{domain:get-field-namespace($field)}" name="{fn:head(($name, $field/@name))}"/>
 };
-
-(:declare function model-impl:search-sort-state(
-  $field as element(),
-  $order as xs:string?
-) as xs:string {
-  model-impl:search-sort-state($field, (), $order)
-};:)
 
 declare function model-impl:search-sort-state(
   $field as element(),
@@ -2541,13 +2530,6 @@ declare %private function model-impl:build-sort-element(
         ()
 };
 
-(:declare function model-impl:build-search-query(
-  $model as element(domain:model),
-  $params as item()
-) {
-  model-impl:build-search-query($model, $params, ())
-};:)
-
 declare function model-impl:build-search-query(
   $model as element(domain:model),
   $params as item(),
@@ -2579,26 +2561,26 @@ declare function model-impl:build-search-query(
  : @param $params the values to fill into the search
  : @return search response element
  :)
-declare function model-impl:search($model as element(domain:model), $params as item())
-as element(search:response)
-{
-   let $query as xs:string* := domain:get-param-value($params, "query")
-   let $sort as xs:string?  := domain:get-param-value($params, "sort")
-   let $page as xs:integer  := (domain:get-param-value($params, "pg"),1)[1] cast as xs:integer
-   let $page-size as xs:integer? := model-impl:page-size($model, $params, "ps")
-   let $start := (($page - 1) * $page-size) + 1
-   let $end := ($page * $page-size)
-   let $final := fn:concat($query," ",$sort)
-   let $options := model-impl:build-search-options($model,$params)
-   let $results :=
-     search:search($final,$options,$start,$page-size)
-   return
-     <search:response>
-     {attribute type {$model/@name}}
-     {attribute page {$page}}
-     {$results/(@*|node())}
-     {$options}
-     </search:response>
+declare function model-impl:search(
+  $model as element(domain:model),
+  $params as item()
+) as element(search:response) {
+  let $query as xs:string* := domain:get-param-value($params, "query")
+  let $sort as xs:string?  := domain:get-param-value($params, "sort")
+  let $page as xs:integer  := (domain:get-param-value($params, "pg"),1)[1] cast as xs:integer
+  let $page-size as xs:integer? := model-impl:page-size($model, $params, "ps")
+  let $start := (($page - 1) * $page-size) + 1
+  let $end := ($page * $page-size)
+  let $final := fn:concat($query," ",$sort)
+  let $options := model-impl:build-search-options($model,$params)
+  let $results := search:search($final,$options,$start,$page-size)
+  return
+    <search:response>
+    {attribute type {$model/@name}}
+    {attribute page {$page}}
+    {$results/(@*|node())}
+    {$options}
+    </search:response>
 };
 
 (:~

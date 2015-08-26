@@ -1,6 +1,5 @@
 var gulp = require('gulp');
 var gutil = require('gulp-util');
-
 var del = require('del');
 var fs = require('fs');
 var pkg = require('./package.json');
@@ -16,10 +15,7 @@ var plumber = require('gulp-plumber');
 var runSequence = require('run-sequence');
 var inject = require('gulp-inject-string');
 var nconf = require('nconf');
-// var run = require('gulp-run');
-// var map = require('vinyl-map');
 var exec = require('gulp-exec');
-// var data = require('gulp-data');
 var install = require('gulp-install');
 
 nconf

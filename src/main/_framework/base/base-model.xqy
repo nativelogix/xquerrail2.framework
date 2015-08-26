@@ -829,6 +829,12 @@ declare function model:build-search-options(
 };
 
 declare function model:build-search-constraints(
+  $model as element(domain:model)
+) {
+  model:build-search-constraints($model, map:new())
+};
+
+declare function model:build-search-constraints(
   $model as element(domain:model),
   $params as item()
 ) {

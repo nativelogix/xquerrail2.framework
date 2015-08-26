@@ -9,10 +9,5 @@ import module namespace database = "http://xquerrail.com/database" at "database.
 
 xdmp:set-response-content-type("application/xml"),
 <initialize-database> {
-  let $params := map:new((
-    map:entry("mode",xdmp:get-request-field("mode","apply"))
-  ))
-  return
-    database:initialize($params)
-  
+database:initialize(map:entry("mode", xdmp:get-request-field("mode", "echo")))
 }</initialize-database>

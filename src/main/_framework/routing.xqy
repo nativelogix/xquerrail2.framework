@@ -14,6 +14,12 @@ declare %private variable $INITIALIZE-ROUTE :=
   </route>
 ;
 
+declare %private variable $INITIALIZE-DATABASE-ROUTE :=
+  <route id="xquerrail_database_initialize" pattern="^/initialize-database(.xqy)?" is-resource="true" xmlns="http://xquerrail.com/routing">
+    <to>{config:resolve-path(config:framework-path(), "initialize-database.xqy")}</to>
+  </route>
+;
+
 declare %private variable $APPLICATIONS-ROUTE :=
   <route id="xquerrail_applications" pattern="^/applications(/(get|list))?\.(xml|json)?$" is-resource="true" xmlns="http://xquerrail.com/routing">
     <to>{config:resolve-path(config:framework-path(), "services/applications-controller.xqy")}</to>
@@ -33,6 +39,7 @@ declare function routing:get-routes() {
     $routes/namespace::*,
     $routes/attribute::*,
     $routing:INITIALIZE-ROUTE,
+    $routing:INITIALIZE-DATABASE-ROUTE,
     $routing:APPLICATIONS-ROUTE,
     $routing:DOMAINS-ROUTE,
     $routes/node()

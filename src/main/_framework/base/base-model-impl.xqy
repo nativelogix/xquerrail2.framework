@@ -2435,26 +2435,23 @@ declare function model-impl:build-search-constraints(
           element search:constraint {
             attribute name {fn:string-join($name, '.')},
             element { fn:QName("http://marklogic.com/appservices/search", (if ($search-type eq "path") then "range" else $search-type)) } {
+              attribute type { $prop-type },
               if ($prop-type eq "xs:string") then
                 attribute collation {domain:get-field-collation($prop)}
               else
-                (),
+                ()
+              ,
               attribute facet { xs:boolean((fn:data($prop-nav/@facetable), fn:false())[1]) }
               ,
-              if ($search-type eq "range") then
-                attribute type { $prop-type }
-              else if ($search-type eq "path") then (
-                attribute type { $prop-type },
+              if ($search-type eq "path") then (
                 element search:path-index {
                   attribute {"xmlns:" || domain:get-field-prefix($prop)} {domain:get-field-namespace($prop)},
                   fn:string(domain:get-field-absolute-xpath($prop))
                 }
               )
               else
-                (: According to search:search documentation @type is not needed for value constraint :)
-                attribute type {"xs:string"}
+                model-impl:build-search-element($prop, $name[fn:last()])
               ,
-              if ($search-type ne "path") then model-impl:build-search-element($prop, $name[fn:last()]) else (),
               $term-options,
               $facet-options
             }

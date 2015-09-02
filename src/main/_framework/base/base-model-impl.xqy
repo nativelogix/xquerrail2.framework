@@ -1716,55 +1716,42 @@ declare function model-impl:filter-list-result(
     ()
   else
     typeswitch($field)
-      case element(domain:model)
-        return
-          element {domain:get-field-qname($field)} {
-             for $field in $field/(domain:attribute)
-             return model-impl:filter-list-result($field,$result,$params),
-             for $field in $field/(domain:element|domain:container)
-             return model-impl:filter-list-result($field,$result,$params)
-          }
-      case element(domain:element)
-        return
-          let $value := domain:get-field-value-node($field,$result)
-          let $fieldtype := domain:get-base-type($field)
-          for $val in $value
-          return
-           switch($fieldtype)
-             case "complex" return $val
-             default return
-              element {domain:get-field-qname($field)} {
-                for $field in $field/domain:attribute
-                return model-impl:filter-list-result($field,$val,$params),
-                if($val instance of node()) then $val/node()
-                else $val
-              }
-      case element(domain:container)
-        return
-          element {domain:get-field-qname($field)} {
-            for $field in $field/domain:attribute
-            return model-impl:filter-list-result($field,$result,$params),
-            for $field in $field/(domain:element|domain:container)
-            return model-impl:filter-list-result($field,$result,$params)
-          }
-      case element(domain:attribute)
-        return
-          attribute {domain:get-field-qname($field)} {
-            domain:get-field-value($field,$result,fn:true())
-          }
+      case element(domain:model) return
+        element {domain:get-field-qname($field)} {
+          for $field in $field/(domain:attribute)
+          return model-impl:filter-list-result($field,$result,$params),
+          for $field in $field/(domain:element|domain:container)
+          return model-impl:filter-list-result($field,$result,$params)
+        }
+      case element(domain:element) return
+        let $value := domain:get-field-value-node($field,$result)
+        let $fieldtype := domain:get-base-type($field)
+        for $val in $value
+        return switch($fieldtype)
+          case "complex" return $val
+          case "instance" return
+            let $model := domain:get-model($field/@type)
+            return model-impl:filter-list-result($model, $val, $params)
+          default return
+            element {domain:get-field-qname($field)} {
+              for $field in $field/domain:attribute
+              return model-impl:filter-list-result($field,$val,$params),
+              if($val instance of node()) then $val/node()
+              else $val
+            }
+      case element(domain:container) return
+        element {domain:get-field-qname($field)} {
+          for $field in $field/domain:attribute
+          return model-impl:filter-list-result($field,$result,$params),
+          for $field in $field/(domain:element|domain:container)
+          return model-impl:filter-list-result($field,$result,$params)
+        }
+      case element(domain:attribute) return
+        attribute {domain:get-field-qname($field)} {
+          domain:get-field-value($field,$result,fn:true())
+        }
       default return ()
 };
-
-(:~
-: Returns a list of packageType
-: @return  element(packageType)*
-:)
-(:declare function model-impl:list(
-  $model as element(domain:model),
-  $params as item()
-) as element(list)? {
-  model-impl:list($model, $params, ())
-};:)
 
 declare function model-impl:list(
   $model as element(domain:model),

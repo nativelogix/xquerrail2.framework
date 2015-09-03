@@ -864,38 +864,46 @@ declare function domain-impl:build-model-triples-container(
       element domain:container {
         $container/namespace::*,
         $container/attribute::*,
-        element domain:triple {
-          attribute name {$model:HAS-URI-PREDICATE},
-          attribute autogenerate {fn:true()},
-          element domain:subject {
-            attribute type {"sem:iri"},
-            "{model:triple-identity-value#3}"
-          },
-          element domain:predicate {
-            attribute type {"sem:iri"},
-            $model:HAS-URI-PREDICATE
-          },
-          element domain:object {
-            attribute type {"sem:iri"},
-            "{model:node-uri#3}"
+        if (fn:exists($container/node()[@name eq $model:HAS-URI-PREDICATE])) then
+          ()
+        else
+          element domain:triple {
+            attribute name {$model:HAS-URI-PREDICATE},
+            attribute autogenerate {fn:true()},
+            element domain:subject {
+              attribute type {"sem:iri"},
+              "{model:triple-identity-value#3}"
+            },
+            element domain:predicate {
+              attribute type {"sem:iri"},
+              $model:HAS-URI-PREDICATE
+            },
+            element domain:object {
+              attribute type {"sem:iri"},
+              "{model:node-uri#3}"
+            }
           }
-        },
-        element domain:triple {
-          attribute name {$model:HAS-TYPE-PREDICATE},
-          attribute autogenerate {fn:true()},
-          element domain:subject {
-            attribute type {"sem:iri"},
-            "{model:triple-identity-value#3}"
-          },
-          element domain:predicate {
-            attribute type {"sem:iri"},
-            $model:HAS-TYPE-PREDICATE
-          },
-          element domain:object {
-            attribute type {"sem:iri"},
-            fn:string($model/@name)
+        ,
+        if (fn:exists($container/node()[@name eq $model:HAS-TYPE-PREDICATE])) then
+          ()
+        else
+          element domain:triple {
+            attribute name {$model:HAS-TYPE-PREDICATE},
+            attribute autogenerate {fn:true()},
+            element domain:subject {
+              attribute type {"sem:iri"},
+              "{model:triple-identity-value#3}"
+            },
+            element domain:predicate {
+              attribute type {"sem:iri"},
+              $model:HAS-TYPE-PREDICATE
+            },
+            element domain:object {
+              attribute type {"sem:iri"},
+              fn:string($model/@name)
+            }
           }
-        },
+        ,
         $container/node()
       }
   else

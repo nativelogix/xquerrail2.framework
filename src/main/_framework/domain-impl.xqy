@@ -2473,10 +2473,9 @@ declare function domain-impl:declared-namespaces(
   return
     if($cache) then $cache
     else
+    let $value-map := domain:declared-namespaces-map($model)
     let $value := (
-      $model/ancestor::domain:domain/domain:content-namespace ! (./@prefix, ./(@namespace|@namespace-uri)[1]),
-      $model/ancestor::domain:domain/domain:declare-namespace ! (./@prefix, ./(@namespace|@namespace-uri)[1]),
-      fn:in-scope-prefixes($model)[. ne ""] ! (., fn:namespace-uri-for-prefix(., $model))
+      map:keys($value-map) ! (., map:get($value-map, .))
     )
     return domain-impl:set-identity-cache($key,$value)
 };
@@ -2484,11 +2483,11 @@ declare function domain-impl:declared-namespaces(
 declare function domain-impl:declared-namespaces-map(
   $model as element()
 ) {
-  let $nses := domain:declared-namespaces($model)
-  let $map := map:map()
+  let $map := map:new($domain:XQUERRAIL-NAMESPACES)
   let $_ := (
-    $model/../domain:content-namespace ! map:put($map,./@prefix,./(@namespace|@namespace-uri)[1]),
-    $model/../domain:declare-namespace ! map:put($map,./@prefix,./(@namespace|@namespace-uri)[1])
+    fn:in-scope-prefixes($model)[. ne ""] ! map:put($map, ., fn:namespace-uri-for-prefix(., $model)),
+    $model/ancestor::domain:domain/domain:content-namespace ! map:put($map,./@prefix,./(@namespace|@namespace-uri)[1]),
+    $model/ancestor::domain:domain/domain:declare-namespace ! map:put($map,./@prefix,./(@namespace|@namespace-uri)[1])
   )
   return $map
 };

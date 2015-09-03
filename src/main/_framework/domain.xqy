@@ -23,6 +23,10 @@ declare variable $DOMAINS-CONTROLLER-NAMESPACE := "http://xquerrail.com/controll
 declare variable $CONTROLLER-EXTENSION-NAMESPACE := "http://xquerrail.com/controller/extension";
 declare variable $DOMAIN-EXTENSION-NAMESPACE := "http://xquerrail.com/domain/extension";
 declare variable $MODEL-EXTENSION-NAMESPACE := "http://xquerrail.com/model/extension";
+declare variable $XQUERRAIL-NAMESPACES := map:new((
+  map:entry("config", "http://xquerrail.com/config"),
+  map:entry("domain", "http://xquerrail.com/domain")
+));
 
 declare %config:module-location function domain:module-location(
 ) as element(module)* {

@@ -35,7 +35,7 @@ If your issue appears to be a bug, and hasn't been reported, open a new issue.
 Help us to maximize the effort we can spend fixing issues and adding new
 features, by not reporting duplicate issues.  Providing the following information will increase the
 chances of your issue being dealt with quickly:
-
+*
 * **Overview of the Issue** - if an error is being thrown a stack trace helps
 * **Motivation for or Use Case** - explain why this is a bug for you
 * **xquerrail2.framework Version** - is it a named version or from our master branch
@@ -47,7 +47,7 @@ chances of your issue being dealt with quickly:
 
 #### Fork xquerrail2.framework
 
-Fork the project [on GitHub](https://github.com/marklogic/xquerrail2.framework/fork) and clone
+Fork the project [on GitHub](https://github.com/nativelogix/xquerrail2.framework/fork) and clone
 your copy.
 
 ```sh
@@ -170,8 +170,8 @@ from the main (upstream) repository:
     git pull --ff upstream master
     ```
 
-[wiki]: https://github.com/marklogic/xquerrail2.framework/wiki
+[wiki]: https://github.com/nativelogix/xquerrail2.framework/wiki
 [mlstack]: http://stackoverflow.com/questions/tagged/marklogic
-[issue tracker]: https://github.com/marklogic/xquerrail2.framework/issues
+[issue tracker]: https://github.com/nativelogix/xquerrail2.framework/issues
 [mailing list]: http://developer.marklogic.com/mailman/listinfo/roxy
 [.editorconfig]: http://editorconfig.org/

@@ -182,9 +182,10 @@ declare function database:update-path-namespaces(
   xdmp:set($NAMESPACES-MAP, ($NAMESPACES-MAP + domain:declared-namespaces-map($field/ancestor::domain:model)))
 };
 
+(: 'xml' prefix is reserved so it must be excluded. :)
 declare function database:database-path-namespaces(
 ) as element()* {
-  map:keys($NAMESPACES-MAP) ! (
+  map:keys($NAMESPACES-MAP)[. ne "xml"] ! (
     admin:database-path-namespace(., map:get($NAMESPACES-MAP, .))
   )
 };

@@ -1175,7 +1175,7 @@ declare function model-impl:build-schema-element(
         )
       else if ($updates instance of map:map and fn:exists($update-value)) then
         $value
-      else if($value instance of element()) then $value/node()
+      else if($value instance of element()) then ($value/attribute::*, $value/node())
       else if($value instance of text()) then $value
       else if($partial and $current) then
         $current-value/node()

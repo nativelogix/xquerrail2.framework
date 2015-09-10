@@ -1627,18 +1627,19 @@ declare %test:case function model-create-xml-no-default-test() as item()*
 declare %test:case function model-document-new-xml-schema-element-test() as item()*
 {
   let $model := domain:get-model("model27")
+  let $html := <html xmlns="http://xquerrail.com/app-test" attribute1="key1"><p>my title</p></html>
   let $instance :=
     model:new(
       $model,
       <model27 xmlns="http://xquerrail.com/app-test">
         <name>doc1</name>
-        <html><p>my title</p></html>
+        { $html }
       </model27>
     )
   let $value-html := domain:get-field-value(domain:get-model-field($model, "html"), $instance)
   return (
     assert:not-empty($instance),
-    assert:equal($value-html, $instance/app-test:html)
+    assert:equal($value-html, $html)
   )
 };
 

@@ -73,11 +73,6 @@ declare variable $FIELD-NAVIGATION-ATTRIBUTES := (
   $MODEL-NAVIGATION-ATTRIBUTES, "metadata", "suggestable"
 );
 
-(:~
- : Holds a cache of all the domain models
- :)
-declare variable $DOMAIN-MODEL-CACHE := map:map();
-
 (:Holds a cache of all the identity fields:)
 declare variable $DOMAIN-IDENTITY-CACHE := map:map();
 
@@ -220,7 +215,7 @@ declare %private function domain-impl:get-model-cache(
   $application as xs:string,
   $model-name as xs:string+
 ) {
-  map:get($DOMAIN-MODEL-CACHE, fn:concat($application, ":" , fn:string-join($model-name, "")))
+  map:get($domain:DOMAIN-MODEL-CACHE, fn:concat($application, ":" , fn:string-join($model-name, "")))
 };
 
 (:~
@@ -231,7 +226,7 @@ declare %private function domain-impl:set-model-cache(
   $model-name as xs:string+,
   $model as element(domain:model)+
 ) as element(domain:model)+ {
-  map:put($DOMAIN-MODEL-CACHE, fn:concat($application, ":" , fn:string-join($model-name, "")), $model),
+  map:put($domain:DOMAIN-MODEL-CACHE, fn:concat($application, ":" , fn:string-join($model-name, "")), $model),
   $model
 };
 
@@ -242,7 +237,7 @@ declare %private function domain-impl:set-field-cache(
   $key as xs:string,
   $func as function(*)
 ) {
-  map:put($DOMAIN-MODEL-CACHE,$key,$func)
+  map:put($domain:DOMAIN-MODEL-CACHE,$key,$func)
 };
 
 (:~

@@ -165,6 +165,14 @@ declare function domain:resolve-cts-type(
   domain:domain-function("resolve-cts-type", 1)($type)
 };
 
+(:
+ : Clear domain model cache
+ :)
+declare function domain:clear-model-cache(
+) as empty-sequence() {
+  map:clear($domain:DOMAIN-MODEL-CACHE)
+};
+
 (:~
  : Gets the domain model from the given cache
  :)

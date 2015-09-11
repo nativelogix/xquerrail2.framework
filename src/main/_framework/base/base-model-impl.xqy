@@ -131,7 +131,6 @@ declare function model-impl:generate-iri(
       if (fn:not($field instance of element(domain:model))) then fn:string($field/@type) else (),
       "sem:iri"
     ))
-    let $_ := xdmp:log(text{"generate-iri", xdmp:describe($field, (), ()), "$type", $type})
     let $model := $field/ancestor-or-self::domain:model
     let $token-pattern := $model:EXPANDO-PATTERN
     let $patterns := fn:analyze-string($uri,$token-pattern)

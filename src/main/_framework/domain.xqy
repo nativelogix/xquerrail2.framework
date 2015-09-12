@@ -1704,7 +1704,7 @@ declare function domain:find-field-in-model(
   $model as element(domain:model),
   $key as xs:string
 ) as element()* {
-  domain:domain-function("find-field-in-model", 2)($model, $key)
+  domain:domain-function("find-field-in-model", 3)($model, $key, ())
 };
 
 declare function domain:build-field-xpath-from-model(

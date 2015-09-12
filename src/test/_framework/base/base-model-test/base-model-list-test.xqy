@@ -804,7 +804,6 @@ declare %test:case function model-sorted-list-in-nested-object-element-test() as
     map:entry("debug", fn:true()),
     map:entry("sort", "+order1")
   ))
-  let $_ := xdmp:log(("model-sorted-list-in-nested-object-element-test", "domain:find-field-in-model", domain:find-field-in-model($model, "order1")))
   let $list := model:list($model, $params)
   let $sorted-list :=
     for $instance in $list/app-test:model10
@@ -823,7 +822,7 @@ declare %test:case function model-sorted-list-in-nested-object-element-test() as
   )
 };
 
-declare %test:ignore function model-sorted-list-in-nested-object-attribute-test() as item()*
+declare %test:case function model-sorted-list-in-nested-object-attribute-test() as item()*
 {
   let $model := domain:get-model("model10")
   let $params := map:new((

@@ -3314,20 +3314,28 @@ declare function domain-impl:get-model-from-instance(
 
 declare function domain-impl:find-field-in-model(
   $model as element(domain:model),
-  $key as xs:string
+  $key as xs:string,
+  $accumulator as element()*
 ) as element()* {
   let $cache-key := ($model/@name || ":find-field-in-model:" || $key)
   let $cache := domain-impl:get-identity-cache($cache-key)
   return
     if(fn:exists($cache)) then $cache
     else
-      let $value := (
-        domain:get-model-field($model, $key),
+      if (fn:exists($model//(domain:element)[domain:get-base-type(.) = "instance"])) then
         for $field in $model//(domain:element)
         where domain:get-base-type($field) = "instance"
-        return domain-impl:find-field-in-model(domain:get-model($field/@type), $key)
-      )
-      return domain-impl:set-identity-cache($cache-key, $value)
+        return domain-impl:find-field-in-model(domain:get-model($field/@type), $key, ($accumulator, $field))
+      else
+        let $value := (
+          let $field := domain:get-model-field($model, $key)
+          return
+            if (fn:exists($field)) then
+              ($accumulator, $field)
+            else
+              ()
+        )
+        return domain-impl:set-identity-cache($cache-key, $value)
 };
 
 declare function domain-impl:build-field-xpath-from-model(
@@ -3337,8 +3345,10 @@ declare function domain-impl:build-field-xpath-from-model(
   let $cache-key := fn:concat(
     $model/@name,
     ":build-field-xpath-in-model:",
-    fn:string-join(for $field in $fields
-        return domain-impl:get-field-key($field))
+    fn:string-join(
+      for $field in $fields
+      return domain-impl:get-field-key($field)
+    )
   )
   let $cache := domain-impl:get-identity-cache($cache-key)
   return

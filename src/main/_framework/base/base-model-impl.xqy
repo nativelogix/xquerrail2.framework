@@ -1801,14 +1801,6 @@ declare function model-impl:list(
     return model-impl:render-list($model, $list, $params, $filter-function)
 };
 
-(:declare function model-impl:render-list(
-  $model as element(domain:model),
-  $list as xs:string,
-  $params as item()*
-) as element() {
-  model-impl:render-list($model, $list, $params, ())
-};:)
-
 (: Function responsible to render a list :)
 declare function model-impl:render-list(
   $model as element(domain:model),
@@ -1822,13 +1814,13 @@ declare function model-impl:render-list(
   let $namespace := domain:get-field-namespace($model)
   let $model-prefix := domain:get-field-prefix($model)
   let $model-qname := fn:concat("/",$model-prefix,":",$model/@name)
-  (:let $total := xdmp:with-namespaces(domain:declared-namespaces($model), xdmp:value(fn:concat("fn:count(", $list, ")"))):)
   let $total :=
     if($persistence = 'document') then
       xdmp:with-namespaces(domain:declared-namespaces($model), xdmp:value(fn:concat("fn:count(", $list, ")")))
     else
       xdmp:value(
-        fn:concat("xdmp:estimate(", $list, ")")
+        fn:concat("if(fn:exists(", $list, ")) then cts:remainder(", $list, "[1]) else 0")
+        (:fn:concat("xdmp:estimate(", $list, ")"):)
       )
   let $sorting := model-impl:sorting($model, $params, ("sort", "sort.name", "sidx"), ("", "sort.order", "sord"))
   let $sort :=
@@ -1839,7 +1831,7 @@ declare function model-impl:render-list(
         if (fn:contains($field/@name, "/")) then
           domain:find-field-from-path-model($model, $field/@name)
         else
-          domain:find-field-in-model($model, $field/@name)[1]
+          domain:find-field-in-model($model, $field/@name)
       let $domain-sort-field := $domain-path-sort-field[fn:last()]
       let $domain-sort-as :=
         if(fn:exists($domain-sort-field)) then
@@ -1853,7 +1845,15 @@ declare function model-impl:render-list(
               if($persistence = 'document') then
                 fn:substring-after(domain:get-field-absolute-xpath($domain-sort-field), $model-qname)
               else
-                fn:exactly-one(domain:build-field-xpath-from-model($model, $domain-path-sort-field))
+                fn:exactly-one(
+                  let $field-xpath := domain:build-field-xpath-from-model($model, $domain-path-sort-field)
+                  return
+                    if (fn:exists($field-xpath)) then
+                      $field-xpath
+                    else
+                      let $fields := domain:find-field-in-model($model, domain:get-field-key($domain-path-sort-field))
+                      return domain:build-field-xpath-from-model($model, $fields)
+                )
           return
             if($field/@order = ("desc","descending")) then
               fn:concat("($__context__",$sortPath,")",$domain-sort-as," descending", $collation-sort-field)

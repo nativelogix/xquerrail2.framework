@@ -477,13 +477,13 @@ declare %test:case function field-param-exists-test() as item()* {
 };
 
 declare %test:case function find-field-in-model-test() as item()* {
-  let $model := domain:get-model("model8")
+  let $model := domain:get-model("model9")
   let $field := domain:find-field-in-model($model, "model10-name")
+  let $model9-nested10-field := domain:get-model-field(domain:get-model("model9"), "nested10")
   let $model10-name-field := domain:get-model-field(domain:get-model("model10"), "model10-name")
   return (
     assert:not-empty($field),
-    assert:not-empty($model10-name-field),
-    assert:equal($field, ($model10-name-field, $model10-name-field))
+    assert:equal($field, ($model9-nested10-field, $model10-name-field))
   )
 };
 

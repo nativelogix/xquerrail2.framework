@@ -144,7 +144,7 @@ declare %private function get-program(
   model:get(domain:get-model("program"), $id)
 };
 
-(: TEST broken in ML8 :)
+(: TEST broken in ML8 - It should be fixed in ML8.0-4 :)
 declare %test:ignore function test-search-with-string-query-grammar-sorting() as item()*
 {
   let $program-model := domain:get-model("program")

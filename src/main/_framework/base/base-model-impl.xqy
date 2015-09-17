@@ -1092,17 +1092,13 @@ declare function model-impl:build-attribute(
   let $occurrence := (fn:data($context/@occurrence),"?")[1]
   let $value := model-impl:build-value($context, $update-value, $current-value)
   return
-    if(fn:exists($update-value)) then
+    if(fn:exists($value)) then
       attribute {$qname} {
         $value
       }
     else if($partial and fn:exists($current)) then
       attribute {$qname} {
         $current-value
-      }
-    else if(fn:exists($value)) then
-      attribute {$qname} {
-        $value
       }
     else if(fn:empty($current) and fn:exists($default-value)) then
       attribute {$qname} {

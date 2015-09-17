@@ -197,6 +197,12 @@ declare variable $INSTANCES24 := (
 </model24>
 );
 
+declare variable $INSTANCES28 := (
+<model28 xmlns="http://xquerrail.com/app-test">
+  <name>model28-updated-attribute</name>
+</model28>
+);
+
 declare %test:setup function setup() {
   setup:setup($TEST-APPLICATION),
   setup:create-instances("model1", $INSTANCES1, $TEST-COLLECTION),
@@ -207,6 +213,7 @@ declare %test:setup function setup() {
   setup:create-instances("model19", $INSTANCES19, $TEST-COLLECTION),
   setup:create-instances("model23", $INSTANCES23, $TEST-COLLECTION),
   setup:create-instances("model24", $INSTANCES24, $TEST-COLLECTION),
+  setup:create-instances("model28", $INSTANCES28, $TEST-COLLECTION),
   setup:create-instances("parent-model", $PARENT-INSTANCES, $TEST-COLLECTION),
   setup:create-instances("child-model", $CHILD-INSTANCES, $TEST-COLLECTION)
 };
@@ -1767,6 +1774,38 @@ declare %test:case function model-document-new-json-no-namespace-schema-element-
     assert:equal($value-html/node()/text(), $value-html-from-map/text(), text{"html field value must be", xdmp:quote(<p>my title</p>)}),
     assert:equal($value-html-from-instance-map/node()/fn:name(), $value-html-from-map/fn:name(), text{"html field value must be", xdmp:quote(<p>my title</p>)}),
     assert:equal($value-html-from-instance-map/node()/text(), $value-html-from-map/text(), text{"html field value must be", xdmp:quote(<p>my title</p>)})
+  )
+};
+
+declare %test:case function model-update-attribute-test() as item()*
+{
+  let $_ := setup:lock-for-update()
+  let $model := domain:get-model("model28")
+  let $instance := model:find(
+    $model,
+    map:entry("name", "model28-updated-attribute")
+  )
+  let $date-modified-value := domain:get-field-value(domain:get-model-field($model, "dateModified"), $instance)
+  let $comment := setup:random("model4-comment")
+  let $updated-instance := setup:eval(
+    function() {
+      model:update(
+        $model,
+        map:new((
+          map:entry("name", "model28-updated-attribute"),
+          map:entry("comment", $comment)
+        )),
+        (),
+        fn:true()
+      )
+    }
+  )
+  let $comment-value := domain:get-field-value(domain:get-model-field($model, "comment"), $updated-instance)
+  let $updated-date-modified-value := domain:get-field-value(domain:get-model-field($model, "dateModified"), $updated-instance)
+  return (
+    assert:not-empty($updated-instance),
+    assert:equal($comment, $comment-value, "comment must equal " || $comment),
+    assert:not-equal($date-modified-value, $updated-date-modified-value, "dateModified must be updated.")
   )
 };
 

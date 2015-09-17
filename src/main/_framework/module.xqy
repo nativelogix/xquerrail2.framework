@@ -10,6 +10,7 @@ import module namespace cache = "http://xquerrail.com/cache" at "cache.xqy";
 import module namespace config = "http://xquerrail.com/config" at "config.xqy";
 import module namespace domain = "http://xquerrail.com/domain" at "domain.xqy";
 import module namespace generator = "http://xquerrail.com/generator/module" at "generators/generator.module.xqy";
+import module namespace xdmp-api = "http://xquerrail.com/xdmp/api" at "lib/xdmp-api.xqy";
 
 (:Options Definition:)
 declare option xdmp:mapping "false";
@@ -207,6 +208,14 @@ declare function module:load-function-module(
   $namespace as xs:string?,
   $location as xs:string?
 ) as xdmp:function? {
+  let $namespace :=
+    if (fn:exists($location)) then
+      if (fn:exists($namespace) and fn:not(xdmp-api:is-javascript-modules($location))) then
+        $namespace
+      else
+        ()
+    else
+      $namespace
   let $function :=
     module:get-modules($application)/library[
       (if (fn:exists($module-type)) then @type eq $module-type else fn:true()) and
@@ -367,15 +376,18 @@ declare function module:load-controller-functions(
   for $controller in domain:get-controllers($application)
   let $controller-name := $controller/@name
   let $controller-namespace := config:controller-uri($application, $controller-name)
-  let $controller-location := config:controller-location($application, $controller-name)
-  return module:load-module-definition(
-    $controller-namespace,
-    $controller-location,
-    (
-      attribute name {$controller-name},
-      attribute type { $module:CONTROLLER-TYPE }
+  let $controller-locations := config:controller-location($application, $controller-name)
+  return
+    for $controller-location in $controller-locations
+    let $functions := module:load-module-definition(
+      $controller-namespace,
+      $controller-location,
+      (
+        attribute name {$controller-name},
+        attribute type { $module:CONTROLLER-TYPE }
+      )
     )
-  )
+    return $functions
 };
 
 declare function module:load-model-functions(

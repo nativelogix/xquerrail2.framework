@@ -29,7 +29,8 @@ return (
   else
   (
     <domains xmlns="http://xquerrail.com/domain">
-    {config:refresh-app-cache($application)}</domains>,
+     { attribute mlVersion { xdmp:version() },
+    config:refresh-app-cache($application)}</domains>,
     xdmp:spawn(
       "initialize-taskserver.xqy",
       if (fn:exists($application)) then

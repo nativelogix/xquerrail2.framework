@@ -10,6 +10,7 @@ var parser = new xml2js.Parser({explicitArray: false, explicitRoot: true});
 var builder = new xml2js.Builder();
 
 var xquerrailCommon = (function(){
+  var _domain;
   var settings = {};
   var ml;
   try {
@@ -48,6 +49,14 @@ var xquerrailCommon = (function(){
     return configurationPath += '/_config';
   }
 
+  function mlVersion() {
+    return _domain.domains['$'].mlVersion
+  }
+
+  function isMl8() {
+    mlVersion().substring(0, 1) === '8';
+  }
+
   function initialize(callback, configuration) {
     var options = {
       method: 'POST',
@@ -61,7 +70,10 @@ var xquerrailCommon = (function(){
       options,
       function(error, response, body) {
         expect(response.statusCode).to.equal(200);
-        domainReady(callback);
+        parseXml(undefined, error, response, function(error, response, result) {
+          _domain = result;
+          domainReady(callback);
+        });
       }
     );
   };
@@ -145,16 +157,16 @@ var xquerrailCommon = (function(){
     }
     options.followRedirect = true;
 
-      if (format === 'json') {
-        options.headers['content-type'] = 'application/json';
-        options.json = data;
-      } else if (format === 'xml') {
-        options.headers['content-type'] = 'text/xml';
-        if (data) {
-          options.body = new xml2js.Builder({'rootName': model, 'headless': true, 'renderOpts': {}}).buildObject(data);
-        }
-      } else {
-        options.form = data;
+    if (format === 'json') {
+      options.headers['content-type'] = 'application/json';
+      options.json = data;
+    } else if (format === 'xml') {
+      options.headers['content-type'] = 'text/xml';
+      if (data) {
+        options.body = new xml2js.Builder({'rootName': model, 'headless': true, 'renderOpts': {}}).buildObject(data);
+      }
+    } else {
+      options.form = data;
     }
 
     request(options, function(error, response) {
@@ -287,6 +299,7 @@ var xquerrailCommon = (function(){
     username: settings.username,
     password: settings.password,
     initialize: initialize,
+    isMl8: isMl8,
     login: login,
     logout: logout,
     random: random,

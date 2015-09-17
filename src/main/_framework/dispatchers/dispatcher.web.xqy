@@ -34,12 +34,13 @@ declare option xdmp:output "indent-untyped=yes";
 declare option xdmp:ouput "omit-xml-declaration=yes";
 declare option xdmp:update "false";
 
+declare variable $EVENT-NAME := "xquerrail.dispatcher.web";
 declare variable $BASE-CONTROLLER-NAMESPACE := "http://xquerrail.com/controller/base";
 
 declare function dispatcher:get-controller-action(
   $application as xs:string,
   $action as xs:string,
-  $controller-namespace as xs:string,
+  $controller-namespace as xs:string?,
   $controller-location as xs:string?
 ) as xdmp:function? {
   let $module-type :=
@@ -70,55 +71,64 @@ declare function dispatcher:get-controller-action(
   $action as xs:string
 ) as xdmp:function? {
   let $controller-namespace := config:controller-uri($application, $controller)
-  let $controller-location := config:controller-location($application, $controller)
-  let $function :=
-    dispatcher:get-controller-action(
-    $application,
-    $action,
-    $controller-namespace,
-    $controller-location
-  )
-  return
-    if (fn:exists($function)) then
-      $function
-    else
-      let $function :=
-        dispatcher:get-controller-action(
-        $application,
-        $action,
-        $domain:CONTROLLER-EXTENSION-NAMESPACE,
-        ()
-      )
-      return
-        if (fn:exists($function)) then
-          $function
-        else
-          let $function :=
-            if ($controller eq "domains") then
-              dispatcher:get-controller-action(
-              $application,
-              $action,
-              $domain:DOMAINS-CONTROLLER-NAMESPACE,
-              ()
-            )
-            else
-              ()
-          return
-            if (fn:exists($function)) then
-              $function
-            else
-              let $function :=
+  let $controller-locations := config:controller-location($application, $controller)
+  let $functions :=
+    for $controller-location in $controller-locations
+    let $function := dispatcher:get-controller-action(
+      $application,
+      $action,
+      $controller-namespace,
+      $controller-location
+    )
+    return
+      if (fn:exists($function)) then
+        $function
+      else
+        let $function :=
+          dispatcher:get-controller-action(
+          $application,
+          $action,
+          $domain:CONTROLLER-EXTENSION-NAMESPACE,
+          ()
+        )
+        return
+          if (fn:exists($function)) then
+            $function
+          else
+            let $function :=
+              if ($controller eq "domains") then
                 dispatcher:get-controller-action(
                 $application,
                 $action,
-                $BASE-CONTROLLER-NAMESPACE,
+                $domain:DOMAINS-CONTROLLER-NAMESPACE,
                 ()
               )
-              return
-                if (fn:exists($function)) then
-                  $function
-                else
+              else
+                ()
+            return
+              if (fn:exists($function)) then
+                $function
+              else
+                let $function :=
+                  dispatcher:get-controller-action(
+                  $application,
+                  $action,
+                  $BASE-CONTROLLER-NAMESPACE,
                   ()
+                )
+                return
+                  if (fn:exists($function)) then
+                    $function
+                  else
+                    ()
+  return
+    if (fn:count($functions) eq 2) then
+    (
+      xdmp:trace($EVENT-NAME, text{"Found 2 controller actions. Will be using the first", $functions[1]}),
+      $functions[1]
+    )
+    else
+      $functions
 };
 
 (:~
@@ -189,7 +199,7 @@ declare function dispatcher:invoke-controller()
     if (fn:exists($controller-action)) then
     (
       let $controller-location := xdmp:function-module($controller-action)
-      let $controller-uri := fn:namespace-uri-from-QName(fn:function-name($controller-action))
+      let $controller-uri := ()(:fn:namespace-uri-from-QName(fn:function-name($controller-action)):)
       let $controller-initialize := dispatcher:get-controller-action($application, "initialize", $controller-uri, $controller-location)
       return (
         if (fn:exists($controller-initialize)) then
@@ -275,6 +285,16 @@ declare function dispatcher:invoke-response(
   )
 };
 
+declare function dispatcher:is-reponse-object(
+  $response as item()?
+) as xs:boolean {
+  (
+    $response instance of map:map and
+    (some $item in map:keys($response) satisfies fn:starts-with($item, "response:"))
+  )
+
+};
+
 declare function dispatcher:process-request() {
   let $route := xdmp:get-request-field("_route","")
   let $action := xdmp:get-request-field("_action","")
@@ -302,8 +322,9 @@ declare function dispatcher:process-request() {
               xdmp:redirect-response(request:redirect())
             else
               let $response := dispatcher:invoke-controller()
+              let $_ := xdmp:log((text{"dispatcher:is-reponse-object($response)", dispatcher:is-reponse-object($response)},$response))
               let $response :=
-                if($response instance of map:map) then
+                if(dispatcher:is-reponse-object($response)) then
                   $response
                 else (
                   response:initialize(map:new()),

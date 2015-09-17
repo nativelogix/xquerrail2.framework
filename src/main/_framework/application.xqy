@@ -114,22 +114,21 @@ declare %private function app:load-domain(
   $application-name as xs:string,
   $domain as element(domain:domain)
 ) as element(domain:domain) {
-    let $app-path := config:application-directory($application-name)
-    let $imports :=
-        for $import in $domain/domain:import
-        return
-        config:get-resource(fn:concat($app-path,"/domains/",$import/@resource))
+  let $app-path := config:application-directory($application-name)
+  let $imports :=
+    for $import in $domain/domain:import
     return
-        element { fn:QName("http://xquerrail.com/domain", "domain") } {
-         (:namespace domain {"http://xquerrail.com/domain"},:)
-         ($domain/namespace::*,$imports/namespace::*),
-         $domain/attribute::*,
-         $domain/(domain:name|domain:content-namespace|domain:application-namespace|domain:description|domain:author|domain:version|domain:declare-namespace|domain:default-collation|domain:permission|domain:language|domain:default-language|domain:navigation|domain:profiles|domain:validator),
-         ($domain/domain:model,$imports/domain:model),
-         ($domain/domain:optionlist,$imports/domain:optionlist),
-         ($domain/domain:controller,$imports/domain:controller),
-         ($domain/domain:view,$imports/domain:view)
-       }
+    config:get-resource(fn:concat($app-path,"/domains/",$import/@resource))
+  return
+    element { fn:QName("http://xquerrail.com/domain", "domain") } {
+      ($domain/namespace::*,$imports/namespace::*),
+      $domain/attribute::*,
+      $domain/(domain:name|domain:content-namespace|domain:application-namespace|domain:description|domain:author|domain:version|domain:declare-namespace|domain:default-collation|domain:permission|domain:language|domain:default-language|domain:navigation|domain:profiles|domain:validator),
+      ($domain/domain:model,$imports/domain:model),
+      ($domain/domain:optionlist,$imports/domain:optionlist),
+      ($domain/domain:controller,$imports/domain:controller),
+      ($domain/domain:view,$imports/domain:view)
+    }
 };
 
 declare %private function app:update-domain(

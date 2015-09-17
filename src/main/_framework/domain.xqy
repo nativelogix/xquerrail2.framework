@@ -1195,7 +1195,18 @@ declare function domain:get-field-query(
   $field as element(),
   $value as xs:anyAtomicType*
 ) {
-  domain:domain-function("get-field-query", 2)($field, $value)
+  domain:get-field-query($field, $value, ())
+};
+
+(:~
+ :
+:)
+declare function domain:get-field-query(
+  $field as element(),
+  $value as xs:anyAtomicType*,
+  $options as xs:string*
+) {
+  domain:domain-function("get-field-query", 3)($field, $value, $options)
 };
 
 declare function domain:get-field-tuple-reference(

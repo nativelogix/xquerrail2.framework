@@ -8,13 +8,9 @@ xquery version "1.0-ml";
 
 module namespace config = "http://xquerrail.com/config";
 
-import module namespace response = "http://xquerrail.com/response" at "response.xqy";
-
-import module namespace request  = "http://xquerrail.com/request" at "request.xqy";
-
-import module namespace cache = "http://xquerrail.com/cache" at "cache.xqy";
-
 import module namespace application = "http://xquerrail.com/application" at "application.xqy";
+import module namespace cache = "http://xquerrail.com/cache" at "cache.xqy";
+import module namespace xdmp-api = "http://xquerrail.com/xdmp/api" at "lib/xdmp-api.xqy";
 
 declare namespace domain = "http://xquerrail.com/domain";
 
@@ -107,10 +103,10 @@ declare variable $DOMAIN-CACHE-TS := "application-domains:timestamp::";
 declare variable $CACHE-COLLECTION := "cache:domain";
 
 declare variable $CACHE-PERMISSIONS := (
-    xdmp:permission("xquerrail","read"),
-    xdmp:permission("xquerrail","update"),
-    xdmp:permission("xquerrail","insert"),
-    xdmp:permission("xquerrail","execute")
+  xdmp:permission("xquerrail","read"),
+  xdmp:permission("xquerrail","update"),
+  xdmp:permission("xquerrail","insert"),
+  xdmp:permission("xquerrail","execute")
 );
 
 declare function config:version() as xs:string {
@@ -772,8 +768,14 @@ declare function config:property(
 declare function config:controller-location(
   $application-name as xs:string?,
   $controller-name as xs:string
-) as xs:string {
-   fn:concat(config:application-controllers-path($application-name), $controller-name, config:controller-suffix(), '.xqy')
+) as xs:string* {
+  (
+    fn:concat(config:application-controllers-path($application-name), $controller-name, config:controller-suffix(), '.xqy'),
+    if (xdmp-api:is-ml-8()) then
+      fn:concat(config:application-controllers-path($application-name), $controller-name, config:controller-suffix(), '.sjs')
+    else
+      ()
+  )
 };
 
 (:~

@@ -201,7 +201,16 @@ declare %test:case function test-model-uri() as item()*
 
 declare %test:case function test-controller-location() as item()*
 {
-  assert:equal(config:controller-location(config:default-application(), "model1"), "/test/_framework/config-test/app-test/controllers/model1-controller.xqy")
+  assert:equal(
+    config:controller-location(config:default-application(), "model1"),
+    (
+      "/test/_framework/config-test/app-test/controllers/model1-controller.xqy",
+      if (fn:starts-with(xdmp:version(), "8")) then
+        "/test/_framework/config-test/app-test/controllers/model1-controller.sjs"
+      else
+        ()
+    )
+  )
 };
 
 declare %test:case function test-controller-uri() as item()*

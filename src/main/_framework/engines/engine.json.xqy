@@ -103,35 +103,38 @@ declare function json-engine:render-array(
 };
 
 declare function json-engine:render-json(
-  $node
+  $node as item()
 ) {
-  let $is-multiple := xs:boolean(($node/@multi, fn:false())[1])
-  let $is-array := xs:boolean(($node/@array, fn:false())[1])
-  let $model :=
-    if($is-array) then
-      (
-        domain:get-model-from-instance($node/element()[1]),
-        if(domain:model-exists($node/@type/fn:string())) then
-          domain:get-model($node/@type/fn:string())
-        else ()
-      )[1]
-    else if(response:model()) then
-      response:model()
-    else if(domain:model-exists(fn:local-name($node))) then
-      domain:get-model(fn:local-name($node))
-    else ()
-  return
-    if($is-array and fn:exists($model)) then
-      json-engine:render-array($model, $node)
-    (: Multiple allow heterogenous members, groups by name, and emits an array, recursively calling render-json for each :)
-    else if($is-multiple) then
-      let $types := fn:distinct-values( $node/element() ! ( domain:get-model-name-from-instance(.) ) )
-      let $models := domain:get-domain-model($types)
-      return json-engine:render-array($models, $node)
-    else if(fn:exists($model)) then
-      model-helper:to-json($model,$node)
-    else (:fn:error(xs:QName("JSON-PROCESSING-ERROR"),"Cannot generate JSON response without model"):)
-      jsh:to-json($node)
+  if (fn:not($node instance of node())) then
+    $node
+  else
+    let $is-multiple := xs:boolean(($node/@multi, fn:false())[1])
+    let $is-array := xs:boolean(($node/@array, fn:false())[1])
+    let $model :=
+      if($is-array) then
+        (
+          domain:get-model-from-instance($node/element()[1]),
+          if(domain:model-exists($node/@type/fn:string())) then
+            domain:get-model($node/@type/fn:string())
+          else ()
+        )[1]
+      else if(response:model()) then
+        response:model()
+      else if(domain:model-exists(fn:local-name($node))) then
+        domain:get-model(fn:local-name($node))
+      else ()
+    return
+      if($is-array and fn:exists($model)) then
+        json-engine:render-array($model, $node)
+      (: Multiple allow heterogenous members, groups by name, and emits an array, recursively calling render-json for each :)
+      else if($is-multiple) then
+        let $types := fn:distinct-values( $node/element() ! ( domain:get-model-name-from-instance(.) ) )
+        let $models := domain:get-domain-model($types)
+        return json-engine:render-array($models, $node)
+      else if(fn:exists($model)) then
+        model-helper:to-json($model,$node)
+      else (:fn:error(xs:QName("JSON-PROCESSING-ERROR"),"Cannot generate JSON response without model"):)
+        jsh:to-json($node)
 };
 
 (:~

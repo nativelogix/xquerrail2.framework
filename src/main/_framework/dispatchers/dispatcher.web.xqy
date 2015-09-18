@@ -322,7 +322,6 @@ declare function dispatcher:process-request() {
               xdmp:redirect-response(request:redirect())
             else
               let $response := dispatcher:invoke-controller()
-              let $_ := xdmp:log((text{"dispatcher:is-reponse-object($response)", dispatcher:is-reponse-object($response)},$response))
               let $response :=
                 if(dispatcher:is-reponse-object($response)) then
                   $response

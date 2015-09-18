@@ -566,3 +566,65 @@ declare %test:case function find-field-from-path-model-with-container-test() as 
     assert:equal($model10-name-field, $expected)
   )
 };
+
+declare %test:case function get-field-query-path-test() as item()* {
+  let $model := domain:get-model("model1")
+  let $field-name := domain:get-model-field($model, "name")
+  let $field-query := domain:get-field-query($field-name, "dummy")
+  return (
+    assert:not-empty($field-query),
+    assert:equal(
+      $field-query,
+      xdmp:with-namespaces(
+        domain:declared-namespaces($field-name),
+        cts:path-range-query(domain:get-field-absolute-xpath($field-name), "=", "dummy", ("collation=" || domain:get-field-collation($field-name)))
+      )
+    )
+  )
+};
+
+declare %test:case function get-field-query-range-test() as item()* {
+  let $model := domain:get-model("model2")
+  let $field-name := domain:get-model-field($model, "name")
+  let $field-query := domain:get-field-query($field-name, "dummy")
+  return (
+    assert:not-empty($field-query),
+    assert:equal(
+      $field-query,
+      cts:element-range-query(domain:get-field-qname($field-name), "=", "dummy", ("collation=" || domain:get-field-collation($field-name)))
+    )
+  )
+};
+
+declare %test:case function get-field-tuple-reference-path-test() as item()* {
+  let $model := domain:get-model("model1")
+  let $field-name := domain:get-model-field($model, "name")
+  let $field-query := domain:get-field-tuple-reference($field-name)
+  return (
+    assert:not-empty($field-query),
+    assert:equal(
+      document{$field-query},
+      document{
+        xdmp:with-namespaces(
+              domain:declared-namespaces($field-name),
+              cts:path-reference(domain:get-field-absolute-xpath($field-name), ("collation=" || domain:get-field-collation($field-name)))
+            )
+      }
+    )
+  )
+};
+
+declare %test:case function get-field-tuple-reference-range-test() as item()* {
+  let $model := domain:get-model("model2")
+  let $field-name := domain:get-model-field($model, "name")
+  let $field-query := domain:get-field-tuple-reference($field-name)
+  return (
+    assert:not-empty($field-query),
+    assert:equal(
+      document{$field-query},
+      document{
+        cts:element-reference(domain:get-field-qname($field-name), ("collation=" || domain:get-field-collation($field-name)))
+      }
+    )
+  )
+};

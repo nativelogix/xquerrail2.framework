@@ -1726,6 +1726,8 @@ declare function domain-impl:get-field-xpath(
             return typeswitch($path)
               case element(domain:attribute)
                 return fn:concat("/@",$path/@name)
+              case element(domain:triple)
+                return fn:concat("/sem:triple[@name eq '",$path/@name, "']")
               default
                 return fn:concat("/",domain-impl:get-field-prefix($path),":",$path/@name)
             ,
@@ -1762,6 +1764,7 @@ declare function domain-impl:get-field-absolute-xpath(
     return
      typeswitch($path)
       case element(domain:attribute) return fn:concat("/@",$path/@name)
+      case element(domain:triple) return fn:concat("/sem:triple[@name eq '",$path/@name, "']")
       default return  fn:concat("/",domain-impl:get-field-prefix($path),":",$path/@name)
     ,"")
 };

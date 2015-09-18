@@ -2428,10 +2428,13 @@ declare function domain-impl:get-field-query(
   let $index := $field/domain:navigation/@searchType
   return typeswitch($field)
     case element(domain:element) return
-      if($index = "range") then
+      if($index eq "range") then
         cts:element-range-query(fn:QName($ns,$name), "=", $value, $options)
       else if ($index eq "path") then
-        cts:path-range-query(domain:get-field-absolute-xpath($field), "=", $value, $options)
+        xdmp:with-namespaces(
+          domain:declared-namespaces($field),
+          cts:path-range-query(domain:get-field-absolute-xpath($field), "=", $value, $options)
+        )
       else
         cts:element-value-query(fn:QName($ns,$name), $value, $options)
     case element(domain:attribute) return
@@ -2439,21 +2442,18 @@ declare function domain-impl:get-field-query(
       let $parent-ns := domain:get-field-namespace($parent)
       let $parent-name := $parent/@name
       return
-        if($index = "range") then
+        if($index eq "range") then
           cts:element-attribute-range-query(fn:QName($parent-ns,$parent-name),fn:QName("",$name), "=", $value, $options)
       else if ($index eq "path") then
-        cts:path-range-query(domain:get-field-absolute-xpath($field), "=", $value, $options)
+        xdmp:with-namespaces(
+          domain:declared-namespaces($field),
+          cts:path-range-query(domain:get-field-absolute-xpath($field), "=", $value, $options)
+        )
         else
           cts:element-attribute-value-query(fn:QName($parent-ns,$parent-name),fn:QName($ns,$name), $value, $options)
       default return
         fn:error(xs:QName("FIELD-QUERY-ERROR"), "Unable to resolve query for",$field/@name)
 };
-
-(:declare function domain-impl:get-field-tuple-reference(
-  $field as element()
-) as cts:reference? {
-  domain-impl:get-field-tuple-reference($field,())
-};:)
 
 (:~
  : Returns a field reference to be used in xxx-value-calls
@@ -2474,12 +2474,18 @@ declare function domain-impl:get-field-tuple-reference(
   return typeswitch($field)
     case element(domain:element) return
       if ($field/domain:navigation/@searchType eq "path") then
-        cts:path-reference(domain:get-field-absolute-xpath($field), $options)
+        xdmp:with-namespaces(
+          domain:declared-namespaces($field),
+          cts:path-reference(domain:get-field-absolute-xpath($field), $options)
+        )
       else
         cts:element-reference(domain:get-field-qname($field), $options)
     case element(domain:attribute) return
       if ($field/domain:navigation/@searchType eq "path") then
-        cts:path-reference(domain:get-field-absolute-xpath($field), $options)
+        xdmp:with-namespaces(
+          domain:declared-namespaces($field),
+          cts:path-reference(domain:get-field-absolute-xpath($field), $options)
+        )
       else
         cts:element-attribute-reference(domain:get-field-qname($field), $options)
     default return fn:error(xs:QName("NOT-REFERENCABLE"),"Cannot reference type of " || fn:local-name($field),$field)

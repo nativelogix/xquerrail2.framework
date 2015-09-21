@@ -2011,7 +2011,7 @@ declare function domain-impl:get-model-reference-uris(
   $domain-model as element(domain:model),
   $instance as element()
 ) {
-  return cts:uris((), (), domain-impl:get-models-reference-query($domain-model, $instance))
+  cts:uris((), (), domain-impl:get-models-reference-query($domain-model, $instance))
 };
 
 

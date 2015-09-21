@@ -184,7 +184,7 @@ declare function cache:get-cache-keys($type as xs:string, $path as xs:string?, $
   ,
   switch($type)
     case $SERVER-FIELD-CACHE-LOCATION
-      return xdmp:get-server-field-names()
+      return xdmp:get-server-field-names()[fn:starts-with(., $path)]
     default
       return
       xdmp:eval(

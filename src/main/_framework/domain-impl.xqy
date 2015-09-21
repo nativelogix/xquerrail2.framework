@@ -1901,16 +1901,6 @@ declare function domain-impl:get-model-controller(
 };
 
 (:~
- : Returns an optionlist from the default domain
- : @param $name  Name of the optionlist
- :)
-declare function domain-impl:get-optionlist(
-  $name as xs:string
-) {
-  domain-impl:get-optionlist(domain:get-default-application(),$name)
-};
-
-(:~
  :  Returns an optionlist from the application by its name
  : @param $application  Name of the application
  : @param $listname  Name of the optionlist
@@ -2009,21 +1999,7 @@ declare function domain-impl:is-model-referenced(
   $domain-model as element(domain:model),
   $instance as element()
 ) as xs:boolean {
-     (:let $reference-key    := domain-impl:get-model-reference-key($domain-model)
-     let $reference-models := domain-impl:get-model-references($domain-model)
-     let $reference-values := (
-        domain:get-field-value(domain-impl:get-model-key-field($domain-model),$instance),
-        domain:get-field-value(domain-impl:get-model-keyLabel-field($domain-model),$instance)
-     )
-     let $reference-query :=
-       cts:or-query((
-        for $reference-model in $reference-models
-        let $reference-fields := $reference-model//domain:element[@reference = $reference-key]
-        return
-          domain-impl:get-model-reference-query($reference-model,$reference-key,$reference-values)
-       )):)
-  let $reference-query := domain-impl:get-models-reference-query($domain-model, $instance)
-  return xdmp:exists(cts:search(fn:collection(),$reference-query))
+  xdmp:exists(cts:search(fn:collection(), domain-impl:get-models-reference-query($domain-model, $instance)))
 };
 
 (:~
@@ -2035,21 +2011,7 @@ declare function domain-impl:get-model-reference-uris(
   $domain-model as element(domain:model),
   $instance as element()
 ) {
-     (:let $reference-key    := domain-impl:get-model-reference-key($domain-model)
-     let $reference-models := domain-impl:get-model-references($domain-model)
-     let $reference-values := (
-        domain:get-field-value(domain-impl:get-model-key-field($domain-model),$instance),
-        domain:get-field-value(domain-impl:get-model-keyLabel-field($domain-model),$instance)
-     )
-     let $reference-query :=
-       cts:or-query((
-        for $reference-model in $reference-models
-        let $reference-fields := $reference-model//domain:element[@reference = $reference-key]
-        return
-          domain-impl:get-model-reference-query($reference-model,$reference-key,$reference-values)
-       )):)
-  let $reference-query := domain-impl:get-models-reference-query($domain-model, $instance)
-  return cts:uris((),(),$reference-query)
+  cts:uris((), (), domain-impl:get-models-reference-query($domain-model, $instance))
 };
 
 
@@ -2126,27 +2088,6 @@ declare function domain-impl:get-model-uniqueKey-constraint-query(
   $mode as xs:string
 ) {
   if(domain-impl:get-model-uniqueKey-constraint-fields($model)) then
-   (: It should not include id field value in the query :)
-       (:let $id-field := domain-impl:get-model-identity-field($model)
-       let $id-field-key := domain-impl:get-field-id($id-field)
-       let $id-value := domain:get-field-value($id-field,$params)
-       let $id-query :=
-          if($mode = ("create","new")) then
-               if($id-value) then
-                 typeswitch($id-field)
-                   case element(domain:element) return
-                        cts:element-range-query(fn:QName(domain-impl:get-field-namespace($id-field),$id-field/@name),"=",$id-value,("collation=" || domain-impl:get-field-collation($id-field)))
-                   case element(domain:attribute) return
-                        cts:element-attribute-range-query(fn:QName(domain-impl:get-field-namespace($model),$model/@name),xs:QName($id-field/@name),"=",$id-value,("collation=" || domain-impl:get-field-collation($id-field)))
-                   default return ()
-                else ()
-            else
-             typeswitch($id-field)
-                  case element(domain:element) return
-                    cts:element-range-query(fn:QName(domain-impl:get-field-namespace($id-field),$id-field/@name),"!=",$id-value,("collation="  || domain-impl:get-field-collation($id-field)))
-                  case element(domain:attribute) return
-                       cts:element-attribute-range-query(fn:QName(domain-impl:get-field-namespace($model),$model/@name),xs:QName($id-field/@name),"!=",$id-value,("collation=" || domain-impl:get-field-collation($id-field)))
-                  default return ():)
     let $id-query := ()
     let $unique-fields := domain-impl:get-model-uniqueKey-constraint-fields($model)
     let $constraint-query :=
@@ -2192,27 +2133,6 @@ declare function domain-impl:get-model-unique-constraint-query(
   let $unique-fields := domain-impl:get-model-unique-constraint-fields($model)
   return
   if(fn:exists($unique-fields)) then
-    (:let $id-field := domain-impl:get-model-identity-field($model)
-    let $id-field-key := domain-impl:get-field-id($id-field)
-    let $id-value := domain:get-field-value($id-field,$params)
-    let $id-query :=
-      if($mode = "create") then
-        if($id-value) then
-          typeswitch($id-field)
-            case element(domain:element) return
-              cts:element-range-query(fn:QName(domain-impl:get-field-namespace($id-field),$id-field/@name),"=",$id-value,("collation=" || domain-impl:get-field-collation($id-field)))
-            case element(domain:attribute) return
-              cts:element-attribute-range-query(fn:QName(domain-impl:get-field-namespace($model),$model/@name),xs:QName($id-field/@name),"=",$id-value,("collation=" || domain-impl:get-field-collation($id-field)))
-            default return ()
-        else ()
-      else if($id-value) then
-        typeswitch($id-field)
-          case element(domain:element) return
-            cts:element-range-query(fn:QName(domain-impl:get-field-namespace($id-field),$id-field/@name),"!=",$id-value,("collation=" || domain-impl:get-field-collation($id-field)))
-          case element(domain:attribute) return
-            cts:element-attribute-range-query(fn:QName(domain-impl:get-field-namespace($model),$model/@name),xs:QName($id-field/@name),"!=",$id-value,("collation=" || domain-impl:get-field-collation($id-field)))
-          default return ()
-      else ():)
     let $id-query := ()
     let $constraint-query :=
       for $field in $unique-fields

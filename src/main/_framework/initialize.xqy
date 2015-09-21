@@ -3,6 +3,7 @@ xquery version "1.0-ml";
    The application cache expands all the domains includes and keeps them in a server variable
    corresponding the the configuration uri.
  :)
+import module namespace cache ="http://xquerrail.com/cache" at "cache.xqy";
 import module namespace config ="http://xquerrail.com/config" at "config.xqy";
 let $http-method := xdmp:get-request-method()
 let $application :=
@@ -29,15 +30,21 @@ return (
   else
   (
     <domains xmlns="http://xquerrail.com/domain">
-     { attribute mlVersion { xdmp:version() },
-    config:refresh-app-cache($application)}</domains>,
-    xdmp:spawn(
-      "initialize-taskserver.xqy",
-      if (fn:exists($application)) then
-        (xs:QName("config:application"), $application)
-      else
-        (xs:QName("config:application"), <config:application/>)
-    )
+      { attribute mlVersion { xdmp:version() },
+      config:refresh-app-cache($application)}</domains>,
+      (
+        let $cache :=
+          map:new((
+            for $key in cache:get-cache-keys($cache:SERVER-FIELD-CACHE-LOCATION, $cache:CACHE-BASE-KEY)
+            return map:entry($key, cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key))
+          ))
+          return xdmp:spawn-function(
+            function() {
+              for $key in map:keys($cache)
+              return cache:set-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key, map:get($cache, $key))
+            }
+          )
+      )
   )
 )
 

@@ -1334,10 +1334,19 @@ declare function model-impl:build-triple-subject(
 ) as element(sem:subject) {
   let $model := $field/ancestor-or-self::domain:model
   let $subject-definition := fn:string($field/domain:subject)
+  let $subject-value :=
+    if ($value instance of map:map) then
+      map:get($value, "subject")
+    else if ($value instance of node()) then
+      $value/sem:subject
+    else
+      ()
   return
     element sem:subject {
       model:generate-iri(
-        if (fn:exists($subject-definition)) then
+        if (fn:exists($subject-value)) then
+          $subject-value
+        else if (fn:exists($subject-definition)) then
           if (fn:starts-with($subject-definition, "{") and fn:ends-with($subject-definition, "}")) then
             xdmp:value(fn:substring($subject-definition, 2, fn:string-length($subject-definition) - 2))($field, $params, $value)
           else if (fn:exists($field/domain:subject/domain:expression)) then

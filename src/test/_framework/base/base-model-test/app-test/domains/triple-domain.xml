@@ -40,12 +40,19 @@
     <navigation triplable="true"/>
     <element name="name" type="string" label="Name"/>
     <container name="triples" namespace="http://marklogic.com/semantics">
-      <triple name="manualTriple">
+      <triple name="iriManualTriple">
         <subject type="sem:iri">
           <expression namespace="http://xquerrail.com/model/base/impl" function="triple-identity-value" location=""/>
         </subject>
         <predicate type="sem:iri" />
         <object type="sem:iri" />
+      </triple>
+      <triple name="literalManualTriple">
+        <subject>
+          <expression namespace="http://xquerrail.com/model/base/impl" function="triple-identity-value" location=""/>
+        </subject>
+        <predicate>literalManualTriple</predicate>
+        <object/>
       </triple>
       <triple name="customTriple">
         <subject type="sem:iri">
@@ -87,6 +94,24 @@
     <navigation triplable="true"/>
     <element name="uuid" type="identity" identity="true" label="Globally Unique Identifier"/>
     <element name="name" type="string" label="Name"/>
+  </model>
+
+  <model name="triplable6" label="Triplable #6" persistence="directory" extends="base" key="uuid" keyLabel="name">
+    <directory>/test/triplables6/</directory>
+    <navigation triplable="true"/>
+    <element name="name" type="string" label="Name"/>
+    <container name="triples" namespace="http://marklogic.com/semantics">
+      <triple name="hasUri">
+        <subject/>
+        <predicate type="sem:iri">hasUri</predicate>
+        <object/>
+      </triple>
+      <triple name="hasType">
+        <subject/>
+        <predicate type="sem:iri">hasType</predicate>
+        <object/>
+      </triple>
+    </container>
   </model>
 
 </domain>

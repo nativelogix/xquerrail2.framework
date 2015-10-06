@@ -2390,7 +2390,7 @@ declare function domain-impl:get-field-tuple-reference(
       if($field/@type = ("string", "reference", "identity", "id"))
       then "collation=" || domain:get-field-collation($field)
       else if($field/@type = ("integer", "decimal", "double", "float", "long", "unsignedLong", "unsignedInt", "int"))
-      then "type=" || $field/@type
+      then "type=" || domain:resolve-cts-type($field/@type)
       else ()
     )
   )

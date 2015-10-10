@@ -342,18 +342,20 @@ declare %test:case function get-param-value-json-dotted-notation-test() as item(
 {
   let $citrus := ("lemon", "orange")
   let $berries := ("strawberry", "raspberry", "blueberry")
-  let $params1 := xdmp-api:from-json('{"fruits": {"citrus": ["lemon", "orange"], "berry": ["strawberry", "raspberry", "blueberry"]}}')
+  let $green-veggie := ("green beans", "cucumber")
+  let $params := xdmp-api:from-json('{"fruits": {"citrus": ["lemon", "orange"], "berry": ["strawberry", "raspberry", "blueberry"]}, "green.veggie": ["green beans", "cucumber"]}')
   return (
-    assert:equal(domain:get-param-value($params1, "fruits.citrus"), $citrus, "'fruits.citrus' must equal " || fn:string-join($citrus, ",")),
-    assert:equal(domain:get-param-value($params1, "fruits.berry")[2], $berries[2], "'fruits.berry[2]' must equal " || $berries[2]),
-    assert:equal(domain:get-param-value($params1, "fruits.apple", "pink lady"), "pink lady", "'fruits.apple' must equal 'pink lady'")
+    assert:equal(domain:get-param-value($params, "fruits.citrus"), $citrus, "'fruits.citrus' must equal " || fn:string-join($citrus, ",")),
+    assert:equal(domain:get-param-value($params, "fruits.berry")[2], $berries[2], "'fruits.berry[2]' must equal " || $berries[2]),
+    assert:equal(domain:get-param-value($params, "green.veggie"), $green-veggie, "'green.veggie' must equal " || fn:string-join($green-veggie, ",")),
+    assert:equal(domain:get-param-value($params, "fruits.apple", "pink lady"), "pink lady", "'fruits.apple' must equal 'pink lady'")
   )
 };
 
 declare %test:case function get-param-value-json-array-dotted-notation-test() as item()*
 {
-  let $params2 := xdmp-api:from-json('{"sort": [{"field": "field1", "order": "descending"}, {"field": "field2", "order": "ascending"}]}')
-  let $sort := domain:get-param-value($params2, "sort")
+  let $params := xdmp-api:from-json('{"sort": [{"field": "field1", "order": "descending"}, {"field": "field2", "order": "ascending"}]}')
+  let $sort := domain:get-param-value($params, "sort")
   let $field := domain:get-param-value($sort[1], "field")
   return (
     assert:equal($field, "field1","sort.field[1] must equal 'field1")

@@ -2895,13 +2895,36 @@ declare function domain-impl:get-param-value(
 ) {
   let $type := domain-impl:get-value-type($params[1])
   let $value :=
-  switch ($type)
-    case "param" return
+    if ($type = ("param", "json")) then
+      let $params :=
+        if ($params instance of element(map:map)) then
+          map:new($params)
+        else if ($params instance of element(json:object)) then
+          json:object($params)
+        else if ($params instance of element(json:array)) then
+          json:array($params)
+        else
+          $params
+      let $value :=
       if (map:contains($params, $key)) then
         map:get($params, $key)
       else
         ()
-    default return
+      return
+        if ($value instance of json:array) then
+          let $value := json:array-values($value)
+          return
+            if ($value instance of node()*) then
+              if ($value/node() instance of text()*) then
+                $value/fn:data()
+              else
+                $value/node()
+            else
+              $value
+
+        else
+          $value
+    else
       ()
   return
     if (fn:exists($value)) then
@@ -2967,6 +2990,7 @@ declare function domain-impl:get-param-value(
             else
               ()
 };
+
 (:~
  :
  :)

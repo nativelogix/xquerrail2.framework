@@ -2921,7 +2921,8 @@ declare function domain-impl:get-param-value(
                 $value/node()
             else
               $value
-
+        else if ($value instance of xs:untypedAtomic) then
+          fn:string($value)
         else
           $value
     else
@@ -2952,6 +2953,8 @@ declare function domain-impl:get-param-value(
                     $value/fn:data()
                   else
                     $value/node()
+                else if ($value instance of xs:untypedAtomic) then
+                  fn:string($value)
                 else
                   $value
           case "param"

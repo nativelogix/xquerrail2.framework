@@ -677,7 +677,7 @@ declare function model-impl:patch(
       let $key := domain:get-field-name-key($field)
       return
         if (fn:empty($field)) then
-          (xdmp:log(text{"Cannot find field from", $path}, "info"))
+          (xdmp:log(text{"Cannot find field from", $path}, "warning"))
         else
           if ($operation eq "add") then
           (
@@ -2402,9 +2402,16 @@ declare function model-impl:build-search-constraints(
       $prefix,
       if($prop-nav/@constraintName) then
         $prop-nav/@constraintName
-     else if (fn:empty($prefix) and xs:boolean(fn:data($model/ancestor::domain:domain/@useModelInConstraintName))) then
-        ($model/@name, $prop/@name)
-      else $prop/@name
+      else if (fn:empty($prefix) and xs:boolean(fn:data($model/ancestor::domain:domain/@useModelInConstraintName))) then
+        $model/@name
+      else ()
+      ,
+      if (fn:empty($prefix) and $prop instance of element(domain:attribute)) then
+        domain:get-parent-field-attribute($prop)/@name
+      else
+        ()
+      ,
+      $prop/@name
     )
     let $base-type := domain:get-base-type($prop)
     return
@@ -2422,9 +2429,14 @@ declare function model-impl:build-search-constraints(
         let $term-options := $prop-nav/(search:term-option|search:weight)
         let $term-options := if($term-options) then $term-options else domain:get-param-value($params, "search:term-options")
         let $prop-type := domain:resolve-ctstype($prop)
+        let $contraint-name :=
+          if ($prop instance of element(domain:attribute)) then
+            fn:concat(fn:string-join($name[1 to fn:count($name) - 1], '.'), config:attribute-prefix(), $name[fn:count($name)])
+          else
+            fn:string-join($name, '.')
         return
           element search:constraint {
-            attribute name {fn:string-join($name, '.')},
+            attribute name {$contraint-name},
             element { fn:QName("http://marklogic.com/appservices/search", (if ($search-type eq "path") then "range" else $search-type)) } {
               attribute type { $prop-type },
               if ($prop-type eq "xs:string") then
@@ -2441,7 +2453,10 @@ declare function model-impl:build-search-constraints(
                 }
               )
               else
-                model-impl:build-search-element($prop, $name[fn:last()])
+                model-impl:build-search-element(
+                  $prop,
+                  $name[if ($prop instance of element(domain:attribute)) then (fn:last() - 1) else fn:last()]
+                )
               ,
               $term-options,
               $facet-options

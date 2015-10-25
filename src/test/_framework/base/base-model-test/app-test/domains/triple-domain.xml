@@ -86,6 +86,13 @@
         <predicate type="sem:iri">iriTriple</predicate>
         <object type="sem:iri">object2</object>
       </triple>
+      <triple name="multipleTriples" occurrence="*">
+        <subject>
+          <expression namespace="http://xquerrail.com/model/base/impl" function="triple-identity-value" location=""/>
+        </subject>
+        <predicate>multipleTriples</predicate>
+        <object/>
+      </triple>
     </container>
   </model>
 

@@ -2,6 +2,8 @@ xquery version "1.0-ml";
 
 module namespace cache = "http://xquerrail.com/cache";
 
+declare namespace server-status = "http://marklogic.com/xdmp/status/server";
+
 declare option xdmp:mapping "false";
 
 declare variable $SERVER-FIELD-CACHE-LOCATION := "server-field";
@@ -13,10 +15,10 @@ declare variable $CONFIG-CACHE-TYPE := "config" ;
 declare variable $DOMAIN-CACHE-TYPE := "domain";
 declare variable $APPLICATION-CACHE-TYPE := "application";
 
-declare variable $CACHE-BASE-KEY := "http://xquerrail.com/cache/";
-declare variable $CONFIG-CACHE-KEY := $CACHE-BASE-KEY || "config/" ;
-declare variable $DOMAIN-CACHE-KEY := $CACHE-BASE-KEY || "domains/";
-declare variable $APPLICATION-CACHE-KEY    := $CACHE-BASE-KEY || "applications/";
+declare %private variable $CACHE-BASE-KEY := "http://xquerrail.com/cache/";
+declare variable $CONFIG-CACHE-KEY := cache:cache-base() || "config/" ;
+declare variable $DOMAIN-CACHE-KEY := cache:cache-base() || "domains/";
+declare variable $APPLICATION-CACHE-KEY    := cache:cache-base() || "applications/";
 declare variable $CACHE-COLLECTION := "cache:domain";
 
 declare variable $CACHE-PERMISSIONS := (
@@ -27,6 +29,11 @@ declare variable $CACHE-PERMISSIONS := (
 );
 
 declare variable $CACHE-MAP := map:new();
+
+declare function cache:cache-base() as xs:string {
+  let $server-status := xdmp:server-status(xdmp:host(), xdmp:server())
+  return fn:concat($CACHE-BASE-KEY, fn:string($server-status/server-status:server-name), "/", fn:string($server-status/server-status:port), "/")
+};
 
 declare %private function cache:get-cache-map-type(
   $type as xs:string
@@ -255,12 +262,12 @@ declare function cache:clear-cache($type as xs:string, $key as xs:string, $user 
     default
       return
       xdmp:eval('
-      declare variable $CACHE-BASE-KEY external;
+      declare variable $CACHE-BASE external;
       function() {
-         xdmp:directory-delete($CACHE-BASE-KEY),
+         xdmp:directory-delete($CACHE-BASE),
          xdmp:commit()
       }()',
-      (xs:QName("CACHE-BASE-KEY"), $CACHE-BASE-KEY),
+      (xs:QName("CACHE-BASE"), cache:cache-base()),
       <options xmlns="xdmp:eval">
        <isolation>different-transaction</isolation>
        <transaction-mode>update</transaction-mode>

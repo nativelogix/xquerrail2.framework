@@ -35,7 +35,7 @@ return (
       (
         let $cache :=
           map:new((
-            for $key in cache:get-cache-keys($cache:SERVER-FIELD-CACHE-LOCATION, $cache:CACHE-BASE-KEY)
+            for $key in cache:get-cache-keys($cache:SERVER-FIELD-CACHE-LOCATION, cache:cache-base())
             return map:entry($key, cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key))
           ))
           return xdmp:spawn-function(

@@ -706,6 +706,11 @@
           <action>http://marklogic.com/xdmp/privileges/get-privilege</action>
           <kind>execute</kind>
         </privilege>
+        <privilege>
+          <privilege-name>status-builtins</privilege-name>
+          <action>http://marklogic.com/xdmp/privileges/status</action>
+          <kind>execute</kind>
+        </privilege>
       </privileges>
     </role>
     <role>

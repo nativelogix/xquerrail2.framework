@@ -832,14 +832,17 @@ declare function model-impl:recursive-create(
   let $mode := if (fn:exists($updates)) then "update" else "create"
   return (
     let $model-key := xdmp:key-from-QName(domain:get-field-qname($model))
-    return
+    let $instance :=
       if(domain:get-value-type($updates) eq "xml" and generator:has-generator($model-key, "build")) then (
         xdmp:trace("xquerrail.generator", "Generator:" || $model-key),
         generator:get-generator($model-key, "build")($current, $updates)
       )
       else
-        model:recursive-build($model, $current, $updates, $partial),
-      model:validate-params($model, $updates, $mode)
+        model:recursive-build($model, $current, $updates, $partial)
+    return (
+      model:validate-params($model, $instance, $mode),
+      $instance
+    )
   )
 };
 

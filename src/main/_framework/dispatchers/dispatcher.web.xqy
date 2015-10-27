@@ -358,7 +358,7 @@ declare function dispatcher:process-request() {
       dispatcher:error($ex)
     }
   }
-  let $_ := xdmp:log(text{"action", $action, $route, xdmp:describe($eval-options)}, "debug")
+  let $_ := xdmp:log(text{"action", $action, $route, xdmp:describe($eval-options)}, "fine")
   return
     if (fn:empty($eval-options)) then (
       $process()

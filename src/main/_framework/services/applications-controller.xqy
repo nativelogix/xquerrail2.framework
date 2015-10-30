@@ -23,7 +23,8 @@ return
           fn:string($application/@name)
         },
         element {fn:QName("http://xquerrail.com/application", "domain")} {
-          $domain-link
+          element {fn:QName("http://xquerrail.com/application", "timestamp")} { fn:string(config:get-domain($application/@name)/@timestamp) },
+          element {fn:QName("http://xquerrail.com/application", "link")} { $domain-link }
         }
       }
     }
@@ -38,7 +39,14 @@ return
         let $domain-link := fn:concat("/applications/", fn:string($application/@name) , "/domain/get.", $format)
         let $json-application := json:object()
         let $_ := map:put($json-application, "name", fn:string($application/@name))
-        let $_ := map:put($json-application, "domain", $domain-link)
+        let $_ := map:put(
+          $json-application,
+          "domain",
+          map:new((
+            map:entry("timestamp", fn:string(config:get-domain($application/@name)/@timestamp)),
+            map:entry("link", $domain-link)
+          ))
+        )
         return $json-application
       )
     )

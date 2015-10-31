@@ -1,9 +1,8 @@
 xquery version "1.0-ml";
 (:~
  : The domain controller is responsible for all domain functions.
- : Any actions specified in the base controller will be globally accessible by each domain controller.
  :
- : @author   : Gary Vidal
+ : @author   : Richard Louapre
  : @version  : 2.0
  :)
 

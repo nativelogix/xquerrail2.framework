@@ -139,6 +139,7 @@ declare %private function app:update-domain(
     $domain/namespace::*,
     $domain/attribute::*,
     attribute compiled {fn:true()},
+    attribute timestamp {fn:current-dateTime()},
     $domain/*[. except $domain/domain:model],
     $domain/domain:model ! (domain:compile-model($application-name, .))
   }

@@ -57,7 +57,8 @@ describe('Application controllers (applications, domains)', function() {
         var application = entity.applications[0];
         expect(application).to.have.property('name');
         expect(application).to.have.property('domain');
-        expect(application.domain).to.equal('/applications/' + application.name + '/domain/get.json');
+        expect(application.domain).to.have.property('link');
+        expect(application.domain.link).to.equal('/applications/' + application.name + '/domain/get.json');
         xquerrailCommon.httpMethod('GET', 'applications/' + application.name + '/domain', 'get', undefined, undefined, function(error, response, entity) {
           expect(response.statusCode).to.equal(200);
           expect(entity).to.have.property('domain');
@@ -75,7 +76,8 @@ describe('Application controllers (applications, domains)', function() {
         var application = entity.applications.application[0];
         expect(application).to.have.property('name');
         expect(application).to.have.property('domain');
-        expect(application.domain).to.equal('/applications/' + application.name + '/domain/get.xml');
+        expect(application.domain).to.have.property('link');
+        expect(application.domain.link).to.equal('/applications/' + application.name + '/domain/get.xml');
         xquerrailCommon.httpMethod('GET', 'applications/' + application.name + '/domain', 'get', undefined, undefined, function(error, response, entity) {
           expect(response.statusCode).to.equal(200);
           expect(entity).to.have.property('domain');

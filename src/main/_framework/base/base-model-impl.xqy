@@ -2403,18 +2403,18 @@ declare function model-impl:build-search-options(
 };
 
 declare function model-impl:build-search-constraints(
-  $model as element(domain:model),
+  $field as element(),
   $params as item(),
   $prefix as xs:string*
 ) {
-  for $prop in $model//(domain:element|domain:attribute)
+  for $prop in $field/(domain:container|domain:element|domain:attribute)
     for $prop-nav in $prop/domain:navigation[xs:boolean(fn:data(./@searchable)) or xs:boolean(fn:data(./@facetable))]
     let $name := (
       $prefix,
       if($prop-nav/@constraintName) then
         $prop-nav/@constraintName
-      else if (fn:empty($prefix) and xs:boolean(fn:data($model/ancestor::domain:domain/@useModelInConstraintName))) then
-        $model/@name
+      else if (fn:empty($prefix) and xs:boolean(fn:data($field/ancestor::domain:domain/@useModelInConstraintName))) then
+        $field/@name
       else ()
       ,
       if (fn:empty($prefix) and $prop instance of element(domain:attribute)) then
@@ -2426,7 +2426,9 @@ declare function model-impl:build-search-constraints(
     )
     let $base-type := domain:get-base-type($prop)
     return
-      if ($base-type eq "instance") then
+      if ($prop instance of element(domain:container)) then
+        model:build-search-constraints($prop, $params, $name)
+      else if ($base-type eq "instance") then
         model:build-search-constraints(domain:get-model($prop/@type), $params, $name)
       else
         let $search-type := (
@@ -2445,7 +2447,7 @@ declare function model-impl:build-search-constraints(
             fn:concat(fn:string-join($name[1 to fn:count($name) - 1], '.'), config:attribute-prefix(), $name[fn:count($name)])
           else
             fn:string-join($name, '.')
-        return
+        return (
           element search:constraint {
             attribute name {$contraint-name},
             element { fn:QName("http://marklogic.com/appservices/search", (if ($search-type eq "path") then "range" else $search-type)) } {
@@ -2472,7 +2474,12 @@ declare function model-impl:build-search-constraints(
               $term-options,
               $facet-options
             }
-          }
+          },
+          if ($prop instance of element(domain:element)) then
+            model:build-search-constraints($prop, $params, $name)
+          else
+            ()
+        )
 };
 
 declare function model-impl:build-search-element(

@@ -80,3 +80,25 @@ declare %test:case function model-build-search-options-field-instance-test() {
     return assert:empty($search-options//search:state[@name eq $sort-state-name], text{"Missing sort state", $sort-state-name})
   )
 };
+
+declare %test:case function model-build-search-options-container-test() {
+  let $model := domain:get-model("model4")
+  let $params := map:new()
+  let $search-options := model:build-search-options($model, $params)
+  let $container1-name2-search-constraint := $search-options/search:constraint[@name eq "container1.name2"]
+  let $container1-description-search-constraint := $search-options/search:constraint[@name eq "container1.description"]
+  let $container1-description-id2-search-constraint := $search-options/search:constraint[@name eq "container1.description@id2"]
+  let $_ := xdmp:log(($search-options, $container1-name2-search-constraint, $container1-description-search-constraint))
+  return (
+    assert:not-empty($container1-name2-search-constraint),
+    assert:equal(fn:string($container1-name2-search-constraint/search:value/@type), "xs:string"),
+    assert:equal(fn:string($container1-name2-search-constraint/search:value/search:element/@name), "name2"),
+    assert:not-empty($container1-description-search-constraint),
+    assert:equal(fn:string($container1-description-search-constraint/search:value/@type), "xs:string"),
+    assert:equal(fn:string($container1-description-search-constraint/search:value/search:element/@name), "description"),
+    assert:not-empty($container1-description-id2-search-constraint),
+    assert:equal(fn:string($container1-description-id2-search-constraint/search:value/@type), "xs:string"),
+    assert:equal(fn:string($container1-description-id2-search-constraint/search:value/search:element/@name), "description"),
+    assert:equal(fn:string($container1-description-id2-search-constraint/search:value/search:attribute/@name), "id2")
+  )
+};

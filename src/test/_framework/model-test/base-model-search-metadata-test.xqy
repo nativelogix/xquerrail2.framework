@@ -128,9 +128,10 @@ declare %test:case function test-search-with-string-query-grammar-by-type() as i
 {
   let $program-model := domain:get-model("program")
   let $params := map:new((
-    map:entry("query", "type:oscar")
+    map:entry("query", "container1.type:oscar")
   ))
   let $results := model:search($program-model, $params)
+  let $_ := xdmp:log(($program-model,model:build-search-options($program-model, $params)))
   return
   (
     assert:not-empty($results),

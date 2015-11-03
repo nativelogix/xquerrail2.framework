@@ -842,11 +842,11 @@ declare function model:build-search-constraints(
 };
 
 declare function model:build-search-constraints(
-  $model as element(domain:model),
+  $field as element(),
   $params as item(),
   $prefix as xs:string*
 ) {
-  model:model-function("build-search-constraints", 3)($model, $params, $prefix)
+  model:model-function("build-search-constraints", 3)($field, $params, $prefix)
 };
 
 declare function model:build-search-element(

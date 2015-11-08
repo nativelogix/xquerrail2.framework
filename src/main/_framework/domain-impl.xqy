@@ -2359,7 +2359,7 @@ declare function domain-impl:get-field-query(
           cts:path-range-query(domain:get-field-absolute-xpath($field), "=", $value, $options)
         )
       else
-        cts:element-value-query(fn:QName($ns,$name), $value, $options ! (if (fn:starts-with(., "collation=")) then () else .))
+        cts:element-value-query(fn:QName($ns,$name), $value ! xs:string(.), $options ! (if (fn:starts-with(., "collation=")) then () else .))
     case element(domain:attribute) return
       let $parent := $field/..
       let $parent-ns := domain:get-field-namespace($parent)
@@ -2373,7 +2373,7 @@ declare function domain-impl:get-field-query(
           cts:path-range-query(domain:get-field-absolute-xpath($field), "=", $value, $options)
         )
         else
-          cts:element-attribute-value-query(fn:QName($parent-ns,$parent-name),fn:QName($ns,$name), $value, $options ! (if (fn:starts-with(., "collation=")) then () else .))
+          cts:element-attribute-value-query(fn:QName($parent-ns,$parent-name),fn:QName($ns,$name), $value ! xs:string(.), $options ! (if (fn:starts-with(., "collation=")) then () else .))
       default return
         fn:error(xs:QName("FIELD-QUERY-ERROR"), "Unable to resolve query for",$field/@name)
 };

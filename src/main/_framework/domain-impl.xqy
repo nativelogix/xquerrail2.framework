@@ -2993,7 +2993,7 @@ declare function domain-impl:get-param-value(
  :)
 declare function domain-impl:model-exists(
   $model-name as xs:string?
-) {
+) as xs:boolean {
   domain:model-exists(config:default-application(),$model-name)
 };
 
@@ -3001,10 +3001,16 @@ declare function domain-impl:model-exists(
  :
  :)
 declare function domain-impl:model-exists(
-    $application as xs:string,
-    $model-name as xs:string?
-) {
-   fn:exists(config:get-domain($application)//domain:model[@name = $model-name])
+  $application as xs:string,
+  $model-name as xs:string?
+) as xs:boolean {
+  let $cache-key := fn:concat($application, ":model-exists:", $model-name)
+  let $cache := domain:get-identity-cache($cache-key)
+  return
+    if(fn:exists($cache)) then $cache
+    else
+      let $model-exists := fn:exists(config:get-domain($application)//domain:model[@name = $model-name])
+      return domain:set-identity-cache($cache-key, $model-exists)
 };
 
 (:~

@@ -20,6 +20,7 @@ declare option xdmp:mapping "false";
 
 declare variable $FUNCTION-KEYS := "$FUNCTION-KEYS$";
 declare variable $UNDEFINED-FUNCTION := "$UNDEFINED-FUNCTION$";
+declare variable $DOMAIN-NOT-FOUND := "$DOMAIN-NOT-FOUND$";
 
 (:~
  : A list of QName's that define in a model
@@ -73,18 +74,10 @@ declare variable $FIELD-NAVIGATION-ATTRIBUTES := (
   $MODEL-NAVIGATION-ATTRIBUTES, "metadata", "suggestable"
 );
 
-(:Holds a cache of all the identity fields:)
-declare variable $DOMAIN-IDENTITY-CACHE := map:map();
-
 (:~
  : Caches all module functions
  :)
 declare variable $FUNCTION-CACHE := map:map() ;
-
-(:~
- : Cache all values
-:)
-declare variable $VALUE-CACHE := map:map();
 
 (:~
  :Casts the value as a specific type
@@ -208,6 +201,23 @@ declare function domain-impl:resolve-cts-type(
     default return ()
 };
 
+declare %private function domain-impl:model-cache-key(
+  $application as xs:string,
+  $model-name as xs:string+
+) as xs:string {
+  fn:concat($application, ":" , fn:string-join($model-name, ""))
+};
+
+(:~
+ : Contains the domain model from the given cache
+ :)
+declare %private function domain-impl:contains-model-cache(
+  $application as xs:string,
+  $model-name as xs:string+
+) as xs:boolean {
+  map:contains($domain:DOMAIN-MODEL-CACHE, domain-impl:model-cache-key($application, $model-name))
+};
+
 (:~
  : Gets the domain model from the given cache
  :)
@@ -215,7 +225,12 @@ declare %private function domain-impl:get-model-cache(
   $application as xs:string,
   $model-name as xs:string+
 ) {
-  map:get($domain:DOMAIN-MODEL-CACHE, fn:concat($application, ":" , fn:string-join($model-name, "")))
+  let $model := map:get($domain:DOMAIN-MODEL-CACHE, domain-impl:model-cache-key($application, $model-name))
+  return
+    if ($model = $DOMAIN-NOT-FOUND) then
+      ()
+    else
+      $model
 };
 
 (:~
@@ -224,9 +239,16 @@ declare %private function domain-impl:get-model-cache(
 declare %private function domain-impl:set-model-cache(
   $application as xs:string,
   $model-name as xs:string+,
-  $model as element(domain:model)+
-) as element(domain:model)+ {
-  map:put($domain:DOMAIN-MODEL-CACHE, fn:concat($application, ":" , fn:string-join($model-name, "")), $model),
+  $model as element(domain:model)*
+) {
+  map:put(
+    $domain:DOMAIN-MODEL-CACHE,
+    domain-impl:model-cache-key($application, $model-name),
+      if (fn:exists($model)) then
+        $model
+      else
+        $DOMAIN-NOT-FOUND
+  ),
   $model
 };
 
@@ -237,7 +259,7 @@ declare %private function domain-impl:set-field-cache(
   $key as xs:string,
   $func as function(*)
 ) {
-  map:put($domain:DOMAIN-MODEL-CACHE,$key,$func)
+  map:put($domain:DOMAIN-MODEL-CACHE, $key, $func)
 };
 
 (:~
@@ -247,7 +269,7 @@ declare %private function domain-impl:set-field-cache(
 declare %private function domain-impl:get-identity-cache(
   $key as xs:string
 ) {
-  let $value := map:get($DOMAIN-IDENTITY-CACHE,$key)
+  let $value := map:get($domain:DOMAIN-IDENTITY-CACHE, $key)
   return
     if($value) then $value else ()
 };
@@ -260,7 +282,7 @@ declare function domain-impl:set-identity-cache(
   $key as xs:string,
   $value as item()*
 ) as item()* {
-  map:put($DOMAIN-IDENTITY-CACHE, $key, $value),
+  map:put($domain:DOMAIN-IDENTITY-CACHE, $key, $value),
   $value
 };
 
@@ -337,7 +359,7 @@ declare function domain-impl:get-field-function-cache(
   if (domain-impl:undefined-field-function-cache($field, $type)) then
     ()
   else
-    map:get($FUNCTION-CACHE,domain-impl:get-function-cache-key($field,$type))
+    map:get($FUNCTION-CACHE, domain-impl:get-function-cache-key($field, $type))
 };
 
 
@@ -348,7 +370,7 @@ declare function domain-impl:exists-field-value-cache(
   $field as element(),
   $type as xs:string
 )  as xs:boolean {
-    map:contains($VALUE-CACHE,domain-impl:get-field-cache-key($field,$type))
+  map:contains($domain:FIELD-VALUE-CACHE, domain-impl:get-field-cache-key($field, $type))
 };
 
 (:~
@@ -359,7 +381,7 @@ declare function domain-impl:set-field-value-cache(
   $type as xs:string,
   $value as item()*
 ) {
-   map:put($VALUE-CACHE,domain-impl:get-field-cache-key($field,$type),$value)
+  map:put($domain:FIELD-VALUE-CACHE, domain-impl:get-field-cache-key($field, $type), $value)
 };
 
 (:~
@@ -369,7 +391,7 @@ declare function domain-impl:get-field-value-cache(
   $field as element(),
   $type as xs:string
 ) as item() {
-   map:get($VALUE-CACHE,domain-impl:get-field-cache-key($field,$type))
+  map:get($domain:FIELD-VALUE-CACHE, domain-impl:get-field-cache-key($field, $type))
 };
 
 (:~
@@ -528,18 +550,12 @@ declare function domain-impl:get-field-prefix(
             (:):)
         return domain-impl:set-identity-cache($key,$prefix)
 };
+
 (:~
  : Returns the field that matches the given field name or key
  : @param $model - The model to extract the given field
  : @param $name  - name or key of the field
  :)
-(:declare function domain-impl:get-model-field(
-  $model as element(domain:model),
-  $name as xs:string
-) {
-  domain-impl:get-model-field($model, $name, fn:false())
-};:)
-
 declare function domain-impl:get-model-field(
   $model as element(domain:model),
   $name as xs:string,
@@ -765,37 +781,15 @@ declare function domain-impl:get-domain-model(
   $application as xs:string,
   $model-names as xs:string+,
   $extension as xs:boolean
-) as element(domain:model)+ {
-  (:if (fn:count($model-names) eq 1) then:)
-    let $cached := domain-impl:get-model-cache($application, $model-names)
-    return
-      if(fn:exists($cached)) then
-        $cached
-      else
-        let $domain := config:get-domain($application)
-        let $model := domain-impl:find-model-by-name($domain, $model-names)
-        return domain-impl:set-model-cache($application, $model-names, $model)
-  (:else
-    domain-impl:find-model-by-name(
-      config:get-domain($application),
-      $model-names
-    ):)
-  (:let $domain := config:get-domain($application)
-  let $models :=
-    for $modelName in $model-names
-    let $cached := domain-impl:get-model-cache($application, $modelName)
-    return
-      if($cached) then $cached
-      else
-        let $model := domain-impl:find-model-by-name($domain, $modelName)
-        let $_ := if($model) then () else fn:error(xs:QName("NO-MODEL"),"Missing Model",$modelName)
-        let $_ := fn:exactly-one($model)
-        return ($model,domain-impl:set-model-cache($application, $modelName, $model))
+) as element(domain:model)* {
+  let $cached := domain-impl:get-model-cache($application, $model-names)
   return
-    if($models) then
-      element domain:domain { $domain/namespace::*, $domain/@*, $domain/domain:name, $domain/*[. except $domain/domain:model], $models } / domain:model
+    if(fn:exists($cached)) then
+      $cached
     else
-      fn:error(xs:QName("NO-DOMAIN-MODEL"), "Model does not exist",$model-names):)
+      let $domain := config:get-domain($application)
+      let $model := domain-impl:find-model-by-name($domain, $model-names)
+      return domain-impl:set-model-cache($application, $model-names, $model)
 };
 
 declare %private function domain-impl:find-base-model(

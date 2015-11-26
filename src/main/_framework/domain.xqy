@@ -6,6 +6,7 @@ xquery version "1.0-ml";
  :)
 module namespace domain = "http://xquerrail.com/domain";
 
+import module namespace cache = "http://xquerrail.com/cache" at "cache.xqy";
 import module namespace config = "http://xquerrail.com/config" at "config.xqy";
 import module namespace module-loader = "http://xquerrail.com/module" at "module.xqy";
 
@@ -114,10 +115,15 @@ declare variable $FIELD-NAVIGATION-ATTRIBUTES := (
 (:~
  : Holds a cache of all the domain models
  :)
-declare variable $DOMAIN-MODEL-CACHE := map:map();
+declare variable $DOMAIN-MODEL-CACHE := cache:get-server-field-cache-map("domain-model-cache");
 
 (:Holds a cache of all the identity fields:)
-declare variable $DOMAIN-IDENTITY-CACHE := map:map();
+declare variable $DOMAIN-IDENTITY-CACHE := cache:get-server-field-cache-map("domain-identity-cache");
+
+(:~
+ : Cache all values
+:)
+declare variable $FIELD-VALUE-CACHE := cache:get-server-field-cache-map("domain-field-value-cache");
 
 (:~
  : Caches all module functions
@@ -585,7 +591,7 @@ declare function domain:get-domain-model(
   $application as xs:string,
   $model-names as xs:string+,
   $extension as xs:boolean
-) as element(domain:model)+ {
+) as element(domain:model)* {
   domain:domain-function("get-domain-model", 3)($application, $model-names, $extension)
 };
 

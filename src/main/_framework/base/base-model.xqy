@@ -30,7 +30,6 @@ declare default collation "http://marklogic.com/collation/codepoint";
 (:Options Definition:)
 declare option xdmp:mapping "false";
 
-declare variable $FUNCTIONS-CACHE  := map:map();
 declare variable $HAS-URI-PREDICATE := "hasUri";
 declare variable $HAS-TYPE-PREDICATE := "hasType";
 
@@ -53,27 +52,20 @@ declare function model:model-function(
   $name as xs:string,
   $arity as xs:integer
 ) as xdmp:function {
-  if (map:contains($FUNCTIONS-CACHE, $name)) then
-    map:get($FUNCTIONS-CACHE, $name)
-  else
-    let $function :=
-      module-loader:load-function-module(
-        domain:get-default-application(),
-        "base-model",
-        $name,
-        $arity,
-        (),
-        ()
-      )
-    let $function :=
-      if (fn:empty($function)) then
-        fn:error(xs:QName("LOAD-FUNCTION-MODULE-ERROR"), text{"Function", $name, "from base-model module type not found."})
-      else
-        $function
-    return (
-      map:put($FUNCTIONS-CACHE, $name, $function),
-      $function
+  let $function :=
+    module-loader:load-function-module(
+      domain:get-default-application(),
+      "base-model",
+      $name,
+      $arity,
+      (),
+      ()
     )
+  return
+    if (fn:empty($function)) then
+      fn:error(xs:QName("LOAD-FUNCTION-MODULE-ERROR"), text{"Function", $name, "from base-model module type not found."})
+    else
+      $function
 };
 
 declare function model:uuid-string(

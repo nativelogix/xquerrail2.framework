@@ -15,7 +15,11 @@ import module namespace xdmp-api = "http://xquerrail.com/xdmp/api" at "lib/xdmp-
 (:Options Definition:)
 declare option xdmp:mapping "false";
 
+declare variable $EVENT-NAME := "xquerrail.module";
+
 declare variable $CACHE := map:new();
+declare variable $FUNCTION-CACHE := cache:get-server-field-cache-map("module-function-cache");
+declare variable $FUNCTION-NOT-FOUND := "function-not-found";
 declare variable $MODULES-DB := xdmp:modules-database();
 declare variable $CONTROLLER-EXTENSION-TYPE := "controller-extension";
 declare variable $DOMAIN-EXTENSION-TYPE := "domain-extension";
@@ -208,31 +212,44 @@ declare function module:load-function-module(
   $namespace as xs:string?,
   $location as xs:string?
 ) as xdmp:function? {
-  let $namespace :=
-    if (fn:exists($location)) then
-      if (fn:exists($namespace) and fn:not(xdmp-api:is-javascript-modules($location))) then
-        $namespace
+  let $key := fn:concat($application, $module-type, $function-name, $function-arity, $namespace, $location)
+  let $function := map:get($FUNCTION-CACHE, $key)
+  return
+    if (fn:exists($function)) then
+      if ($function instance of xdmp:function) then
+        $function
       else
         ()
     else
-      $namespace
-  let $function :=
-    module:get-modules($application)/library[
-      (if (fn:exists($module-type)) then @type eq $module-type else fn:true()) and
-      (if (fn:exists($namespace)) then @namespace eq $namespace else fn:true()) and
-      (if (fn:exists($location)) then @location eq $location else fn:true())
-    ]/function[@name eq $function-name and @arity eq $function-arity]
-  return
-    if (fn:exists($function)) then
+      let $namespace :=
+        if (fn:exists($location)) then
+          if (fn:exists($namespace) and fn:not(xdmp-api:is-javascript-modules($location))) then
+            $namespace
+          else
+            ()
+        else
+          $namespace
       let $function :=
-        if (fn:count($function) ne 1) then (
-          xdmp:trace("xquerrail.module", (text{"Found multiple functions with params", $function-name, $function-arity, $module-type}, $function)),
-          $function[1]
-        ) else
-          $function
-      return generator:get-xdmp-function($function)
-    else
-      ()
+        module:get-modules($application)/library[
+          (if (fn:exists($module-type)) then @type eq $module-type else fn:true()) and
+          (if (fn:exists($namespace)) then @namespace eq $namespace else fn:true()) and
+          (if (fn:exists($location)) then @location eq $location else fn:true())
+        ]/function[@name eq $function-name and @arity eq $function-arity]
+      let $function :=
+        if (fn:exists($function)) then
+          let $function :=
+            if (fn:count($function) ne 1) then (
+              xdmp:trace($EVENT-NAME, (text{"Found multiple functions with params", $function-name, $function-arity, $module-type}, $function)),
+              $function[1]
+            ) else
+              $function
+          return generator:get-xdmp-function($function)
+        else
+          ()
+      return (
+        map:put($FUNCTION-CACHE, $key, ($function, $FUNCTION-NOT-FOUND)[1]),
+        $function
+      )
 };
 
 declare function module:get-function-module-definition(

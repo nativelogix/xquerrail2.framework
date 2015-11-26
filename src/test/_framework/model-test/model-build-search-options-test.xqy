@@ -88,7 +88,6 @@ declare %test:case function model-build-search-options-container-test() {
   let $container1-name2-search-constraint := $search-options/search:constraint[@name eq "container1.name2"]
   let $container1-description-search-constraint := $search-options/search:constraint[@name eq "container1.description"]
   let $container1-description-id2-search-constraint := $search-options/search:constraint[@name eq "container1.description@id2"]
-  let $_ := xdmp:log(($search-options, $container1-name2-search-constraint, $container1-description-search-constraint))
   return (
     assert:not-empty($container1-name2-search-constraint),
     assert:equal(fn:string($container1-name2-search-constraint/search:value/@type), "xs:string"),

@@ -44,9 +44,6 @@ declare variable $current-identity := ();
 (:Stores a cache of any references resolved :)
 declare variable $REFERENCE-CACHE := map:map();
 
-declare variable $INSTANCE-CACHE  := map:map();
-declare variable $FUNCTION-CACHE  := map:map();
-
 declare function model-impl:uuid-string(
   $seed as xs:integer?
 ) as xs:string {
@@ -2647,14 +2644,6 @@ declare function model-impl:get-function-cache(
   $function as function(*)?
 ) {
   $function
-  (:let $func-hash := xdmp:hmac-md5("function",xdmp:describe($function,(),()))
-  let $func := map:get($FUNCTION-CACHE,$func-hash)
-  return
-    if(fn:exists($func)) then $func
-    else (
-        map:put($FUNCTION-CACHE,$func-hash,$function),
-        $function
-    ):)
 };
 
 (:~
@@ -3006,7 +2995,6 @@ declare function model-impl:validate-params(
             case attribute(validator) return
               let $function-name := fn:string($attribute)
               let $validator-function := domain:get-model-function((), $model/@name, $function-name, 3, fn:false())
-              (:let $validator-function := model-impl:get-function-cache($validator-function):)
               return
                 if (fn:exists($validator-function)) then
                   $validator-function($element, $params, $mode)

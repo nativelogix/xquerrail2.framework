@@ -168,7 +168,8 @@ declare function config:clear-cache() {
   ,
   cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, ()),
   cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY),
-  cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)
+  cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY),
+  cache:remove-server-field-maps()
 };
 
 (:~

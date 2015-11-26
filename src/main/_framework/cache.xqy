@@ -94,6 +94,26 @@ declare %private function cache:cache-location($location as xs:string?) {
   ($location, $DEFAULT-CACHE-LOCATION)[1]
 };
 
+declare function cache:get-server-field-cache-map(
+  $key as xs:string
+) as map:map {
+  let $key := fn:concat($APPLICATION-CACHE-KEY, $key)
+  return
+    if (cache:is-cache-empty($cache:SERVER-FIELD-CACHE-LOCATION, $key)) then
+      let $cache := map:new()
+      return (
+        cache:set-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key, $cache),
+        $cache
+      )
+    else
+      cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key)
+};
+
+declare function cache:remove-server-field-maps() {
+  for $key in cache:get-cache-keys($cache:SERVER-FIELD-CACHE-LOCATION, $APPLICATION-CACHE-KEY)
+  return cache:remove-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key)
+};
+
 declare function cache:set-cache($key as xs:string, $value as item()*) as empty-sequence(){
   cache:set-cache($DEFAULT-CACHE-LOCATION, $key, $value)
 };
@@ -107,7 +127,6 @@ declare function cache:set-cache($type as xs:string, $key as xs:string, $value, 
 };
 
 declare function cache:set-cache($type as xs:string, $key as xs:string, $value, $user as xs:string?, $transient as xs:boolean) as empty-sequence() {
-  xdmp:log(text{"set-cache", $type, $key, $transient}, "finest"),
   (
     cache:validate-cache-location($type)
     ,
@@ -151,10 +170,7 @@ declare function cache:get-cache($type as xs:string, $key as xs:string) {
 };
 
 declare function cache:get-cache($type as xs:string, $key as xs:string, $user as xs:string?) {
-  let $_ := (
-    xdmp:log((text{"get-cache", $type, $key, $user}), "finest"),
-    cache:validate-cache-location($type)
-  )
+  let $_ := cache:validate-cache-location($type)
   let $value := cache:get-cache-map($type, $key)
   let $value :=
     if (fn:exists($value)) then

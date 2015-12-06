@@ -15,7 +15,9 @@ declare variable $CONFIG-CACHE-TYPE := "config" ;
 declare variable $DOMAIN-CACHE-TYPE := "domain";
 declare variable $APPLICATION-CACHE-TYPE := "application";
 
+declare %private variable $UNDEFINED-VALUE := "$$UNDEFINED-VALUE$$";
 declare %private variable $CACHE-BASE-KEY := "http://xquerrail.com/cache/";
+
 declare variable $CONFIG-CACHE-KEY := cache:cache-base() || "config/" ;
 declare variable $DOMAIN-CACHE-KEY := cache:cache-base() || "domains/";
 declare variable $APPLICATION-CACHE-KEY    := cache:cache-base() || "applications/";
@@ -46,7 +48,7 @@ declare %private function cache:get-cache-map-type(
   return map:get($CACHE-MAP, $type)
 };
 
-declare %private function cache:get-cache-map(
+declare %private function cache:get-cache-map-for-type(
   $type as xs:string,
   $key as xs:string
 ) {
@@ -54,7 +56,7 @@ declare %private function cache:get-cache-map(
   return map:get($cache, $key)
 };
 
-declare %private function cache:set-cache-map(
+declare %private function cache:set-cache-map-for-type(
   $type as xs:string,
   $key as xs:string,
   $value
@@ -63,7 +65,7 @@ declare %private function cache:set-cache-map(
   return map:put($cache, $key, $value)
 };
 
-declare %private function cache:clear-cache-map(
+declare %private function cache:clear-cache-map-for-type(
   $type as xs:string,
   $key as xs:string
 ) {
@@ -109,6 +111,50 @@ declare function cache:get-server-field-cache-map(
       cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key)
 };
 
+(:~
+ : Contains the cacked key from the given cache
+ :)
+declare function cache:contains-cache-map(
+	$cache as map:map,
+  $key as xs:string
+) as xs:boolean {
+  map:contains($cache, $key)
+};
+
+(:~
+ : Gets the cached value from the given key
+ :)
+declare function cache:get-cache-map(
+  $cache as map:map,
+  $key as xs:string
+) {
+  let $value := map:get($cache, $key)
+  return
+    if ($value = $UNDEFINED-VALUE) then
+      ()
+    else
+      $value
+};
+
+(:~
+ : Sets the cached value for the given key
+ :)
+declare function cache:set-cache-map(
+  $cache as map:map,
+  $key as xs:string,
+  $value
+) {
+  map:put(
+    $cache,
+    $key,
+      if (fn:exists($value)) then
+        $value
+      else
+        $UNDEFINED-VALUE
+  ),
+  $value
+};
+
 declare function cache:remove-server-field-maps() {
   for $key in cache:get-cache-keys($cache:SERVER-FIELD-CACHE-LOCATION, $APPLICATION-CACHE-KEY)
   return cache:remove-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key)
@@ -130,7 +176,7 @@ declare function cache:set-cache($type as xs:string, $key as xs:string, $value, 
   (
     cache:validate-cache-location($type)
     ,
-    cache:set-cache-map($type, $key, $value)
+    cache:set-cache-map-for-type($type, $key, $value)
     ,
     if ($transient) then
       ()
@@ -171,7 +217,7 @@ declare function cache:get-cache($type as xs:string, $key as xs:string) {
 
 declare function cache:get-cache($type as xs:string, $key as xs:string, $user as xs:string?) {
   let $_ := cache:validate-cache-location($type)
-  let $value := cache:get-cache-map($type, $key)
+  let $value := cache:get-cache-map-for-type($type, $key)
   let $value :=
     if (fn:exists($value)) then
       $value
@@ -192,7 +238,7 @@ declare function cache:get-cache($type as xs:string, $key as xs:string, $user as
                 <user-id>{get-user-id($user)}</user-id>
               </options>
             )
-      let $_ := cache:set-cache-map($type, $key, $value)
+      let $_ := cache:set-cache-map-for-type($type, $key, $value)
       return $value
     )
   return $value
@@ -228,7 +274,7 @@ declare function cache:remove-cache($type as xs:string, $key as xs:string) as em
 declare function cache:remove-cache($type as xs:string, $key as xs:string, $user as xs:string?) as empty-sequence() {
   cache:validate-cache-location($type)
   ,
-  cache:clear-cache-map($type, $key)
+  cache:clear-cache-map-for-type($type, $key)
   ,
   switch($type)
     case $SERVER-FIELD-CACHE-LOCATION
@@ -270,7 +316,7 @@ declare function cache:clear-cache($type as xs:string, $key as xs:string) as emp
 declare function cache:clear-cache($type as xs:string, $key as xs:string, $user as xs:string?) as empty-sequence() {
   cache:validate-cache-location($type)
   ,
-  cache:clear-cache-map($type, $key)
+  cache:clear-cache-map-for-type($type, $key)
   ,
   switch($type)
     case $SERVER-FIELD-CACHE-LOCATION

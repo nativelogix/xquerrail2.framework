@@ -49,7 +49,6 @@ declare %private function app:load-application(
   $application-name as xs:string
 ) as element(domain:domain)? {
   let $application-path := fn:concat(config:application-directory($application-name), "/domains/application-domain.xml")
-  let $_ := xdmp:log(text{"config:load-domain", $application-name, "$application-path", $application-path}, "debug")
   let $domain-config := config:get-resource($application-path)
   let $domain := app:load-domain($application-name, $domain-config)
   let $config := config:get-config()
@@ -201,8 +200,8 @@ declare %private function app:get-base-safe($path as xs:string) as element(confi
 declare function app:reset() as item()* {
   try {
     xdmp:function(xs:QName("extension:reset"), "generators/bootstrap-generator.xqy")()
-  } catch ($ex) {
-    xdmp:log($ex)
+  } catch ($exception) {
+    xdmp:log($exception, "warning")
   },
   config:clear-cache()
 };

@@ -20,6 +20,8 @@ declare option xdmp:mapping "false";
 
 declare variable $USE-MODULES-DB := (xdmp:modules-database() ne 0);
 
+declare variable $CACHE := cache:get-server-field-cache-map("config-cache");
+
 (:~
  : Defines the default base path for engines
  :)
@@ -169,7 +171,8 @@ declare function config:clear-cache() {
   cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, ()),
   cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY),
   cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY),
-  cache:remove-server-field-maps()
+  cache:remove-server-field-maps(),
+  map:clear($CACHE)
 };
 
 (:~
@@ -353,13 +356,19 @@ declare function config:get-dispatcher() as xs:string
  : Returns the application configuration for a given application by name
  : @param $application-name - The name of the application specified by the @name parameter
  :)
-declare function config:get-application($application-name as xs:string) as element(config:application)
+declare function config:get-application($name as xs:string) as element(config:application)
 {
-  let $application := config:get-applications()[@name eq $application-name]
+  let $key := fn:concat("get-application", $name)
   return
-    if($application)
-    then $application
-    else fn:error(xs:QName("INVALID-APPLICATION"),"Application with '" || $application-name || "' does not-exist",$application-name)
+    if (cache:contains-cache-map($CACHE, $key)) then
+      cache:get-cache-map($CACHE, $key)
+    else
+      let $application := config:get-applications()[@name eq $name]
+      return
+        if(fn:exists($application)) then
+          cache:set-cache-map($CACHE, $key, $application)
+        else
+          fn:error(xs:QName("INVALID-APPLICATION"),"Application with '" || $name || "' does not-exist", $name)
 };
 
 
@@ -662,8 +671,8 @@ declare function config:error-handler() as xs:string
 (:~
  : Returns the list of all interceptors defined in the configuration
  :)
-declare function config:get-interceptors()
-{
+declare function config:get-interceptors(
+) {
   config:get-interceptors("all")
 };
 
@@ -674,25 +683,30 @@ declare function config:get-interceptors()
  :)
 declare function config:get-interceptors(
   $value as xs:string?
-){
-  let $interceptors :=
-    for $interceptor in config:get-config()/config:interceptors/config:interceptor
-    return element config:interceptor {
-      $interceptor/@*[. except $interceptor/@*[fn:local-name(.) eq "resource"]],
-      if (fn:exists($interceptor/@resource) and $interceptor/@resource ne "") then
-        attribute resource { config:resolve-config-path($interceptor/@resource) }
-      else
-        ()
-    }
+) {
+  let $key := fn:concat("get-interceptors", $value)
   return
-    switch($value)
-      case "before-request" return $interceptors[@before-request eq "true"]
-      case "after-request" return $interceptors[@after-request eq "true"]
-      case "before-response" return $interceptors[@before-response eq "true"]
-      case "after-response" return $interceptors[@after-response eq "true"]
-      case "all" return $interceptors
-      default return ()
-
+    if (cache:contains-cache-map($CACHE, $key)) then
+      cache:get-cache-map($CACHE, $key)
+    else
+      let $interceptors :=
+        for $interceptor in config:get-config()/config:interceptors/config:interceptor
+        return element config:interceptor {
+          $interceptor/@*[. except $interceptor/@*[fn:local-name(.) eq "resource"]],
+          if (fn:exists($interceptor/@resource) and $interceptor/@resource ne "") then
+            attribute resource { config:resolve-config-path($interceptor/@resource) }
+          else
+            ()
+        }
+      let $interceptors :=
+        switch($value)
+          case "before-request" return $interceptors[@before-request eq "true"]
+          case "after-request" return $interceptors[@after-request eq "true"]
+          case "before-response" return $interceptors[@before-response eq "true"]
+          case "after-response" return $interceptors[@after-response eq "true"]
+          case "all" return $interceptors
+          default return ()
+      return cache:set-cache-map($CACHE, $key, $interceptors)
 };
 (:~
  : Returns the default interceptor configuration.  If none is configured will map to the default

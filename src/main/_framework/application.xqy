@@ -55,6 +55,7 @@ declare %private function app:load-application(
   let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config), fn:true())
   let $domain := app:custom-models($application-name, app:update-domain($application-name, $domain))
   let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config))
+  let $_ := map:clear(cache:domain-model-cache())
   let $_ := module-loader:load-modules($application-name, fn:false())
   let $_ := app:custom-bootstrap($application-name)
   return $domain

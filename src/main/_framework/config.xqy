@@ -344,12 +344,21 @@ declare function config:default-format() as xs:string
  : Returns the default dispatcher for entire framework. By default the only dispatcher defined is the
   /_framework/displatcher/dispatcher.web.xqy. But if a custom dispatcher is implemented then the configuration will use that value.
  :)
-declare function config:get-dispatcher() as xs:string
-{
-  (
-    config:get-config()/config:dispatcher/@resource,
-    fn:concat($DEFAULT-DISPATCHER-PATH, "/dispatcher.web.xqy")
-  )[1]
+declare function config:get-dispatcher(
+  ) as xs:string {
+  let $key := "get-dispatcher"
+  return
+    if (cache:contains-cache-map($CACHE, $key)) then
+      cache:get-cache-map($CACHE, $key)
+    else
+      cache:set-cache-map(
+        $CACHE,
+        $key,
+        (
+          config:get-config()/config:dispatcher/@resource,
+          fn:concat($DEFAULT-DISPATCHER-PATH, "/dispatcher.web.xqy")
+        )[1]
+      )
 };
 
 (:~

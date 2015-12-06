@@ -115,7 +115,7 @@ declare variable $FIELD-NAVIGATION-ATTRIBUTES := (
 (:~
  : Holds a cache of all the domain models
  :)
-declare variable $DOMAIN-MODEL-CACHE := cache:get-server-field-cache-map("domain-model-cache");
+declare variable $DOMAIN-MODEL-CACHE := cache:domain-model-cache();
 
 (:Holds a cache of all the identity fields:)
 declare variable $DOMAIN-IDENTITY-CACHE := cache:get-server-field-cache-map("domain-identity-cache");

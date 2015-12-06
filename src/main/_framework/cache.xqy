@@ -111,6 +111,9 @@ declare function cache:get-server-field-cache-map(
       cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key)
 };
 
+declare function cache:domain-model-cache() as map:map {
+  cache:get-server-field-cache-map("domain-model-cache")
+};
 (:~
  : Contains the cacked key from the given cache
  :)

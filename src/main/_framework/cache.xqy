@@ -6,6 +6,8 @@ declare namespace server-status = "http://marklogic.com/xdmp/status/server";
 
 declare option xdmp:mapping "false";
 
+declare variable $USE-MODULES-DB := (xdmp:modules-database() ne 0);
+
 declare variable $SERVER-FIELD-CACHE-LOCATION := "server-field";
 declare variable $DATABASE-CACHE-LOCATION := "database";
 declare variable $DEFAULT-CACHE-LOCATION := $DATABASE-CACHE-LOCATION;
@@ -99,16 +101,19 @@ declare %private function cache:cache-location($location as xs:string?) {
 declare function cache:get-server-field-cache-map(
   $key as xs:string
 ) as map:map {
-  let $key := fn:concat($APPLICATION-CACHE-KEY, $key)
-  return
-    if (cache:is-cache-empty($cache:SERVER-FIELD-CACHE-LOCATION, $key)) then
-      let $cache := map:new()
-      return (
-        cache:set-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key, $cache),
-        $cache
-      )
-    else
-      cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key)
+  if ($USE-MODULES-DB) then
+    let $key := fn:concat($APPLICATION-CACHE-KEY, $key)
+    return
+      if (cache:is-cache-empty($cache:SERVER-FIELD-CACHE-LOCATION, $key)) then
+        let $cache := map:new()
+        return (
+          cache:set-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key, $cache),
+          $cache
+        )
+      else
+        cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key)
+  else
+    map:new()
 };
 
 declare function cache:domain-model-cache() as map:map {

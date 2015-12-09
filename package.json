@@ -31,7 +31,7 @@
     "gulp-template": "*",
     "gulp-util": "^3.0.4",
     "gulp-watch": "*",
-    "gulp-xray-runner": "https://github.com/rlouapre/gulp-xray-runner/tarball/v0.0.3",
+    "gulp-xray-runner": "https://github.com/rlouapre/gulp-xray-runner/tarball/v1.0.0",
     "nconf": "^0.7.1",
     "run-sequence": "*",
     "vinyl-map": "^1.0.1"

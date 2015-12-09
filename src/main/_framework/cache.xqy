@@ -138,7 +138,7 @@ declare function cache:get-cache-map(
 ) {
   let $value := map:get($cache, $key)
   return
-    if ($value = $UNDEFINED-VALUE) then
+    if (Value instance of xs:string and $value = $UNDEFINED-VALUE) then
       ()
     else
       $value

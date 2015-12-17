@@ -72,8 +72,8 @@ declare %test:case function convert-to-map-with-container-test() as item()*
   let $map := model:convert-to-map($model10, $instance)
   return
   (
-    assert:true(map:contains($map, "id")),
-    assert:true(map:contains($map, "versions.version"))
+    assert:true(map:contains($map, domain:get-field-name-key(domain:get-model-field(domain:get-model("model10"), "id")))),
+    assert:true(map:contains($map, domain:get-field-name-key(domain:get-model-field(domain:get-model("model10"), "version"))))
   )
 };
 

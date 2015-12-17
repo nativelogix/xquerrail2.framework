@@ -154,7 +154,7 @@ declare function dispatcher:error(
      map:put($error-map,"response",response:response())
     )
   return (
-    xdmp:trace($EVENT-NAME, ("Error::[",$ex,"]")),
+    xdmp:log($ex, "error"),
     xdmp:invoke( config:error-handler(),(xs:QName("_ERROR"),$error-map))
   )
 };

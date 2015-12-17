@@ -1570,7 +1570,7 @@ declare %test:case function model-update-default-element-test() as item()*
   let $description-value := domain:get-field-value(domain:get-model-field($model23, "description"), $instance23)
   let $instance23-map := model:convert-to-map($model23, $instance23)
   let $_ := map:put($instance23-map, "comment", ())
-  let $_ := map:put($instance23-map, "description", "updated-description")
+  let $_ := map:put($instance23-map, "@description", "updated-description")
   let $update23 := setup:eval(
     function() {
       model:update(
@@ -1599,7 +1599,7 @@ declare %test:case function model-update-default-attribute-test() as item()*
   let $description-value := domain:get-field-value(domain:get-model-field($model23, "description"), $instance23)
   let $instance23-map := model:convert-to-map($model23, $instance23)
   let $_ := map:put($instance23-map, "comment", "updated-comment")
-  let $_ := map:put($instance23-map, "description", ())
+  let $_ := map:put($instance23-map, "@description", ())
   let $update23 := setup:eval(
     function() {
       model:update(

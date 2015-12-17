@@ -1432,17 +1432,30 @@ declare %private function domain-impl:build-field-name-key(
 ) {
   let $ns := domain-impl:get-field-namespace($field)
   let $path :=
-  fn:string-join(
-    for $item in domain-impl:get-field-node-ancestors($field)
-    (:$items:)
-    return  fn:concat($item/@name)
-    ,"."
-  )
+  if ($field instance of element(domain:attribute)) then
+    fn:string-join(
+      (
+        fn:string-join(
+          for $item in domain-impl:get-field-node-ancestors($field)[. except $field]
+          return  fn:concat($item/@name)
+          ,"."
+        ),
+        $field/@name
+      ),
+      config:attribute-prefix()
+    )
+  else
+    fn:string-join(
+      for $item in domain-impl:get-field-node-ancestors($field)
+      return  fn:concat($item/@name)
+      ,"."
+    )
   return $path
 };
 
-declare function domain-impl:hash($field as node()) {
-(:  xdmp:hash64(xdmp:describe($field, (), ())):)
+declare function domain-impl:hash(
+  $field as node()
+) as xs:string {
   fn:generate-id($field)
 };
 

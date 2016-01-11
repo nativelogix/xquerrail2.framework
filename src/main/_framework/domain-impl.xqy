@@ -3311,20 +3311,23 @@ declare function domain-impl:find-field-in-model(
   return
     if(fn:exists($cache)) then $cache
     else
-      if (fn:exists($model//(domain:element)[domain:get-base-type(.) = "instance"])) then
-        for $field in $model//(domain:element)
-        where domain:get-base-type($field) = "instance"
-        return domain-impl:find-field-in-model(domain:get-model($field/@type), $key, ($accumulator, $field))
-      else
-        let $value := (
+      let $fields := 
+        if (fn:exists($model//(domain:element)[domain:get-base-type(.) = "instance"])) then
+          for $field in $model//(domain:element)[domain:get-base-type(.) = "instance"]
+          return domain-impl:find-field-in-model(domain:get-model($field/@type), $key, ($accumulator, $field))
+        else
+          ()
+      let $fields := 
+        if (fn:exists($fields)) then
+          $fields
+        else
           let $field := domain:get-model-field($model, $key)
           return
             if (fn:exists($field)) then
               ($accumulator, $field)
             else
               ()
-        )
-        return domain-impl:set-identity-cache($cache-key, $value)
+      return domain-impl:set-identity-cache($cache-key, $fields) 
 };
 
 declare function domain-impl:build-field-xpath-from-model(

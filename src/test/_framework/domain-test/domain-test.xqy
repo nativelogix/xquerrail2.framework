@@ -630,3 +630,16 @@ declare %test:case function get-field-tuple-reference-range-test() as item()* {
     )
   )
 };
+
+declare %test:case function spawn-function-test() as item()* {
+  let $model := domain:spawn-function(
+    function() {domain:get-model("model2")},
+    <options xmlns="xdmp:eval">
+      <result>true</result>
+    </options>
+    )
+  return (
+    assert:not-empty($model),
+    assert:equal(fn:string($model/@name), "model2")
+  )
+};

@@ -67,6 +67,24 @@ class ServerConfig
     r = go %Q{http://#{@hostname}:#{@properties["ml.app-port"]}/initialize.xqy}, "get"
     if r.code.to_i != 200
       logger.error "#{r.body}"
+    else
+      r = go %Q{http://#{@hostname}:#{@properties["ml.app-port"]}/initialize.xqy?hosts=1}, "get"
+      if r.code.to_i != 200
+        logger.error "#{r.body}"
+      else
+        xmldoc = REXML::Document.new(r.body)
+        hosts = XPath.match(xmldoc, "/domain:hosts/domain:host/text()", { "domain" => "http://xquerrail.com/domain" })
+        rc = true
+        hosts.each do |host|
+          r = go %Q{http://#{host}:#{@properties["ml.app-port"]}/initialize.xqy?clear-cache=1}, "get"
+          if r.code.to_i != 200
+            logger.error "#{r.body}"
+            rc = false
+            break
+          end
+        end
+        return rc
+      end
     end
   end
 

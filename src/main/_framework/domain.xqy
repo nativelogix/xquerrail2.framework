@@ -1752,3 +1752,9 @@ declare function domain:generate-schema(
   domain:domain-function("generate-schema", 1)($model)
 };
 
+declare function domain:spawn-function(
+  $function as function(*),
+  $options as item()?
+) as item()* {
+  domain:domain-function("spawn-function", 2)($function, $options)
+};

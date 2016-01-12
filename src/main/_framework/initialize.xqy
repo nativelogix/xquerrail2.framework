@@ -3,10 +3,13 @@ xquery version "1.0-ml";
    The application cache expands all the domains includes and keeps them in a server variable
    corresponding the the configuration uri.
  :)
-import module namespace cache ="http://xquerrail.com/cache" at "cache.xqy";
+
 import module namespace config ="http://xquerrail.com/config" at "config.xqy";
+declare namespace http = "xdmp:http";
+declare namespace domain = "http://xquerrail.com/domain";
+
 let $http-method := xdmp:get-request-method()
-let $application :=
+let $body :=
   if ($http-method eq "GET") then
     ()
   else if ($http-method eq "POST") then
@@ -27,24 +30,24 @@ return (
       }
       </ready>
     </domains>
+  else if (xs:boolean(xdmp:get-request-field("clear-cache"))) then
+  (
+    element domain:clear-cache {
+      config:clear-cache(fn:true()),
+      fn:current-dateTime()
+    }
+  )
+  else if (xs:boolean(xdmp:get-request-field("hosts"))) then
+  (
+    element domain:hosts {
+      xdmp:hosts() ! element domain:host {xdmp:host-name(.)}
+    }
+  )
   else
   (
-    <domains xmlns="http://xquerrail.com/domain">
-      { attribute mlVersion { xdmp:version() },
-      config:refresh-app-cache($application)}</domains>,
-      (
-        let $cache :=
-          map:new((
-            for $key in cache:get-cache-keys($cache:SERVER-FIELD-CACHE-LOCATION, cache:cache-base())
-            return map:entry($key, cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key))
-          ))
-          return xdmp:spawn-function(
-            function() {
-              for $key in map:keys($cache)
-              return cache:set-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key, map:get($cache, $key))
-            }
-          )
-      )
+    element { fn:QName("http://xquerrail.com/domain", "domains") } {
+      attribute mlVersion { xdmp:version() },
+      config:refresh-app-cache($body)
+    }
   )
 )
-

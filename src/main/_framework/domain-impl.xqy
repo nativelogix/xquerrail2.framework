@@ -7,6 +7,7 @@ xquery version "1.0-ml";
 module namespace domain-impl = "http://xquerrail.com/domain/impl";
 
 import module namespace config = "http://xquerrail.com/config" at "config.xqy";
+import module namespace context = "http://xquerrail.com/context" at "context.xqy";
 import module namespace domain = "http://xquerrail.com/domain" at "domain.xqy";
 import module namespace model = "http://xquerrail.com/model/base" at "base/base-model.xqy";
 import module namespace module-loader = "http://xquerrail.com/module" at "module.xqy";
@@ -3542,4 +3543,19 @@ declare %private function domain-impl:generate-schema-default(
         ()
   else
     ()
+};
+
+declare function domain-impl:spawn-function(
+  $function as function(*),
+  $options as item()?
+) as item()* {
+  let $server := xdmp:server()
+  let $fn := $function
+  return xdmp:spawn-function(
+    function() {
+      context:server($server),
+      $fn()
+    },
+    $options
+  )
 };

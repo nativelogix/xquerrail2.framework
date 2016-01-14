@@ -2401,22 +2401,17 @@ declare function model-impl:build-search-constraints(
   for $prop in $field/(domain:container|domain:element|domain:attribute)
     for $prop-nav in $prop/domain:navigation[xs:boolean(fn:data(./@searchable)) or xs:boolean(fn:data(./@facetable))]
     let $name := (
-      (:if(fn:exists($prop-nav/@constraintName)) then
-        $prop-nav/@constraintName
-      else:)
-        (
-          $prefix,
-          if (fn:empty($prefix) and xs:boolean(fn:data($field/ancestor::domain:domain/@useModelInConstraintName))) then
-            $field/@name
-          else ()
-          ,
-          if (fn:empty($prefix) and $prop instance of element(domain:attribute)) then
-            domain:get-parent-field-attribute($prop)/@name
-          else
-            ()
-          ,
-          $prop/@name
-        )
+      $prefix,
+      if (fn:empty($prefix) and xs:boolean(fn:data($field/ancestor::domain:domain/@useModelInConstraintName))) then
+        $field/@name
+      else ()
+      ,
+      if (fn:empty($prefix) and $prop instance of element(domain:attribute)) then
+        domain:get-parent-field-attribute($prop)/@name
+      else
+        ()
+      ,
+      $prop/@name
     )
     let $base-type := domain:get-base-type($prop)
     return

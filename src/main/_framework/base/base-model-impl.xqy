@@ -2297,12 +2297,6 @@ declare private function model-impl:operator-to-cts(
         ()
 };
 
-(:declare function model-impl:build-search-options(
-  $model as element(domain:model)
-) as element(search:options) {
-   model-impl:build-search-options($model,map:map())
-};:)
-
 (:~
  : Build search options for a given domain model
  : @param $model the model of the content type
@@ -2407,19 +2401,22 @@ declare function model-impl:build-search-constraints(
   for $prop in $field/(domain:container|domain:element|domain:attribute)
     for $prop-nav in $prop/domain:navigation[xs:boolean(fn:data(./@searchable)) or xs:boolean(fn:data(./@facetable))]
     let $name := (
-      $prefix,
-      if($prop-nav/@constraintName) then
+      (:if(fn:exists($prop-nav/@constraintName)) then
         $prop-nav/@constraintName
-      else if (fn:empty($prefix) and xs:boolean(fn:data($field/ancestor::domain:domain/@useModelInConstraintName))) then
-        $field/@name
-      else ()
-      ,
-      if (fn:empty($prefix) and $prop instance of element(domain:attribute)) then
-        domain:get-parent-field-attribute($prop)/@name
-      else
-        ()
-      ,
-      $prop/@name
+      else:)
+        (
+          $prefix,
+          if (fn:empty($prefix) and xs:boolean(fn:data($field/ancestor::domain:domain/@useModelInConstraintName))) then
+            $field/@name
+          else ()
+          ,
+          if (fn:empty($prefix) and $prop instance of element(domain:attribute)) then
+            domain:get-parent-field-attribute($prop)/@name
+          else
+            ()
+          ,
+          $prop/@name
+        )
     )
     let $base-type := domain:get-base-type($prop)
     return
@@ -2440,7 +2437,9 @@ declare function model-impl:build-search-constraints(
         let $term-options := if($term-options) then $term-options else domain:get-param-value($params, "search:term-options")
         let $prop-type := domain:resolve-ctstype($prop)
         let $contraint-name :=
-          if ($prop instance of element(domain:attribute)) then
+          if(fn:exists($prop-nav/@constraintName)) then
+            fn:string($prop-nav/@constraintName)
+          else if ($prop instance of element(domain:attribute)) then
             fn:concat(fn:string-join($name[1 to fn:count($name) - 1], '.'), config:attribute-prefix(), $name[fn:count($name)])
           else
             fn:string-join($name, '.')

@@ -44,6 +44,18 @@
         <attribute name="id2" type="string"/>
       </element>
     </container>
+    <container name="container2">
+      <navigation searchable="true"/>
+      <element name="name3" type="string">
+        <navigation constraintName="constraint-name3" searchable="true"/>
+      </element>
+      <element name="description" type="string">
+        <attribute name="id3" type="string">
+          <navigation constraintName="attribute-id3-word" sortable="true" searchType="word"/>
+          <navigation constraintName="attribute-id3-value" sortable="true" searchType="value" profile="nav1"/>
+        </attribute>
+      </element>
+    </container>
   </model>
 
   <model name="model5" persistence="directory" label="Model #5" extends="base" key="uuid" keyLabel="id">

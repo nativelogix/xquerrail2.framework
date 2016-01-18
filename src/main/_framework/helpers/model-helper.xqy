@@ -4,9 +4,10 @@ xquery version "1.0-ml";
  :)
 module namespace model = "http://xquerrail.com/helper/model";
 
-import module namespace js = "http://xquerrail.com/helper/javascript" at "../helpers/javascript-helper.xqy";
-import module namespace domain = "http://xquerrail.com/domain" at "../domain.xqy";
+import module namespace cache = "http://xquerrail.com/cache" at "../cache.xqy";
 import module namespace config = "http://xquerrail.com/config" at "../config.xqy";
+import module namespace domain = "http://xquerrail.com/domain" at "../domain.xqy";
+import module namespace js = "http://xquerrail.com/helper/javascript" at "../helpers/javascript-helper.xqy";
 
 declare namespace json = "json:options";
 declare namespace quote = "xdmp:quote";
@@ -16,7 +17,27 @@ declare option xdmp:mapping "false";
 (:~
  : Holds a cache of json options per models
  :)
-declare variable $JSON-OPTIONS-MODEL-CACHE := map:map();
+declare variable $JSON-OPTIONS-MODEL-CACHE := xdmp:set-server-field(fn:concat($cache:APPLICATION-CACHE-KEY, "json-model-helper"), json:object());
+
+(:~
+ : Gets the function for the xxx-path from the cache
+:)
+declare %private function model:contains-options-cache(
+  $key as xs:string
+) as xs:boolean {
+  map:contains($JSON-OPTIONS-MODEL-CACHE, $key)
+};
+
+declare function model:get-options-cache(
+  $key as xs:string
+) {
+  let $value := map:get($JSON-OPTIONS-MODEL-CACHE, $key)
+  return
+    if ($value = $VALUE-NOT-FOUND) then
+      ()
+    else
+      $value
+};
 
 (:~
  : Sets the function in the value cache
@@ -204,7 +225,7 @@ declare function model:build-json(
           js:kv(model:field-key($field),fn:string($field-value))
         else if($field/@type eq "schema-element") then
           js:kv(model:field-key($field),$field-value)
-        else if(domain:model-exists($field/@type)) then
+        else if(domain:get-base-type($field) eq "instance" and domain:model-exists($field/@type)) then
           if($field/@occurrence = ("*","+")) then
             js:kv(model:field-key($field),js:a(
               for $v in $field-value

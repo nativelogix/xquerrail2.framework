@@ -9,7 +9,7 @@ import module namespace config = "http://xquerrail.com/config" at "../config.xqy
 import module namespace domain = "http://xquerrail.com/domain" at "../domain.xqy";
 import module namespace js = "http://xquerrail.com/helper/javascript" at "../helpers/javascript-helper.xqy";
 
-declare namespace json = "json:options";
+declare namespace jso = "json:options";
 declare namespace quote = "xdmp:quote";
 
 declare option xdmp:mapping "false";
@@ -31,12 +31,7 @@ declare %private function model:contains-options-cache(
 declare function model:get-options-cache(
   $key as xs:string
 ) {
-  let $value := map:get($JSON-OPTIONS-MODEL-CACHE, $key)
-  return
-    if ($value = $VALUE-NOT-FOUND) then
-      ()
-    else
-      $value
+  map:get($JSON-OPTIONS-MODEL-CACHE, $key)
 };
 
 (:~
@@ -50,15 +45,6 @@ declare function model:set-options-cache(
     map:put($JSON-OPTIONS-MODEL-CACHE,$key,$value),
     $value
   )
-};
-
-(:~
- : Gets the function for the xxx-path from the cache
-:)
-declare function model:get-options-cache(
-  $key as xs:string
-) {
-   map:get($JSON-OPTIONS-MODEL-CACHE,$key)
 };
 
 declare function model:field-value-schema-element(
@@ -83,15 +69,15 @@ declare function model:field-value-schema-element(
 declare function model:field-value(
   $field as element(),
   $instance as element(),
-  $options as element(json:options)
+  $options as element(jso:options)
 ) {
   let $field-value := domain:get-field-value($field,$instance)
   return
-    if ($options/json:empty-string/xs:boolean(.) and $field/@type eq "string" and fn:empty($field-value)) then
+    if ($options/jso:empty-string/xs:boolean(.) and $field/@type eq "string" and fn:empty($field-value)) then
       ""
     else
       if ($field/@type eq "schema-element") then
-        if ($options/json:empty-string/xs:boolean(.) and fn:empty($field-value/node())) then
+        if ($options/jso:empty-string/xs:boolean(.) and fn:empty($field-value/node())) then
           ""
         else
           let $field-value := model:field-value-schema-element($field, $field-value)
@@ -101,7 +87,7 @@ declare function model:field-value(
             else
               $field-value
       else if (
-        $options/json:field-node/xs:boolean(.) and
+        $options/jso:field-node/xs:boolean(.) and
         domain:get-base-type($field) eq "simple" and
         fn:not($field instance of element(domain:attribute))
       ) then
@@ -141,11 +127,11 @@ declare function model:build-json(
   $field as element(),
   $instance as element(),
   $include-root as xs:boolean,
-  $options as element(json:options)
+  $options as element(jso:options)
 ) {
   typeswitch($field)
     case element(domain:model) return
-      let $to-json-function := domain:get-model-function((), $field/@name, (fn:data($options/json:to-json), "to-json")[1], 2, fn:false())
+      let $to-json-function := domain:get-model-function((), $field/@name, (fn:data($options/jso:to-json), "to-json")[1], 2, fn:false())
       return
         if (fn:exists($to-json-function)) then
           xdmp:apply(
@@ -184,7 +170,7 @@ declare function model:build-json(
                   js:a(
                     for $ref in $field-value
                     return
-                      if($options/json:flatten-reference/xs:boolean(.)) then
+                      if($options/jso:flatten-reference/xs:boolean(.)) then
                         fn:string($ref)
                       else
                         js:kv(
@@ -198,7 +184,7 @@ declare function model:build-json(
                   )
                 )
           else
-            if($options/json:flatten-reference/xs:boolean(.)) then
+            if($options/jso:flatten-reference/xs:boolean(.)) then
               js:kv(model:field-key($field),fn:string($field-value))
             else
               js:kv(
@@ -251,7 +237,7 @@ declare function model:build-json(
       return
         js:kv(model:field-key($field),$field-value)
     case element(domain:container) return
-      if($options/json:strip-container/xs:boolean(.)) then
+      if($options/jso:strip-container/xs:boolean(.)) then
         for $field in $field/(domain:element|domain:container|domain:attribute)
         return model:build-json($field,$instance,$include-root,$options)
       else
@@ -284,7 +270,7 @@ declare function model:to-json(
   $model as element(domain:model),
   $instance as element(),
   $include-root as xs:boolean,
-  $options as element(json:options)?
+  $options as element(jso:options)?
 ) {
   if($model/@name eq fn:local-name($instance)) then
     model:build-json(
@@ -302,8 +288,8 @@ declare function model:to-json(
 
 declare %private function model:get-json-options(
   $model as element(domain:model),
-  $options as element(json:options)?
-) as element(json:options) {
+  $options as element(jso:options)?
+) as element(jso:options) {
   let $cached-options := model:get-options-cache($model/@name)
   return
     if (fn:exists($cached-options)) then
@@ -312,8 +298,8 @@ declare %private function model:get-json-options(
       let $cached-options :=
         if (fn:exists($options)) then
           $options
-        else if (fn:exists($model/json:options) or (fn:exists($model/ancestor-or-self::domain:domain/json:options))) then
-          ($model/json:options, $model/ancestor-or-self::domain:domain/json:options)[1]
+        else if (fn:exists($model/jso:options) or (fn:exists($model/ancestor-or-self::domain:domain/jso:options))) then
+          ($model/jso:options, $model/ancestor-or-self::domain:domain/jso:options)[1]
         else
           let $get-options-fn := domain:get-model-function((), $model/@name, "get-json-options", 1, fn:false())
           return
@@ -323,6 +309,6 @@ declare %private function model:get-json-options(
                 $model
               )
             else
-              <json:options/>
+              <jso:options/>
       return model:set-options-cache($model/@name, $cached-options)
 };

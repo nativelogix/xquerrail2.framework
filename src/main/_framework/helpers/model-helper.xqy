@@ -41,10 +41,8 @@ declare function model:set-options-cache(
   $key as xs:string,
   $value
 ) {
-  (
-    map:put($JSON-OPTIONS-MODEL-CACHE,$key,$value),
-    $value
-  )
+  map:put($JSON-OPTIONS-MODEL-CACHE, $key, $value),
+  $value
 };
 
 declare function model:field-value-schema-element(

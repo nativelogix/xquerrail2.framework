@@ -80,3 +80,44 @@ declare %test:case function model-build-search-options-field-instance-test() {
     return assert:empty($search-options//search:state[@name eq $sort-state-name], text{"Missing sort state", $sort-state-name})
   )
 };
+
+declare %test:case function model-build-search-options-container-test() {
+  let $model := domain:get-model("model4")
+  let $params := map:new()
+  let $search-options := model:build-search-options($model, $params)
+  let $container1-name2-search-constraint := $search-options/search:constraint[@name eq "container1.name2"]
+  let $container1-description-search-constraint := $search-options/search:constraint[@name eq "container1.description"]
+  let $container1-description-id2-search-constraint := $search-options/search:constraint[@name eq "container1.description@id2"]
+  return (
+    assert:not-empty($container1-name2-search-constraint),
+    assert:equal(fn:string($container1-name2-search-constraint/search:value/@type), "xs:string"),
+    assert:equal(fn:string($container1-name2-search-constraint/search:value/search:element/@name), "name2"),
+    assert:not-empty($container1-description-search-constraint),
+    assert:equal(fn:string($container1-description-search-constraint/search:value/@type), "xs:string"),
+    assert:equal(fn:string($container1-description-search-constraint/search:value/search:element/@name), "description"),
+    assert:not-empty($container1-description-id2-search-constraint),
+    assert:equal(fn:string($container1-description-id2-search-constraint/search:value/@type), "xs:string"),
+    assert:equal(fn:string($container1-description-id2-search-constraint/search:value/search:element/@name), "description"),
+    assert:equal(fn:string($container1-description-id2-search-constraint/search:value/search:attribute/@name), "id2")
+  )
+};
+
+declare %test:case function model-build-search-options-override-constraint-name-test() {
+  let $model := domain:get-model("model4")
+  let $params := map:new()
+  let $search-options := model:build-search-options($model, $params)
+  let $container2-name3-search-constraint := $search-options/search:constraint[@name eq "constraint-name3"]
+  let $container2-description-id3-word-search-constraint := $search-options/search:constraint[@name eq "attribute-id3-word"]
+  let $container2-description-id3-value-search-constraint := $search-options/search:constraint[@name eq "attribute-id3-value"]
+  return (
+    assert:not-empty($container2-name3-search-constraint),
+    assert:equal(fn:string($container2-name3-search-constraint/search:value/@type), "xs:string"),
+    assert:equal(fn:string($container2-name3-search-constraint/search:value/search:element/@name), "name3"),
+    assert:not-empty($container2-description-id3-word-search-constraint, "word search constraint for description/@id3 must exist."),
+    assert:not-empty($container2-description-id3-value-search-constraint, "value search constraint for description/@id3 must exist."),
+    assert:equal(fn:string($container2-description-id3-value-search-constraint/search:value/@type), "xs:string", "seach:value/@type must be xs:string"),
+    assert:equal(fn:string($container2-description-id3-value-search-constraint/search:value/search:element/@name), "description", "search:value/search:element/@name must be description"),
+    assert:equal(fn:string($container2-description-id3-value-search-constraint/search:value/search:attribute/@name), "id3", "search:value/search:attribute/@name must be id3"),
+    assert:equal(fn:count($container2-description-id3-value-search-constraint/search:value/search:term-option), 6, "value search constraint must have 6 term-option elements.")
+  )
+};

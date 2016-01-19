@@ -630,3 +630,7 @@ declare %test:case function get-field-tuple-reference-range-test() as item()* {
     )
   )
 };
+
+declare %test:case function get-model-function-test() as item()* {
+  assert:not-empty(domain:get-model-function((), "model2", "create", 2, fn:true()), "It should return create from /main/_framework/base/base-model.xqy")
+};

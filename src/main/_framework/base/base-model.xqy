@@ -40,13 +40,22 @@ declare variable $EXPANDO-PATTERN := "\$\((\i\c*(/@?\i\c*)*)\)";
 declare %config:module-location function model:module-location(
 ) as element(module)* {
   let $modules-map := module-loader:get-modules-map("http://xquerrail.com/model/base/", fn:concat("/base/base", config:model-suffix()))
-  for $namespace in map:keys($modules-map)
-  return
+  return (
     element module {
       attribute type {"base-model"},
-      attribute namespace { $namespace },
-      attribute location { map:get($modules-map, $namespace) }
-    }
+      attribute namespace { "http://xquerrail.com/model/base" },
+      attribute location { module-loader:normalize-uri((config:framework-path(), "/base/base-model.xqy")) },
+      attribute interface { fn:true() }
+    },
+    for $namespace in map:keys($modules-map)
+    return
+      element module {
+        attribute type {"base-model"},
+        attribute namespace { $namespace },
+        attribute location { map:get($modules-map, $namespace) },
+        attribute interface { fn:false() }
+      }
+  )
 };
 
 declare function model:model-function(
@@ -63,7 +72,8 @@ declare function model:model-function(
         $name,
         $arity,
         (),
-        ()
+        (),
+        fn:false()
       )
     let $function :=
       if (fn:empty($function)) then

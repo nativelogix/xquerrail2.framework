@@ -31,13 +31,22 @@ declare variable $XQUERRAIL-NAMESPACES := map:new((
 declare %config:module-location function domain:module-location(
 ) as element(module)* {
   let $modules-map := module-loader:get-modules-map("http://xquerrail.com/domain/", "/domain")
-  for $namespace in map:keys($modules-map)
-  return
+  return (
     element module {
       attribute type {"domain"},
-      attribute namespace { $namespace },
-      attribute location { map:get($modules-map, $namespace) }
-    }
+      attribute namespace { "http://xquerrail.com/domain" },
+      attribute location { module-loader:normalize-uri((config:framework-path(), "/domain.xqy")) },
+      attribute interface { fn:true() }
+    },
+    for $namespace in map:keys($modules-map)
+    return
+      element module {
+        attribute type {"domain"},
+        attribute namespace { $namespace },
+        attribute location { map:get($modules-map, $namespace) },
+        attribute interface { fn:false() }
+      }
+  )
 };
 
 declare function domain:domain-function(
@@ -56,7 +65,8 @@ declare function domain:domain-function(
         $name,
         $arity,
         (),
-        ()
+        (),
+        fn:false()
         )
     let $function :=
       if (fn:empty($function)) then

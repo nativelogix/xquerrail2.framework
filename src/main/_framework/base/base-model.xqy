@@ -822,31 +822,31 @@ declare function model:build-search-options(
  : @return search options for the given model
  :)
 declare function model:build-search-options(
-  $model as element(domain:model),
+  $field as element(),
   $params as item()
 ) as element(search:options) {
-  model:model-function("build-search-options", 2)($model, $params)
+  model:model-function("build-search-options", 2)($field, $params)
 };
 
 declare function model:build-search-constraints(
-  $model as element(domain:model)
+  $field as element()
 ) {
-  model:build-search-constraints($model, map:new())
+  model:build-search-constraints($field, map:new())
 };
 
 declare function model:build-search-constraints(
-  $model as element(domain:model),
+  $field as element(),
   $params as item()
 ) {
-  model:build-search-constraints($model, $params, ())
+  model:build-search-constraints($field, $params, ())
 };
 
 declare function model:build-search-constraints(
-  $model as element(domain:model),
+  $field as element(),
   $params as item(),
   $prefix as xs:string*
 ) {
-  model:model-function("build-search-constraints", 3)($model, $params, $prefix)
+  model:model-function("build-search-constraints", 3)($field, $params, $prefix)
 };
 
 declare function model:build-search-element(

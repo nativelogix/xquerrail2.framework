@@ -53,12 +53,13 @@ declare %private function app:load-application(
   let $domain-config := config:get-resource($application-path)
   let $domain := app:load-domain($application-name, $domain-config)
   let $config := config:get-config()
-  let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config), fn:true())
+  let $_ := cache:set-domain($config, $application-name, $domain, fn:true())
   let $domain := app:custom-models($application-name, app:update-domain($application-name, $domain))
-  let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config))
+  let $_ := cache:set-domain($config, $application-name, $domain, fn:false())
   let $_ := map:clear(cache:domain-model-cache())
   let $_ := module-loader:load-modules($application-name, fn:false())
   let $_ := app:custom-bootstrap($application-name)
+  let $_ := app:load-cache-to-task-server()
   return $domain
 };
 
@@ -197,6 +198,19 @@ declare %private function app:get-base-safe($path as xs:string) as element(confi
   catch * {
     ()
   }
+};
+
+declare function app:load-cache-to-task-server() {
+  let $cache := map:new((
+    for $key in cache:get-cache-keys($cache:SERVER-FIELD-CACHE-LOCATION, cache:cache-base())
+    return map:entry($key, cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key))
+  ))
+  return xdmp:spawn-function(
+    function() {
+      for $key in map:keys($cache)
+      return cache:set-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key, map:get($cache, $key))
+    }
+  )
 };
 
 declare function app:reset() as item()* {

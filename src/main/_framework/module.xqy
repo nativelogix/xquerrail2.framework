@@ -476,7 +476,7 @@ declare function module:load-controller-functions(
 declare function module:load-model-functions(
   $application as xs:string
 ) as element(library)* {
-  for $model in domain:get-models($application, fn:false())
+  for $model in domain:get-models($application, fn:true())
   let $model-name := $model/@name
   let $model-namespace := config:model-uri($application, $model-name)
   let $model-location := config:model-location($application, $model-name)
@@ -521,7 +521,7 @@ declare function module:load-model-event-functions(
 declare function module:load-model-expression-functions(
   $application as xs:string
 ) as element(library)* {
-  for $model in domain:get-models($application, fn:false())
+  for $model in domain:get-models($application, fn:true())
     for $expression in $model//domain:expression
     let $model-namespace := fn:string($expression/@namespace)
     let $model-location := fn:string($expression/@location)

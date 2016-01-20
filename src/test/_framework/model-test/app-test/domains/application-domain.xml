@@ -10,6 +10,18 @@
   <default-collation>http://marklogic.com/collation/codepoint</default-collation>
   <validator name="domain-model-validator" function="domain-model-validator" />
   <import id="content" resource="content-domain.xml"/>
+  <profiles>
+    <profile id="nav1" type="navigation">
+      <navigation searchable="true" searchType="value">
+        <term-option xmlns="http://marklogic.com/appservices/search">wildcarded</term-option>
+        <term-option xmlns="http://marklogic.com/appservices/search">stemmed</term-option>
+        <term-option xmlns="http://marklogic.com/appservices/search">case-insensitive</term-option>
+        <term-option xmlns="http://marklogic.com/appservices/search">diacritic-insensitive</term-option>
+        <term-option xmlns="http://marklogic.com/appservices/search">whitespace-sensitive</term-option>
+        <term-option xmlns="http://marklogic.com/appservices/search">punctuation-sensitive</term-option>
+      </navigation>
+    </profile>
+  </profiles>
   <!--Implement a base class to inherit metadata-->
   <model name="base" description="Base Extension Class" persistence="abstract">
     <element name="uuid" type="identity" identity="true" label="Globally Unique Identifier">

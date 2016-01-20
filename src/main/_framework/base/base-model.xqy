@@ -831,16 +831,16 @@ declare function model:build-search-options(
 };
 
 declare function model:build-search-constraints(
-  $model as element(domain:model)
+  $field as element()
 ) {
-  model:build-search-constraints($model, map:new())
+  model:build-search-constraints($field, map:new())
 };
 
 declare function model:build-search-constraints(
-  $model as element(domain:model),
+  $field as element(),
   $params as item()
 ) {
-  model:build-search-constraints($model, $params, ())
+  model:build-search-constraints($field, $params, ())
 };
 
 declare function model:build-search-constraints(

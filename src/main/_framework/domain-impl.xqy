@@ -7,6 +7,7 @@ xquery version "1.0-ml";
 module namespace domain-impl = "http://xquerrail.com/domain/impl";
 
 import module namespace config = "http://xquerrail.com/config" at "config.xqy";
+import module namespace context = "http://xquerrail.com/context" at "context.xqy";
 import module namespace domain = "http://xquerrail.com/domain" at "domain.xqy";
 import module namespace model = "http://xquerrail.com/model/base" at "base/base-model.xqy";
 import module namespace module-loader = "http://xquerrail.com/module" at "module.xqy";
@@ -3316,20 +3317,23 @@ declare function domain-impl:find-field-in-model(
   return
     if(fn:exists($cache)) then $cache
     else
-      if (fn:exists($model//(domain:element)[domain:get-base-type(.) = "instance"])) then
-        for $field in $model//(domain:element)
-        where domain:get-base-type($field) = "instance"
-        return domain-impl:find-field-in-model(domain:get-model($field/@type), $key, ($accumulator, $field))
-      else
-        let $value := (
+      let $fields := 
+        if (fn:exists($model//(domain:element)[domain:get-base-type(.) = "instance"])) then
+          for $field in $model//(domain:element)[domain:get-base-type(.) = "instance"]
+          return domain-impl:find-field-in-model(domain:get-model($field/@type), $key, ($accumulator, $field))
+        else
+          ()
+      let $fields := 
+        if (fn:exists($fields)) then
+          $fields
+        else
           let $field := domain:get-model-field($model, $key)
           return
             if (fn:exists($field)) then
               ($accumulator, $field)
             else
               ()
-        )
-        return domain-impl:set-identity-cache($cache-key, $value)
+      return domain-impl:set-identity-cache($cache-key, $fields) 
 };
 
 declare function domain-impl:build-field-xpath-from-model(
@@ -3544,4 +3548,19 @@ declare %private function domain-impl:generate-schema-default(
         ()
   else
     ()
+};
+
+declare function domain-impl:spawn-function(
+  $function as function(*),
+  $options as item()?
+) as item()* {
+  let $server := xdmp:server()
+  let $fn := $function
+  return xdmp:spawn-function(
+    function() {
+      context:server($server),
+      $fn()
+    },
+    $options
+  )
 };

@@ -4,6 +4,7 @@ import module namespace assert = "http://github.com/robwhitby/xray/assertions" a
 
 import module namespace setup = "http://xquerrail.com/test/setup" at "../../../test/_framework/setup.xqy";
 import module namespace app = "http://xquerrail.com/application" at "/main/_framework/application.xqy";
+import module namespace cache = "http://xquerrail.com/cache" at "../../../main/_framework/cache.xqy";
 import module namespace config = "http://xquerrail.com/config" at "/main/_framework/config.xqy";
 declare namespace domain = "http://xquerrail.com/domain";
 
@@ -78,7 +79,8 @@ declare %test:case function test-base-view-directory() as item()*
 
 declare %test:case function test-cache-location() as item()*
 {
-  assert:equal(config:cache-location(config:get-config()), "database")
+  (: Default cache-location is been changed to server-field :)
+  assert:equal(config:cache-location(config:get-config()), $cache:DEFAULT-CACHE-LOCATION)
 };
 
 declare %test:case function test-controller-base-path() as item()*

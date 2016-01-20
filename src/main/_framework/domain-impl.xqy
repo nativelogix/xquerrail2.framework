@@ -3084,7 +3084,7 @@ declare function domain-impl:get-module-function(
   $function-arity as xs:integer?
 ) as xdmp:function? {
   module-loader:load-function-module(
-    domain:get-default-application(),
+    $application,
     $module-type,
     $function-name,
     $function-arity,
@@ -3141,6 +3141,11 @@ declare function domain-impl:get-model-function(
   $function-arity as xs:integer?,
   $fatal as xs:boolean?
 ) as xdmp:function? {
+  let $application := 
+    if (fn:exists($application)) then
+      $application
+    else
+      config:default-application()
   let $function := domain:get-model-module-function($application, $model-name, $action, $function-arity)
   return
     if (fn:exists($function)) then

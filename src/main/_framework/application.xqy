@@ -36,6 +36,7 @@ declare function app:bootstrap($application as element(config:application)?) as 
   else
   (
     app:set-path($application),
+    module-loader:load-modules-framework(),
     for $application in config:get-applications()
     let $application-name := fn:string($application/@name)
       return (

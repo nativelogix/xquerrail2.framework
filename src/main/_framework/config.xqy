@@ -173,6 +173,40 @@ declare function config:clear-cache() {
   cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY),
   cache:remove-server-field-maps(),
   map:clear($CACHE)
+
+  (:let $config := config:get-config()
+  return
+<<<<<<< Updated upstream
+  if (fn:exists($config)) then (
+    for $application in config:get-applications()
+      return cache:remove-domain-cache(config:cache-location($config), xs:string($application/@name), config:anonymous-user($config))
+=======
+  (
+    if (fn:exists($config)) then (
+      for $application in config:get-applications()
+        return (
+          cache:clear-domain($config, fn:string($application/@name), $server-fields-only),
+          cache:remove-server-field-maps(fn:string($application/@name))
+        )
+    )
+    else
+      ()
+    ,
+    cache:clear-config($config, $CONFIG-CACHE-KEY, $server-fields-only),
+    cache:clear-config($config, $BASE-PATH-CACHE-KEY, $server-fields-only),
+    cache:clear-config($config, $CONFIG-PATH-CACHE-KEY, $server-fields-only),
+    cache:remove-server-field-maps(),
+    map:clear($CACHE)
+>>>>>>> Stashed changes
+  )
+  else
+    ()
+  ,
+  cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, ()),
+  cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY),
+  cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY),
+  cache:remove-server-field-maps(),
+  map:clear($CACHE):)
 };
 
 (:~

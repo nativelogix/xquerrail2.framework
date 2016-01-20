@@ -14,8 +14,6 @@ declare namespace quote = "xdmp:quote";
 
 declare option xdmp:mapping "false";
 
-declare variable $VALUE-NOT-FOUND := "$VALUE-NOT-FOUND$";
-
 (:~
  : Holds a cache of json options per models
  :)
@@ -33,12 +31,7 @@ declare %private function model:contains-options-cache(
 declare function model:get-options-cache(
   $key as xs:string
 ) {
-  let $value := map:get($JSON-OPTIONS-MODEL-CACHE, $key)
-  return
-    if ($value = $VALUE-NOT-FOUND) then
-      ()
-    else
-      $value
+  map:get($JSON-OPTIONS-MODEL-CACHE, $key)
 };
 
 (:~
@@ -48,17 +41,8 @@ declare function model:set-options-cache(
   $key as xs:string,
   $value
 ) {
-  (
-    map:put(
-      $JSON-OPTIONS-MODEL-CACHE,
-      $key,
-        if (fn:exists($value)) then
-          $value
-        else
-          $VALUE-NOT-FOUND
-    ),
-    $value
-  )
+  map:put($JSON-OPTIONS-MODEL-CACHE, $key, $value),
+  $value
 };
 
 declare function model:field-value-schema-element(

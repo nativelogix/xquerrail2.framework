@@ -17,8 +17,10 @@ declare option xdmp:mapping "false";
 
 declare variable $EVENT-NAME := "xquerrail.module";
 
-declare variable $CACHE := map:new();
+declare variable $CACHE := json:object();
+declare variable $GLOBAL-FUNCTION-CACHE-KEY := "global-function-cache";
 declare variable $FUNCTION-CACHE := cache:get-server-field-cache-map("module-function-cache");
+declare variable $GLOBAL-FUNCTION-CACHE := cache:get-server-field-cache-map($GLOBAL-FUNCTION-CACHE-KEY);
 declare variable $FUNCTION-NOT-FOUND := "function-not-found";
 declare variable $MODULES-DB := xdmp:modules-database();
 declare variable $CONTROLLER-EXTENSION-TYPE := "controller-extension";
@@ -67,8 +69,8 @@ declare function module:resource-exists(
 declare function module:normalize-uri(
   $parts as xs:string*
 ) as xs:string {
-   module:normalize-uri($parts,"")
- };
+   module:normalize-uri($parts, "")
+};
 
 (:~
  : Takes a sequence of parts and builds a uri normalizing out repeating slashes
@@ -193,33 +195,63 @@ declare function module:function-key-cache(
   $namespace as xs:string?,
   $location as xs:string?
   ) as xs:string {
-  fn:concat(
-    "function-key-cache::",
-    $application,
-    $module-type,
-    $function-name,
-    $function-arity,
-    $namespace,
-    $location
+  fn:string-join(
+    (
+      "function-key-cache",
+      $application,
+      $module-type,
+      $function-name,
+      $function-arity,
+      $namespace,
+      $location
+    ),
+    ":"
   )
 };
 
 declare function module:load-function-module(
-  $application as xs:string,
+  $application as xs:string?,
   $module-type as xs:string?,
   $function-name as xs:string,
   $function-arity as xs:integer,
   $namespace as xs:string?,
   $location as xs:string?
 ) as xdmp:function? {
-  let $key := fn:concat($application, $module-type, $function-name, $function-arity, $namespace, $location)
-  let $function := map:get($FUNCTION-CACHE, $key)
+  module:load-function-module($application, $module-type, $function-name, $function-arity, $namespace, $location, ())
+};
+
+declare function module:load-function-module(
+  $application as xs:string?,
+  $module-type as xs:string?,
+  $function-name as xs:string,
+  $function-arity as xs:integer,
+  $namespace as xs:string?,
+  $location as xs:string?,
+  $interface as xs:boolean?
+) as xdmp:function? {
+  let $key := fn:string-join(($application, $module-type, $function-name, fn:string($function-arity), $namespace, $location, fn:string($interface)), ":")
+  let $cache := (
+    if (fn:exists($application)) then 
+      (
+        $FUNCTION-CACHE,
+        $GLOBAL-FUNCTION-CACHE
+      )
+    else 
+      (
+        $GLOBAL-FUNCTION-CACHE,
+        $FUNCTION-CACHE
+      )
+    (:,
+    $GLOBAL-FUNCTION-CACHE:)
+
+  )
+  let $function := fn:head($cache ! map:get(., $key))
   return
     if (fn:exists($function)) then
-      if ($function instance of xdmp:function) then
+      (:if ($function instance of xdmp:function) then:)
         $function
-      else
-        ()
+      (:else:)
+        (:():)
     else
       let $namespace :=
         if (fn:exists($location)) then
@@ -229,12 +261,45 @@ declare function module:load-function-module(
             ()
         else
           $namespace
-      let $function :=
-        module:get-modules($application)/library[
+      let $libraries := 
+        if (fn:exists($application)) then
+        (
+          module:get-modules($application),
+          module:get-modules()
+        )
+        else
+        (
+          module:get-modules(),
+          module:get-modules(
+            if (fn:exists($application)) then
+              $application
+            else if (fn:count(config:get-applications()) eq 1) then
+              config:default-application()
+            else
+              ()
+          )
+        )
+      let $function := fn:head((
+        $libraries ! (./library[
           (if (fn:exists($module-type)) then @type eq $module-type else fn:true()) and
           (if (fn:exists($namespace)) then @namespace eq $namespace else fn:true()) and
-          (if (fn:exists($location)) then @location eq $location else fn:true())
+          (if (fn:exists($location)) then @location eq $location else fn:true()) and
+          (if (fn:exists($interface)) then @interface eq $interface else fn:true())
+        ]/function[@name eq $function-name and @arity eq $function-arity])
+        (:module:get-modules($application)/library[
+          (if (fn:exists($module-type)) then @type eq $module-type else fn:true()) and
+          (if (fn:exists($namespace)) then @namespace eq $namespace else fn:true()) and
+          (if (fn:exists($location)) then @location eq $location else fn:true()) and
+          (if (fn:exists($interface)) then @interface eq $interface else fn:true())
         ]/function[@name eq $function-name and @arity eq $function-arity]
+        ,
+        module:get-modules()/library[
+          (if (fn:exists($module-type)) then @type eq $module-type else fn:true()) and
+          (if (fn:exists($namespace)) then @namespace eq $namespace else fn:true()) and
+          (if (fn:exists($location)) then @location eq $location else fn:true()) and
+          (if (fn:exists($interface)) then @interface eq $interface else fn:true())
+        ]/function[@name eq $function-name and @arity eq $function-arity]:)
+      ))
       let $function :=
         if (fn:exists($function)) then
           let $function :=
@@ -247,7 +312,7 @@ declare function module:load-function-module(
         else
           ()
       return (
-        map:put($FUNCTION-CACHE, $key, ($function, $FUNCTION-NOT-FOUND)[1]),
+        map:put(fn:head($cache), $key, $function(:($function, $FUNCTION-NOT-FOUND)[1]:)),
         $function
       )
 };
@@ -332,14 +397,15 @@ declare function module:memoize(
       )
 };
 
-declare function module:load-modules-framework(
+declare function module:load-libraries-framework(
   $modules as element(module)*
 ) as element(library)* {
   for $module in $modules
   return module:load-module-definition(
     $module/@namespace,
     $module/@location,
-    attribute type { $module/@type }
+    ($module/@*[. except ($module/@namespace, $module/@location)])
+    (:attribute type { $module/@type }:)
   )
 };
 
@@ -431,17 +497,25 @@ declare function module:load-model-event-functions(
   $application as xs:string,
   $model as element(domain:model)
 ) as element(library)* {
+  let $map := map:new()
   for $event in $model/domain:event
   let $model-namespace := fn:string($event/@module-namespace)
   let $model-location := fn:string($event/@module-uri)
-  return module:load-module-definition(
-    $model-namespace,
-    $model-location,
-    (
-      attribute name {$model/@name},
-      attribute type { $module:EVENT-TYPE }
-    )
-  )
+  return (
+    if (fn:not(map:contains($map, $model-namespace))) then 
+      module:load-module-definition(
+        $model-namespace,
+        $model-location,
+        (
+          attribute name {$model/@name},
+          attribute type { $module:EVENT-TYPE }
+        )
+      )
+    else
+      ()
+    ,
+    map:put($map, $model-namespace, $model-location)
+  ) 
 };
 
 declare function module:load-model-expression-functions(
@@ -476,13 +550,26 @@ declare function module:load-model-extensions(
 };
 
 declare function module:library-key-cache(
-  $application as xs:string
 ) as xs:string {
-  fn:concat($application, "/libraries")
+  module:library-key-cache(())
+};
+
+declare function module:library-key-cache(
+  $application as xs:string?
+) as xs:string {
+  if (fn:exists($application)) then
+    fn:concat($application, "/libraries")
+  else
+    "libraries"
 };
 
 declare function module:get-modules(
-  $application as xs:string
+) as element(libraries)? {
+  module:get-modules(())
+};
+
+declare function module:get-modules(
+  $application as xs:string?
 ) as element(libraries)? {
   let $cache :=
     if (map:contains($CACHE, module:library-key-cache($application))) then
@@ -519,47 +606,91 @@ declare function module:get-modules-definition(
     )
 };
 
+declare %private function module:contains-cache-library(
+  $key as xs:string,
+  $transient as xs:boolean
+) as xs:boolean {
+  if ($transient) then
+    map:contains($CACHE, $key)
+  else
+    fn:exists(module:get-cache-library($key, $transient))
+};
+
+declare %private function module:get-cache-library(
+  $key as xs:string,
+  $transient as xs:boolean
+) {
+  if ($transient) then
+    map:get($CACHE, $key)
+  else
+    cache:get-application-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key)
+};
+
+declare %private function module:set-cache-library(
+  $key as xs:string,
+  $value,
+  $transient as xs:boolean
+) as empty-sequence() {
+  if ($transient) then
+    map:put($CACHE, $key, $value)
+  else
+    cache:set-application-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key, $value)
+};
+
+declare function module:load-modules-framework(
+) as empty-sequence() {
+  let $libraries :=
+    element libraries {
+      for $module-namespace in map:keys($XQUERRAIL-MODULES)
+      let $module-location := config:resolve-framework-path(map:get($XQUERRAIL-MODULES, $module-namespace))
+      let $definition := module:get-modules-definition($module-namespace, $module-location)
+      return module:load-libraries-framework($definition)
+      ,
+      module:load-engine-functions(),
+      module:load-engine-extensions(),
+      module:load-domain-extensions(),
+      module:load-controller-extensions(),
+      module:load-model-extensions()
+    }
+  return module:set-cache-library(module:library-key-cache(), $libraries, fn:false())
+};
+
 declare function module:load-modules(
   $application as xs:string,
   $transient as xs:boolean
 ) as empty-sequence() {
   if (config:get-applications()/@name = $application) then
-    let $libraries :=
-      element libraries {
-        attribute application { $application },
-        for $module-namespace in map:keys($XQUERRAIL-MODULES)
-        let $module-location := config:resolve-framework-path(map:get($XQUERRAIL-MODULES, $module-namespace))
-        let $definition := module:get-modules-definition($module-namespace, $module-location)
-        return module:load-modules-framework($definition)
-        ,
-        module:load-engine-functions(),
-        module:load-engine-extensions(),
-        module:load-domain-extensions(),
-        module:load-controller-extensions(),
-        module:load-model-extensions(),
-        if ($transient) then
-          ()
-        else (
-          module:load-model-expression-functions($application),
-          module:load-controller-functions($application),
-          module:load-model-functions($application)
-        )
-      }
-    return
-      if ($transient) then
-        map:put($CACHE, module:library-key-cache($application), $libraries)
-      else
-        cache:set-application-cache(
-          $cache:SERVER-FIELD-CACHE-LOCATION,
-          module:library-key-cache($application),
-          $libraries
-        )
+    (
+      (
+        let $libraries :=
+          element libraries {
+            attribute application { $application },
+              module:load-domain-extensions(),
+              module:load-controller-extensions(),
+              module:load-model-extensions(),
+              if ($transient) then
+                ()
+              else
+                ( 
+                  module:load-model-expression-functions($application),
+                  module:load-controller-functions($application),
+                  (
+                    let $load-model-functions := module:load-model-functions($application)
+                    return (
+                      $load-model-functions
+                      )
+                  )
+                )
+          }
+        return module:set-cache-library(module:library-key-cache($application), $libraries, $transient)
+      )
+    )
 
   else
     fn:error(xs:QName("LOAD-MODULES-ERROR"), text{"Application", $application, "not defined."})
 };
 
-declare function module:load-module-definition(
+declare %private function module:load-module-definition(
  $module-namespace as xs:string,
  $module-location as xs:string,
  $attributes as attribute()*
@@ -567,7 +698,7 @@ declare function module:load-module-definition(
   module:load-module-definition($module-namespace, $module-location, $attributes, ())
 };
 
-declare function module:load-module-definition(
+declare %private function module:load-module-definition(
  $module-namespace as xs:string,
  $module-location as xs:string,
  $attributes as attribute()*,

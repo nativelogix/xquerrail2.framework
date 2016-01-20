@@ -381,7 +381,7 @@ declare function model-impl:create(
     if ($current) then
       fn:error(xs:QName("DOCUMENT-EXISTS"), text{"The document already exists.", "model:", $model/@name, "- key:", domain:get-field-value(domain:get-model-keyLabel-field($model), $current)})
     else
-      let $update := model-impl:new($model,$params)
+      let $update := model:new($model, $params)
       let $identity := xs:string(domain:get-field-value(domain:get-model-identity-field($model), $update))
       let $computed-collections :=
         model-impl:build-collections(
@@ -877,7 +877,7 @@ declare function model-impl:recursive-build(
           return namespace {$nsi/@prefix}{$nsi/@namespace-uri},
           $attributes,
           for $n in $context/(domain:element|domain:container)
-          return model-impl:recursive-build($n, $current, $updates, $partial)
+          return model:recursive-build($n, $current, $updates, $partial)
         }
       (:):)
       (: Build out any domain Elements :)
@@ -1130,7 +1130,7 @@ declare function model-impl:build-reference(
     else ()
   return
     if($map-values) then
-      for $value in model-impl:build-value($context, $map-values, $current-value)
+      for $value in model:build-value($context, $map-values, $current-value)
       return
         element {domain:get-field-qname($context)} {($value/(@*|node()))}
     else if($partial and $current) then
@@ -1350,7 +1350,7 @@ declare function model-impl:build-triple-subject(
           if (fn:starts-with($subject-definition, "{") and fn:ends-with($subject-definition, "}")) then
             xdmp:value(fn:substring($subject-definition, 2, fn:string-length($subject-definition) - 2))($field, $params, $value)
           else if (fn:exists($field/domain:subject/domain:expression)) then
-            model-impl:get-model-expression($model, $field/domain:subject/domain:expression, 3)($field/domain:subject, $params, $value)
+            model:get-model-expression($model, $field/domain:subject/domain:expression, 3)($field/domain:subject, $params, $value)
           else
             $subject-definition
         else
@@ -1467,7 +1467,7 @@ declare function model-impl:get-model-expression(
       $function
     else
       module-loader:load-function-module(
-        domain:get-default-application(),
+        (),
         (),
         $expression/@function,
         $arity,
@@ -2632,7 +2632,7 @@ declare function model-impl:get-references($field as element(), $params as item(
     let $element := $refTokens[1]
     return
         switch ($element)
-        case "model"       return model-impl:get-model-references($field,$params)
+        case "model"       return model:get-model-references($field,$params)
         case "application" return model-impl:get-application-reference($field,$params)
         case "controller"  return model-impl:get-controller-reference($field,$params)
         case "optionlist"  return model-impl:get-optionlist-reference($field,$params)
@@ -3113,7 +3113,7 @@ declare function model-impl:build-value(
         then fn:data($value)
         else model-impl:get-identity()
     case "reference" return
-        model-impl:get-references($context,$value)
+        model:get-references($context,$value)
     case "update-timestamp" return
         fn:current-dateTime()
     case "update-user" return

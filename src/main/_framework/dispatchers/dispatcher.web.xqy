@@ -301,7 +301,7 @@ declare function dispatcher:invoke-response(
 };
 
 declare function dispatcher:is-reponse-object(
-  $response as item()?
+  $response as item()*
 ) as xs:boolean {
   (
     $response instance of map:map and

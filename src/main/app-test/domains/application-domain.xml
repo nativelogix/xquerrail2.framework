@@ -26,7 +26,7 @@
         <directory root="countries">/config/countries/</directory>
         <element name="name" type="string"></element>
     </model>
-
+    <controller name="countries" model="country"/>
     <model name="countryProvince" persistence="directory" extends="base" key="uuid" keyLabel="name">
         <directory >/config/provinces/</directory>
         <element name="name" type="string"></element>

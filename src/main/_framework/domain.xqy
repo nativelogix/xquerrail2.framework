@@ -1759,7 +1759,27 @@ declare function domain:find-field-from-path-model(
 declare function domain:generate-schema(
   $model as element(domain:model)
 ) as element()* {
-  domain:domain-function("generate-schema", 1)($model)
+  domain:generate-schema($model, ())
+};
+
+declare function domain:generate-schema(
+  $model as element(domain:model),
+  $options as map:map?
+) as element()* {
+  domain:domain-function("generate-schema", 2)($model, $options)
+};
+
+declare function domain:generate-json-schema(
+  $field as element()
+) as json:object? {
+  domain:generate-json-schema($field, ())
+};
+
+declare function domain:generate-json-schema(
+  $field as element(),
+  $options as map:map?
+) as json:object? {
+  domain:domain-function("generate-json-schema", 2)($field, $options)
 };
 
 declare function domain:spawn-function(

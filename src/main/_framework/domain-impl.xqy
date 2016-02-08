@@ -3397,62 +3397,73 @@ declare function domain-impl:find-field-from-path-model(
 };
 
 declare function domain-impl:generate-schema(
-  $model as element(domain:model)
+  $model as element(domain:model),
+  $options as map:map?
 ) as element()* {
-  <xs:schema
-    xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    targetNamespace="{domain:get-field-namespace($model)}" xmlns="http://xquerrail.com" elementFormDefault="qualified">
-    <xs:element name="{$model/@name}">
-      <xs:complexType>
-        <xs:sequence>
-        {
-          for $field in $model/node()
-          return domain-impl:generate-schema-field($field)
-        }
-        </xs:sequence>
-      </xs:complexType>
-    </xs:element>
-  </xs:schema>
+  let $options :=
+    if (fn:exists($options)) then
+      $options
+    else
+      map:new()
+  return
+    <xs:schema
+      xmlns:xs="http://www.w3.org/2001/XMLSchema"
+      targetNamespace="{domain:get-field-namespace($model)}" xmlns="http://xquerrail.com" elementFormDefault="qualified">
+      <xs:element name="{$model/@name}">
+        <xs:complexType>
+          <xs:sequence>
+          {
+            for $field in $model/node()
+            return domain-impl:generate-schema-field($field, $options)
+          }
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:schema>
 };
 
 declare %private function domain-impl:generate-schema-field(
-  $field as element()
+  $field as element(),
+  $options as map:map
 ) as element()? {
   typeswitch ($field)
   case element(domain:element)
-  return domain-impl:generate-schema-element($field)
+  return domain-impl:generate-schema-element($field, $options)
   case element(domain:attribute)
-  return domain-impl:generate-schema-attribute($field)
+  return domain-impl:generate-schema-attribute($field, $options)
   default
   return ()
 };
 
 declare %private function domain-impl:generate-schema-element(
-  $field as element(domain:element)
+  $field as element(domain:element),
+  $options as map:map
 ) as element(xs:element) {
   <xs:element>
   {
     attribute name {$field/@name},
     attribute type {'xs:' || domain:get-field-scalar-type($field)},
-    domain-impl:generate-schema-occurence-constraints($field)
+    domain-impl:generate-schema-occurence-constraints($field, $options)
   }
   </xs:element>
 };
 
 declare %private function domain-impl:generate-schema-attribute(
-  $field as element(domain:attribute)
+  $field as element(domain:attribute),
+  $options as map:map
 ) as element(xs:attribute) {
   <xs:attribute>
   {
     attribute name {$field/@name},
     attribute type {'xs:' || domain:get-field-scalar-type($field)},
-    domain-impl:generate-schema-occurence-constraints($field)
+    domain-impl:generate-schema-occurence-constraints($field, $options)
   }
   </xs:attribute>
 };
 
 declare %private function domain-impl:generate-schema-occurence-constraints(
-  $field as element()
+  $field as element(),
+  $options as map:map
 ) as attribute()* {
   if ($field/@name = ($field/ancestor::domain:model/@key, $field/ancestor::domain:model/@keyLabel)) then
   (
@@ -3529,11 +3540,12 @@ declare %private function domain-impl:generate-schema-occurence-constraints(
       default return
         ()
   ),
-  domain-impl:generate-schema-default($field)
+  domain-impl:generate-schema-default($field, $options)
 };
 
 declare %private function domain-impl:generate-schema-default(
-  $field as element()
+  $field as element(),
+  $options as map:map
 ) as attribute()? {
   if (fn:exists($field/@default)) then
     typeswitch($field)
@@ -3548,6 +3560,64 @@ declare %private function domain-impl:generate-schema-default(
         ()
   else
     ()
+};
+
+declare function domain-impl:generate-json-schema(
+  $field as element(),
+  $options as map:map?
+) as json:object? {
+  let $options :=
+    if (fn:exists($options)) then
+      $options
+    else
+      map:new()
+  return
+    typeswitch($field)
+    case element(domain:domain) return 
+      let $dom-obj := json:object-define($field/domain:model/@name)
+      let $anchor := map:put($options,"anchor","domain")
+      let $models := 
+         for $m in $field/domain:model
+         return
+          map:put($dom-obj,$m/@name,domain:generate-json-schema($m,$options)/*)
+      return 
+       $dom-obj
+    case element(domain:model) return 
+      let $prop-obj := json:object()
+      let $model-obj := json:object-define(("$schema","name","type","properties"))
+      let $_ := 
+       for $f in $field/(domain:element|domain:attribute|domain:container)
+       return 
+          map:put($prop-obj,$f/@name, domain:generate-json-schema($f,$options))
+
+      let $_ := (
+        map:put($model-obj,"$schema",domain:get-field-namespace($field)),
+        map:put($model-obj,"properties",$prop-obj),
+        map:put($model-obj,"type","object"),
+        map:put($model-obj,"name",$field/@name),
+        map:put($model-obj,"title",$field/@label)
+      )
+      return 
+      xdmp:to-json(map:entry($field/@name,$model-obj))
+    case element(domain:element) return 
+      let $obj := json:object-define($field/@name) 
+      let $properties := json:object-define(("id",$field/(@name|@type|@label)/fn:local-name(.)))
+      let $_ := (
+          $field/@name ! map:put($properties,fn:local-name(.),.),
+          map:put($properties,"type",fn:string($field/@type)),
+          map:put($properties,"label",fn:string($field/@label)),
+          $field/@description ! map:put($properties,"description",fn:string(.)),
+          map:put($properties,"id",fn:concat(domain:get-field-namespace($field),domain:get-field-absolute-xpath($field)!fn:replace(.,domain:get-field-prefix($field)||":?",""))),
+          $field/@default ! map:put($properties,"default",.),
+          if($field/domain:attribute) then 
+           map:put($properties,"properties",for $f in $field/domain:attribute return domain:generate-json-schema($f,$options))
+          else ()
+        )
+      let $_ :=  map:put($obj,$field/@name, $properties)
+      return $properties
+    case element(domain:attribute) return ()
+    case element(domain:container) return ()
+    default return ()
 };
 
 declare function domain-impl:spawn-function(

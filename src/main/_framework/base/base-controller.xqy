@@ -87,7 +87,13 @@ declare function controller:definition() {
  :)
 declare function controller:schema() {
   response:set-model(controller:model()),
-  response:set-body(domain:generate-schema(controller:model())),
+  if(request:format() eq "xml") then
+    response:set-body(domain:generate-schema(controller:model()))
+  else if (request:format() eq "json") then
+    response:set-body(domain:generate-json-schema(controller:model()))
+  else
+    fn:error(xs:QName("INVALID-FORMAT"), text{"schema action does not support format", request:format()})
+  ,
   response:flush()
 };
 
@@ -97,50 +103,6 @@ declare function controller:schema() {
 declare function controller:controller() {
   domain:get-controller(request:application(),request:controller())
 };
-
-(:~
- : Invokes the action associated with the controller and matches the name to the appropriate action
- : @param $action - Name of the action to invoke
- :)
-(:declare function controller:invoke($action)
-{
-  xdmp:log(text{"controller:invoke", $action}, "finest"),
-  if($action eq "login") then controller:login()
-  else if($action eq "logout") then controller:logout()
-  else (
-    response:set-model(controller:model()),
-    (
-     (:REST Actions:)
-     if(controller:controller()) then
-         if($action eq "create")      then xdmp:apply(xdmp:function(xs:QName("controller:create")))
-         else if($action eq "update") then xdmp:apply(xdmp:function(xs:QName("controller:update")))
-         else if($action eq "get")    then xdmp:apply(xdmp:function(xs:QName("controller:get")))
-         else if($action eq "delete") then xdmp:apply(xdmp:function(xs:QName("controller:delete")))
-         else if($action eq "list")   then xdmp:apply(xdmp:function(xs:QName("controller:list")))
-         else if($action eq "search") then xdmp:apply(xdmp:function(xs:QName("controller:search")))
-         else if($action eq "put")    then xdmp:apply(xdmp:function(xs:QName("controller:put")))
-         else if($action eq "patch")  then xdmp:apply(xdmp:function(xs:QName("controller:patch")))
-         else if($action eq "post")   then xdmp:apply(xdmp:function(xs:QName("controller:post")))
-         else if($action eq "binary") then xdmp:apply(xdmp:function(xs:QName("controller:binary")))
-         else if($action eq "schema") then xdmp:apply(xdmp:function(xs:QName("controller:schema")))
-         (:HTML:)
-         else if($action eq "index")  then xdmp:apply(xdmp:function(xs:QName("controller:index")))
-         else if($action eq "new")    then xdmp:apply(xdmp:function(xs:QName("controller:new")))
-         else if($action eq "edit")   then xdmp:apply(xdmp:function(xs:QName("controller:edit")))
-         else if($action eq "remove") then xdmp:apply(xdmp:function(xs:QName("controller:remove")))
-         else if($action eq "save")   then xdmp:apply(xdmp:function(xs:QName("controller:save")))
-         else if($action eq "details") then xdmp:apply(xdmp:function(xs:QName("controller:details")))
-         else if($action eq "show")   then xdmp:apply(xdmp:function(xs:QName("controller:show")))
-         else if($action eq "lookup") then xdmp:apply(xdmp:function(xs:QName("controller:lookup")))
-         else if($action eq "fields") then xdmp:apply(xdmp:function(xs:QName("controller:fields")))
-         else if($action eq "export") then xdmp:apply(xdmp:function(xs:QName("controller:export")))
-         else if($action eq "import") then xdmp:apply(xdmp:function(xs:QName("controller:import")))
-         else if($action eq "suggest") then xdmp:apply(xdmp:function(xs:QName("controller:suggest")))
-         else xdmp:apply(xdmp:function(xs:QName("controller:main")))
-     else fn:error(xs:QName("CONTROLLER-NOT-EXISTS"),"Controller does not exist",request:controller())
-    )
-  )
-};:)
 
 (:Controller Required Functions:)
 declare function controller:name() {

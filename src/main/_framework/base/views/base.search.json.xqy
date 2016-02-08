@@ -94,6 +94,7 @@ return
               if (fn:string(./search:facet-resolution-time) ne "") then js:keyvalue("facet_time",./search:facet-resolution-time) else (),
               if (fn:string(./search:snippet-resolution-time) ne "") then js:keyvalue("snippet_time",./search:snippet-resolution-time) else (),
               if (fn:string(./search:metadata-resolution-time) ne "") then js:keyvalue("metadata_time",./search:metadata-resolution-time) else (),
+              if (fn:string(./search:extract-resolution-time) ne "") then js:keyvalue("extract_time", ./search:extract-resolution-time) else (),
               if (fn:string(./search:total-time) ne "") then js:keyvalue("total_time",./search:total-time) else ()
             )
           ))

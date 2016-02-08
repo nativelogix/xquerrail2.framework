@@ -90,11 +90,12 @@ return
           (:Metrics:)
           js:entry("metrics",js:object(
             $node/search:metrics ! (
-              js:keyvalue("query_time",./search:query-resolution-time),
-              js:keyvalue("facet_time",./search:facet-resolution-time),
-              js:keyvalue("snippet_time",./search:snippet-resolution-time),
-              js:keyvalue("metadata_time",./search:metadata-resolution-time),
-              js:keyvalue("total_time",./search:total_time)
+              if (fn:exists(./search:query-resolution-time/node())) then js:keyvalue("query_time", ./search:query-resolution-time/fn:data()) else (),
+              if (fn:exists(./search:facet-resolution-time/node())) then js:keyvalue("facet_time", ./search:facet-resolution-time/fn:data()) else (),
+              if (fn:exists(./search:snippet-resolution-time/node())) then js:keyvalue("snippet_time", ./search:snippet-resolution-time/fn:data()) else (),
+              if (fn:exists(./search:metadata-resolution-time/node())) then js:keyvalue("metadata_time", ./search:metadata-resolution-time/fn:data()) else (),
+              if (fn:exists(./search:extract-resolution-time/node())) then js:keyvalue("extract_time", ./search:extract-resolution-time/fn:data()) else (),
+              if (fn:exists(./search:total-time/node())) then js:keyvalue("total_time", ./search:total-time/fn:data()) else ()
             )
           ))
         )))

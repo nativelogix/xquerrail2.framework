@@ -237,6 +237,23 @@ declare %test:case function model-list-totalrecords-test() as item()*
   )
 };
 
+declare %test:case function model-list-empty-result-test() as item()*
+{
+  let $model1 := domain:get-model("model1")
+  let $instances := model:list(
+    $model1,
+    map:new((
+      map:entry("searchField", "id"),
+      map:entry("searchOper", "eq"),
+      map:entry("searchString", "list-model1-dummy")
+    ))
+  )
+  return (
+    assert:not-empty($instances),
+    assert:equal(xs:integer($instances/totalrecords), 0)
+  )
+};
+
 declare %test:case function model-list-equal-element-test() as item()*
 {
   let $model := domain:get-model("model1")
@@ -780,7 +797,7 @@ declare %test:case function model-sorted-list-custom-model-collation-test() as i
   )
 };
 
-declare %test:ignore function model-sorted-list-in-nested-object-element-test() as item()*
+declare %test:case function model-sorted-list-in-nested-object-element-test() as item()*
 {
   let $model := domain:get-model("model10")
   let $params := map:new((
@@ -805,7 +822,7 @@ declare %test:ignore function model-sorted-list-in-nested-object-element-test() 
   )
 };
 
-declare %test:ignore function model-sorted-list-in-nested-object-attribute-test() as item()*
+declare %test:case function model-sorted-list-in-nested-object-attribute-test() as item()*
 {
   let $model := domain:get-model("model10")
   let $params := map:new((

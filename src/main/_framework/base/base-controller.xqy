@@ -65,12 +65,12 @@ declare function controller:initialize($request)
 (:~
  : Returns the model associated with the controller.  All actions in base use the controller to define the model.
  :)
-declare function controller:model()
-{
-   let $model := domain:get-controller-model(request:application(),request:controller())
-   return
-     if($model) then $model
-     else fn:error(xs:QName("INVALID-MODEL"),"Invalid Model for application",(request:application(),request:controller()))
+declare function controller:model(
+) as element(domain:model)? {
+  let $model := domain:get-controller-model(request:application(),request:controller())
+  return
+    if($model) then $model
+    else fn:error(xs:QName("INVALID-MODEL"),"Invalid Model for application",(request:application(),request:controller()))
 };
 
 (:~

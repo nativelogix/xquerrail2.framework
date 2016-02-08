@@ -30,7 +30,6 @@ declare default collation "http://marklogic.com/collation/codepoint";
 (:Options Definition:)
 declare option xdmp:mapping "false";
 
-declare variable $FUNCTIONS-CACHE  := map:map();
 declare variable $HAS-URI-PREDICATE := "hasUri";
 declare variable $HAS-TYPE-PREDICATE := "hasType";
 
@@ -40,40 +39,43 @@ declare variable $EXPANDO-PATTERN := "\$\((\i\c*(/@?\i\c*)*)\)";
 declare %config:module-location function model:module-location(
 ) as element(module)* {
   let $modules-map := module-loader:get-modules-map("http://xquerrail.com/model/base/", fn:concat("/base/base", config:model-suffix()))
-  for $namespace in map:keys($modules-map)
-  return
+  return (
     element module {
       attribute type {"base-model"},
-      attribute namespace { $namespace },
-      attribute location { map:get($modules-map, $namespace) }
-    }
+      attribute namespace { "http://xquerrail.com/model/base" },
+      attribute location { module-loader:normalize-uri((config:framework-path(), "/base/base-model.xqy")) },
+      attribute interface { fn:true() }
+    },
+    for $namespace in map:keys($modules-map)
+    return
+      element module {
+        attribute type {"base-model"},
+        attribute namespace { $namespace },
+        attribute location { map:get($modules-map, $namespace) },
+        attribute interface { fn:false() }
+      }
+  )
 };
 
 declare function model:model-function(
   $name as xs:string,
   $arity as xs:integer
 ) as xdmp:function {
-  if (map:contains($FUNCTIONS-CACHE, $name)) then
-    map:get($FUNCTIONS-CACHE, $name)
-  else
-    let $function :=
-      module-loader:load-function-module(
-        domain:get-default-application(),
-        "base-model",
-        $name,
-        $arity,
-        (),
-        ()
-      )
-    let $function :=
-      if (fn:empty($function)) then
-        fn:error(xs:QName("LOAD-FUNCTION-MODULE-ERROR"), text{"Function", $name, "from base-model module type not found."})
-      else
-        $function
-    return (
-      map:put($FUNCTIONS-CACHE, $name, $function),
-      $function
+  let $function :=
+    module-loader:load-function-module(
+      (),
+      "base-model",
+      $name,
+      $arity,
+      (),
+      (),
+      fn:false()
     )
+  return
+    if (fn:empty($function)) then
+      fn:error(xs:QName("LOAD-FUNCTION-MODULE-ERROR"), text{"Function", $name, "from base-model module type not found."})
+    else
+      $function
 };
 
 declare function model:uuid-string(
@@ -829,18 +831,24 @@ declare function model:build-search-options(
 };
 
 declare function model:build-search-constraints(
-  $model as element(domain:model),
-  $params as item()
+  $field as element()
 ) {
-  model:build-search-constraints($model, $params, ())
+  model:build-search-constraints($field, map:new())
 };
 
 declare function model:build-search-constraints(
-  $model as element(domain:model),
+  $field as element(),
+  $params as item()
+) {
+  model:build-search-constraints($field, $params, ())
+};
+
+declare function model:build-search-constraints(
+  $field as element(),
   $params as item(),
   $prefix as xs:string*
 ) {
-  model:model-function("build-search-constraints", 3)($model, $params, $prefix)
+  model:model-function("build-search-constraints", 3)($field, $params, $prefix)
 };
 
 declare function model:build-search-element(

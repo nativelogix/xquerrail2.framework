@@ -5,18 +5,11 @@ var _ = require('lodash');
 var assert = require('chai').assert;
 var expect = require('chai').expect;
 var request = require('request').defaults({jar: true});
-var xml2js = require('xml2js');
-
-var parser = new xml2js.Parser({explicitArray: false});
 
 describe('Custom app1 features', function() {
 
-  // this.timeout(10000);
   before(function(done) {
-    xquerrailCommon.initialize(done/*function(error, response, body) {
-      expect(response.statusCode).to.equal(200);
-      done();
-    }*/, module.filename);
+    xquerrailCommon.initialize(done, module.filename);
   });
 
   describe('model1', function() {

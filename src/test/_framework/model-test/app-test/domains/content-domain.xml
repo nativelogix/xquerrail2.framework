@@ -37,6 +37,25 @@
     <element name="field7" type="model7">
       <navigation searchable="true"/>
     </element>
+    <container name="container1">
+      <navigation searchable="true"/>
+      <element name="name2" type="string"/>
+      <element name="description" type="string">
+        <attribute name="id2" type="string"/>
+      </element>
+    </container>
+    <container name="container2">
+      <navigation searchable="true"/>
+      <element name="name3" type="string">
+        <navigation constraintName="constraint-name3" searchable="true"/>
+      </element>
+      <element name="description" type="string">
+        <attribute name="id3" type="string">
+          <navigation constraintName="attribute-id3-word" sortable="true" searchType="word"/>
+          <navigation constraintName="attribute-id3-value" sortable="true" searchType="value" profile="nav1"/>
+        </attribute>
+      </element>
+    </container>
   </model>
 
   <model name="model5" persistence="directory" label="Model #5" extends="base" key="uuid" keyLabel="id">
@@ -133,6 +152,7 @@
       <navigation metadata="true" searchable="true"></navigation>
     </attribute>
     <container name="container1" label="Container #1">
+      <navigation exportable="true" searchable="true" facetable="false" metadata="true" searchType="range"></navigation>
       <element name="type" type="string" label="Field #1">
         <navigation exportable="true" searchable="true" facetable="false" metadata="true" searchType="range"></navigation>
       </element>

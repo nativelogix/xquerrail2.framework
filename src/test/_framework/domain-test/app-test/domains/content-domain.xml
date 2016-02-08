@@ -6,14 +6,18 @@
   <model name="model1" persistence="document" label="Model #1" extends="base" namespace="http://marklogic.com/model/model1" key="uuid" keyLabel="id">
     <document root="templates">/test/model1.xml</document>
     <element name="id" type="string" label="Id"></element>
-    <element name="name" type="string" label="Name"/>
+    <element name="name" type="string" label="Name">
+      <navigation searchType="path" />
+    </element>
   </model>
 
   <!-- BEGIN models used for tesing order of elements -->
   <model name="model2" persistence="document" label="Model #2" extends="base" namespace="http://marklogic.com/model/model2" key="uuid" keyLabel="id">
     <document root="templates">/test/model2.xml</document>
     <element name="id" type="string" label="Id"></element>
-    <element name="name" type="string" label="Name"/>
+    <element name="name" type="string" label="Name">
+      <navigation searchType="range" />
+    </element>
   </model>
 
   <model name="model3" persistence="document" label="Model #3" extends="base" namespace="http://marklogic.com/model/model3" key="uuid" keyLabel="id">

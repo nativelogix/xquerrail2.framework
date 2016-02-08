@@ -342,18 +342,20 @@ declare %test:case function get-param-value-json-dotted-notation-test() as item(
 {
   let $citrus := ("lemon", "orange")
   let $berries := ("strawberry", "raspberry", "blueberry")
-  let $params1 := xdmp-api:from-json('{"fruits": {"citrus": ["lemon", "orange"], "berry": ["strawberry", "raspberry", "blueberry"]}}')
+  let $green-veggie := ("green beans", "cucumber")
+  let $params := xdmp-api:from-json('{"fruits": {"citrus": ["lemon", "orange"], "berry": ["strawberry", "raspberry", "blueberry"]}, "green.veggie": ["green beans", "cucumber"]}')
   return (
-    assert:equal(domain:get-param-value($params1, "fruits.citrus"), $citrus, "'fruits.citrus' must equal " || fn:string-join($citrus, ",")),
-    assert:equal(domain:get-param-value($params1, "fruits.berry")[2], $berries[2], "'fruits.berry[2]' must equal " || $berries[2]),
-    assert:equal(domain:get-param-value($params1, "fruits.apple", "pink lady"), "pink lady", "'fruits.apple' must equal 'pink lady'")
+    assert:equal(domain:get-param-value($params, "fruits.citrus"), $citrus, "'fruits.citrus' must equal " || fn:string-join($citrus, ",")),
+    assert:equal(domain:get-param-value($params, "fruits.berry")[2], $berries[2], "'fruits.berry[2]' must equal " || $berries[2]),
+    assert:equal(domain:get-param-value($params, "green.veggie"), $green-veggie, "'green.veggie' must equal " || fn:string-join($green-veggie, ",")),
+    assert:equal(domain:get-param-value($params, "fruits.apple", "pink lady"), "pink lady", "'fruits.apple' must equal 'pink lady'")
   )
 };
 
 declare %test:case function get-param-value-json-array-dotted-notation-test() as item()*
 {
-  let $params2 := xdmp-api:from-json('{"sort": [{"field": "field1", "order": "descending"}, {"field": "field2", "order": "ascending"}]}')
-  let $sort := domain:get-param-value($params2, "sort")
+  let $params := xdmp-api:from-json('{"sort": [{"field": "field1", "order": "descending"}, {"field": "field2", "order": "ascending"}]}')
+  let $sort := domain:get-param-value($params, "sort")
   let $field := domain:get-param-value($sort[1], "field")
   return (
     assert:equal($field, "field1","sort.field[1] must equal 'field1")
@@ -477,13 +479,13 @@ declare %test:case function field-param-exists-test() as item()* {
 };
 
 declare %test:case function find-field-in-model-test() as item()* {
-  let $model := domain:get-model("model8")
+  let $model := domain:get-model("model9")
   let $field := domain:find-field-in-model($model, "model10-name")
+  let $model9-nested10-field := domain:get-model-field(domain:get-model("model9"), "nested10")
   let $model10-name-field := domain:get-model-field(domain:get-model("model10"), "model10-name")
   return (
     assert:not-empty($field),
-    assert:not-empty($model10-name-field),
-    assert:equal($field, ($model10-name-field, $model10-name-field))
+    assert:equal($field, ($model9-nested10-field, $model10-name-field))
   )
 };
 
@@ -565,4 +567,83 @@ declare %test:case function find-field-from-path-model-with-container-test() as 
     assert:not-empty($model10-name-field),
     assert:equal($model10-name-field, $expected)
   )
+};
+
+declare %test:case function get-field-query-path-test() as item()* {
+  let $model := domain:get-model("model1")
+  let $field-name := domain:get-model-field($model, "name")
+  let $field-query := domain:get-field-query($field-name, "dummy")
+  return (
+    assert:not-empty($field-query),
+    assert:equal(
+      $field-query,
+      xdmp:with-namespaces(
+        domain:declared-namespaces($field-name),
+        cts:path-range-query(domain:get-field-absolute-xpath($field-name), "=", "dummy", ("collation=" || domain:get-field-collation($field-name)))
+      )
+    )
+  )
+};
+
+declare %test:case function get-field-query-range-test() as item()* {
+  let $model := domain:get-model("model2")
+  let $field-name := domain:get-model-field($model, "name")
+  let $field-query := domain:get-field-query($field-name, "dummy")
+  return (
+    assert:not-empty($field-query),
+    assert:equal(
+      $field-query,
+      cts:element-range-query(domain:get-field-qname($field-name), "=", "dummy", ("collation=" || domain:get-field-collation($field-name)))
+    )
+  )
+};
+
+declare %test:case function get-field-tuple-reference-path-test() as item()* {
+  let $model := domain:get-model("model1")
+  let $field-name := domain:get-model-field($model, "name")
+  let $field-query := domain:get-field-tuple-reference($field-name)
+  return (
+    assert:not-empty($field-query),
+    assert:equal(
+      document{$field-query},
+      document{
+        xdmp:with-namespaces(
+              domain:declared-namespaces($field-name),
+              cts:path-reference(domain:get-field-absolute-xpath($field-name), ("collation=" || domain:get-field-collation($field-name)))
+            )
+      }
+    )
+  )
+};
+
+declare %test:case function get-field-tuple-reference-range-test() as item()* {
+  let $model := domain:get-model("model2")
+  let $field-name := domain:get-model-field($model, "name")
+  let $field-query := domain:get-field-tuple-reference($field-name)
+  return (
+    assert:not-empty($field-query),
+    assert:equal(
+      document{$field-query},
+      document{
+        cts:element-reference(domain:get-field-qname($field-name), ("collation=" || domain:get-field-collation($field-name)))
+      }
+    )
+  )
+};
+
+declare %test:case function spawn-function-test() as item()* {
+  let $model := domain:spawn-function(
+    function() {domain:get-model("model2")},
+    <options xmlns="xdmp:eval">
+      <result>true</result>
+    </options>
+    )
+  return (
+    assert:not-empty($model),
+    assert:equal(fn:string($model/@name), "model2")
+  )
+};
+
+declare %test:case function get-model-function-test() as item()* {
+  assert:not-empty(domain:get-model-function((), "model2", "create", 2, fn:true()), "It should return create from /main/_framework/base/base-model.xqy")
 };

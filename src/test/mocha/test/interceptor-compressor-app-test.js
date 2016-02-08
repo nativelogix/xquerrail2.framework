@@ -48,11 +48,6 @@ function remove(model, format, data, callback) {
   }
 };
 
-// function stripModelRoot(model, error, response, entity, callback) {
-//   entity = entity[model] || entity;
-//   callback(error, response, entity);
-// };
-
 describe('Compress feature', function() {
 
   var namespace;
@@ -71,46 +66,46 @@ describe('Compress feature', function() {
 
   describe('model1', function() {
 
+    before(function(done) {
+      xquerrailCommon.login(function() {
+        done();
+      });
+    });
+
     it('should create and remove entity in json format', function(done) {
-      xquerrailCommon.login(function(error, response, body) {
-        var id = xquerrailCommon.random('json-model1-id');
-        var data = {
-          'id': id,
-          'name': 'model1-name'
-        };
-        create('model1', 'json', data, function(error, response, entity) {
-          expect(entity.id).to.equal(id);
-          remove('model1', 'json', data, done);
-        });
+      var id = xquerrailCommon.random('json-model1-id');
+      var data = {
+        'id': id,
+        'name': 'model1-name'
+      };
+      create('model1', 'json', data, function(error, response, entity) {
+        expect(entity.id).to.equal(id);
+        remove('model1', 'json', data, done);
       });
     });
 
     it('should create and remove entity in xml format', function(done) {
-      xquerrailCommon.login(function(error, response, body) {
-        var id = xquerrailCommon.random('xml-model1-id');
-        var data = {
-          '$': {'xmlns': namespace},
-          'id': id,
-          'name': 'model1-name'
-        };
-        create('model1', 'xml', data, function(error, response, entity) {
-          expect(entity.id).to.equal(id);
-          remove('model1', 'xml', entity, done);
-        });
+      var id = xquerrailCommon.random('xml-model1-id');
+      var data = {
+        '$': {'xmlns': namespace},
+        'id': id,
+        'name': 'model1-name'
+      };
+      create('model1', 'xml', data, function(error, response, entity) {
+        expect(entity.id).to.equal(id);
+        remove('model1', 'xml', entity, done);
       });
     });
 
     it('should create and remove entity in html format', function(done) {
-      xquerrailCommon.login(function(error, response, body) {
-        var id = xquerrailCommon.random('html-model1-id');
-        var data = {
-          'id': id,
-          'name': 'model1-name'
-        };
-        create('model1', 'json', data, function(error, response, entity) {
-          expect(entity.id).to.equal(id);
-          remove('model1', 'html', data, done);
-        });
+      var id = xquerrailCommon.random('html-model1-id');
+      var data = {
+        'id': id,
+        'name': 'model1-name'
+      };
+      create('model1', 'json', data, function(error, response, entity) {
+        expect(entity.id).to.equal(id);
+        remove('model1', 'html', data, done);
       });
     });
 

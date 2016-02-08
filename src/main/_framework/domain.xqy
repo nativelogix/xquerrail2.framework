@@ -6,6 +6,7 @@ xquery version "1.0-ml";
  :)
 module namespace domain = "http://xquerrail.com/domain";
 
+import module namespace cache = "http://xquerrail.com/cache" at "cache.xqy";
 import module namespace config = "http://xquerrail.com/config" at "config.xqy";
 import module namespace module-loader = "http://xquerrail.com/module" at "module.xqy";
 
@@ -19,20 +20,34 @@ declare option xdmp:mapping "false";
 declare variable $FUNCTIONS-CACHE := map:map();
 declare variable $FUNCTION-KEYS := "$FUNCTION-KEYS$";
 declare variable $UNDEFINED-FUNCTION := "$UNDEFINED-FUNCTION$";
+declare variable $DOMAINS-CONTROLLER-NAMESPACE := "http://xquerrail.com/controller/domains";
 declare variable $CONTROLLER-EXTENSION-NAMESPACE := "http://xquerrail.com/controller/extension";
 declare variable $DOMAIN-EXTENSION-NAMESPACE := "http://xquerrail.com/domain/extension";
 declare variable $MODEL-EXTENSION-NAMESPACE := "http://xquerrail.com/model/extension";
+declare variable $XQUERRAIL-NAMESPACES := map:new((
+  map:entry("config", "http://xquerrail.com/config"),
+  map:entry("domain", "http://xquerrail.com/domain")
+));
 
 declare %config:module-location function domain:module-location(
 ) as element(module)* {
   let $modules-map := module-loader:get-modules-map("http://xquerrail.com/domain/", "/domain")
-  for $namespace in map:keys($modules-map)
-  return
+  return (
     element module {
       attribute type {"domain"},
-      attribute namespace { $namespace },
-      attribute location { map:get($modules-map, $namespace) }
-    }
+      attribute namespace { "http://xquerrail.com/domain" },
+      attribute location { module-loader:normalize-uri((config:framework-path(), "/domain.xqy")) },
+      attribute interface { fn:true() }
+    },
+    for $namespace in map:keys($modules-map)
+    return
+      element module {
+        attribute type {"domain"},
+        attribute namespace { $namespace },
+        attribute location { map:get($modules-map, $namespace) },
+        attribute interface { fn:false() }
+      }
+  )
 };
 
 declare function domain:domain-function(
@@ -46,12 +61,13 @@ declare function domain:domain-function(
   else
     let $function :=
       module-loader:load-function-module(
-        domain:get-default-application(),
+        (),
         "domain",
         $name,
         $arity,
         (),
-        ()
+        (),
+        fn:false()
         )
     let $function :=
       if (fn:empty($function)) then
@@ -109,10 +125,15 @@ declare variable $FIELD-NAVIGATION-ATTRIBUTES := (
 (:~
  : Holds a cache of all the domain models
  :)
-declare variable $DOMAIN-MODEL-CACHE := map:map();
+declare variable $DOMAIN-MODEL-CACHE := cache:domain-model-cache();
 
 (:Holds a cache of all the identity fields:)
-declare variable $DOMAIN-IDENTITY-CACHE := map:map();
+declare variable $DOMAIN-IDENTITY-CACHE := cache:get-server-field-cache-map("domain-identity-cache");
+
+(:~
+ : Cache all values
+:)
+declare variable $FIELD-VALUE-CACHE := cache:get-server-field-cache-map("domain-field-value-cache");
 
 (:~
  : Caches all module functions
@@ -158,6 +179,14 @@ declare function domain:resolve-cts-type(
   $type as xs:string
 ) {
   domain:domain-function("resolve-cts-type", 1)($type)
+};
+
+(:
+ : Clear domain model cache
+ :)
+declare function domain:clear-model-cache(
+) as empty-sequence() {
+  map:clear($domain:DOMAIN-MODEL-CACHE)
 };
 
 (:~
@@ -572,7 +601,7 @@ declare function domain:get-domain-model(
   $application as xs:string,
   $model-names as xs:string+,
   $extension as xs:boolean
-) as element(domain:model)+ {
+) as element(domain:model)* {
   domain:domain-function("get-domain-model", 3)($application, $model-names, $extension)
 };
 
@@ -1182,7 +1211,18 @@ declare function domain:get-field-query(
   $field as element(),
   $value as xs:anyAtomicType*
 ) {
-  domain:domain-function("get-field-query", 2)($field, $value)
+  domain:get-field-query($field, $value, ())
+};
+
+(:~
+ :
+:)
+declare function domain:get-field-query(
+  $field as element(),
+  $value as xs:anyAtomicType*,
+  $options as xs:string*
+) {
+  domain:domain-function("get-field-query", 3)($field, $value, $options)
 };
 
 declare function domain:get-field-tuple-reference(
@@ -1691,7 +1731,7 @@ declare function domain:find-field-in-model(
   $model as element(domain:model),
   $key as xs:string
 ) as element()* {
-  domain:domain-function("find-field-in-model", 2)($model, $key)
+  domain:domain-function("find-field-in-model", 3)($model, $key, ())
 };
 
 declare function domain:build-field-xpath-from-model(
@@ -1740,4 +1780,11 @@ declare function domain:generate-json-schema(
   $options as map:map?
 ) as json:object? {
   domain:domain-function("generate-json-schema", 2)($field, $options)
+};
+
+declare function domain:spawn-function(
+  $function as function(*),
+  $options as item()?
+) as item()* {
+  domain:domain-function("spawn-function", 2)($function, $options)
 };

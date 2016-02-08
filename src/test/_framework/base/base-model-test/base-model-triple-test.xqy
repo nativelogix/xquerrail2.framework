@@ -21,6 +21,7 @@ declare variable $TRIPLABLE2-MODEL := domain:get-model("triplable2");
 declare variable $TRIPLABLE3-MODEL := domain:get-model("triplable3");
 declare variable $TRIPLABLE4-MODEL := domain:get-model("triplable4");
 declare variable $TRIPLABLE5-MODEL := domain:get-model("triplable5");
+declare variable $TRIPLABLE6-MODEL := domain:get-model("triplable6");
 
 declare variable $TEST-APPLICATION :=
 <application xmlns="http://xquerrail.com/config">
@@ -44,9 +45,9 @@ declare variable $TRIPLABLES2 := (
 ;
 
 declare variable $TRIPLABLES3 := (
-<triplable2 xmlns="http://xquerrail.com/app-test">
+<triplable3 xmlns="http://xquerrail.com/app-test">
   <name>triplable3-name-1</name>
-</triplable2>
+</triplable3>
 )
 ;
 
@@ -278,12 +279,12 @@ declare %test:case function model-triplable-custom-expression-test() as item()*
   )
 };
 
-declare %test:case function model-triplable-manual-test() as item()*
+declare %test:case function model-triplable-custom-as-map-test() as item()*
 {
   let $params := map:new((
     map:entry("name", setup:random("triple")),
     map:entry(
-      "manualTriple",
+      "iriManualTriple",
       map:new((
         map:entry("predicate", "http://xmlns.com/foaf/0.1/knows/"),
         map:entry("object", "my-object")
@@ -291,15 +292,66 @@ declare %test:case function model-triplable-manual-test() as item()*
     )
   ))
   let $instance := model:new($TRIPLABLE4-MODEL, $params)
-  let $triple-value := $instance/sem:triples/sem:triple[@name eq "manualTriple"]
+  let $triple-value := $instance/sem:triples/sem:triple[@name eq "iriManualTriple"]
   let $has-uri-triple-value := $instance/sem:triples/sem:triple[@name eq "hasUri"]
   return (
     assert:not-empty($instance),
     assert:not-empty($instance/sem:triples, "$instance must contain sem:triples"),
     assert:not-empty($triple-value),
     assert:equal(sem:triple-subject(sem:triple($triple-value)), sem:triple-subject(sem:triple($has-uri-triple-value)), "Triple subject should be the same"),
-    assert:equal(sem:triple-predicate(sem:triple($triple-value)), map:get(map:get($params, "manualTriple"), "predicate"), "Triple predicate should be the same"),
-    assert:equal(sem:triple-object(sem:triple($triple-value)), map:get(map:get($params, "manualTriple"), "object"), "Triple object should be the same")
+    assert:equal(sem:triple-predicate(sem:triple($triple-value)), map:get(map:get($params, "iriManualTriple"), "predicate"), "Triple predicate should be the same"),
+    assert:equal(sem:triple-object(sem:triple($triple-value)), map:get(map:get($params, "iriManualTriple"), "object"), "Triple object should be the same")
+  )
+};
+
+declare %test:case function model-triplable-custom-as-xml-test() as item()*
+{
+  let $params :=
+    <triplable4 xmlns="http://xquerrail.com/app-test">
+      <name>triplable4-name-1</name>
+      <sem:triples>
+        <sem:triple name="iriManualTriple">
+          <sem:predicate>http://xmlns.com/foaf/0.1/knows/</sem:predicate>
+          <sem:object>my-object</sem:object>
+        </sem:triple>
+      </sem:triples>
+    </triplable4>
+  let $instance := model:new($TRIPLABLE4-MODEL, $params)
+  let $triple-value := $instance/sem:triples/sem:triple[@name eq "iriManualTriple"]
+  let $has-uri-triple-value := $instance/sem:triples/sem:triple[@name eq "hasUri"]
+  return (
+    assert:not-empty($instance),
+    assert:not-empty($instance/sem:triples, "$instance must contain sem:triples"),
+    assert:not-empty($triple-value),
+    assert:equal(sem:triple-subject(sem:triple($triple-value)), sem:triple-subject(sem:triple($has-uri-triple-value)), "Triple subject should be the same"),
+    assert:equal(sem:triple-predicate(sem:triple($triple-value)), fn:string($params/sem:triples/sem:triple/sem:predicate), "Triple predicate should be the same"),
+    assert:equal(sem:triple-object(sem:triple($triple-value)), fn:string($params/sem:triples/sem:triple/sem:object), "Triple object should be the same")
+  )
+};
+
+declare %test:case function model-literal-triplable-as-xml-test() as item()*
+{
+  let $params :=
+    <triplable4 xmlns="http://xquerrail.com/app-test">
+      <name>triplable4-name-1</name>
+      <sem:triples>
+        <sem:triple name="literalManualTriple">
+          <sem:predicate datatype="http://www.w3.org/2001/XMLSchema#string">literalManualTriple</sem:predicate>
+          <sem:object datatype="http://www.w3.org/2001/XMLSchema#string">object1</sem:object>
+        </sem:triple>
+      </sem:triples>
+    </triplable4>
+  let $instance := model:new($TRIPLABLE4-MODEL, $params)
+  let $triple-value := $instance/sem:triples/sem:triple[@name eq "literalManualTriple"]
+  let $has-uri-triple-value := $instance/sem:triples/sem:triple[@name eq "hasUri"]
+  return (
+    assert:not-empty($triple-value),
+    assert:equal(sem:triple-subject(sem:triple($triple-value)), sem:triple-subject(sem:triple($has-uri-triple-value)), "Triple subject should be the same"),
+    assert:equal(sem:triple-predicate(sem:triple($triple-value)), fn:string($params/sem:triples/sem:triple/sem:predicate), "Triple predicate should be the same"),
+    assert:equal(sem:triple-object(sem:triple($triple-value)), fn:string($params/sem:triples/sem:triple/sem:object), "Triple object should be the same"),
+    assert:true(sem:isLiteral(sem:triple-subject(sem:triple($triple-value))), "Triple subject should be a literal"),
+    assert:true(sem:isLiteral(sem:triple-predicate(sem:triple($triple-value))), "Triple predicate should be a literal"),
+    assert:true(sem:isLiteral(sem:triple-object(sem:triple($triple-value))), "Triple object should be a literal")
   )
 };
 
@@ -356,3 +408,69 @@ declare %test:case function model-triple-is-iri-test() as item()*
     assert:true(sem:isIRI(sem:triple-object(sem:triple($triple-value))), "Triple object should be an RDF IRI")
   )
 };
+
+declare %test:case function model-triplable-custom-hasUri-hasType-as-xml-test() as item()*
+{
+  let $params :=
+    <triplable6 xmlns="http://xquerrail.com/app-test">
+      <name>{setup:random("triplable6-name-1")}</name>
+      <sem:triples>
+        <sem:triple name="hasUri">
+          <sem:subject datatype="http://www.w3.org/2001/XMLSchema#string">triplable6-name-1</sem:subject>
+          <sem:predicate>hasUri</sem:predicate>
+          <sem:object datatype="http://www.w3.org/2001/XMLSchema#string">triplable6-name-1</sem:object>
+        </sem:triple>
+        <sem:triple name="hasType">
+          <sem:subject datatype="http://www.w3.org/2001/XMLSchema#string">triplable6-name-1</sem:subject>
+          <sem:predicate>hasType</sem:predicate>
+          <sem:object datatype="http://www.w3.org/2001/XMLSchema#string">my-object</sem:object>
+        </sem:triple>
+      </sem:triples>
+    </triplable6>
+  let $instance := model:new($TRIPLABLE6-MODEL, $params)
+  let $has-type-triple-value := $instance/sem:triples/sem:triple[@name eq "hasType"]
+  let $has-uri-triple-value := $instance/sem:triples/sem:triple[@name eq "hasUri"]
+  return (
+    assert:not-empty($has-type-triple-value),
+    assert:not-empty($has-uri-triple-value),
+    assert:equal(sem:triple-subject(sem:triple($has-uri-triple-value)), sem:triple-subject(sem:triple($params/sem:triples/sem:triple[1])), "Triple subject should be the same"),
+    assert:equal(sem:triple-predicate(sem:triple($has-uri-triple-value)), sem:triple-predicate(sem:triple($params/sem:triples/sem:triple[1])), "Triple predicate should be the same"),
+    assert:equal(sem:triple-object(sem:triple($has-uri-triple-value)), sem:triple-object(sem:triple($params/sem:triples/sem:triple[1])), "Triple object should be the same"),
+    assert:equal(sem:triple-subject(sem:triple($has-type-triple-value)), sem:triple-subject(sem:triple($params/sem:triples/sem:triple[2])), "Triple subject should be the same"),
+    assert:equal(sem:triple-predicate(sem:triple($has-type-triple-value)), sem:triple-predicate(sem:triple($params/sem:triples/sem:triple[2])), "Triple predicate should be the same"),
+    assert:equal(sem:triple-object(sem:triple($has-type-triple-value)), sem:triple-object(sem:triple($params/sem:triples/sem:triple[2])), "Triple object should be the same")
+  )
+};
+
+declare %test:case function model-triplable-multiple-triples-as-xml-test() as item()*
+{
+  let $params :=
+    <triplable4 xmlns="http://xquerrail.com/app-test">
+      <name>triplable4</name>
+      <sem:triples>
+        <sem:triple name="multipleTriples">
+          <sem:subject datatype="http://www.w3.org/2001/XMLSchema#string">triplable4-name-1</sem:subject>
+          <sem:predicate>multipleTriples</sem:predicate>
+          <sem:object datatype="http://www.w3.org/2001/XMLSchema#string">dummy1</sem:object>
+        </sem:triple>
+        <sem:triple name="multipleTriples">
+          <sem:subject datatype="http://www.w3.org/2001/XMLSchema#string">triplable4-name-1</sem:subject>
+          <sem:predicate>multipleTriples</sem:predicate>
+          <sem:object datatype="http://www.w3.org/2001/XMLSchema#string">dummy2</sem:object>
+        </sem:triple>
+      </sem:triples>
+    </triplable4>
+  let $instance := model:new($TRIPLABLE4-MODEL, $params)
+  let $multiple-triples-value := $instance/sem:triples/sem:triple[@name eq "multipleTriples"]
+  return (
+    assert:not-empty($multiple-triples-value),
+    assert:equal(fn:count($multiple-triples-value), 2, "Must have 2 multiple triples elements"),
+    assert:equal(sem:triple-subject(sem:triple($multiple-triples-value[1])), sem:triple-subject(sem:triple($params/sem:triples/sem:triple[1])), "Triple subject should be the same"),
+    assert:equal(sem:triple-predicate(sem:triple($multiple-triples-value[1])), sem:triple-predicate(sem:triple($params/sem:triples/sem:triple[1])), "Triple predicate should be the same"),
+    assert:equal(sem:triple-object(sem:triple($multiple-triples-value[1])), sem:triple-object(sem:triple($params/sem:triples/sem:triple[1])), "Triple object should be the same"),
+    assert:equal(sem:triple-subject(sem:triple($multiple-triples-value[2])), sem:triple-subject(sem:triple($params/sem:triples/sem:triple[2])), "Triple subject should be the same"),
+    assert:equal(sem:triple-predicate(sem:triple($multiple-triples-value[2])), sem:triple-predicate(sem:triple($params/sem:triples/sem:triple[2])), "Triple predicate should be the same"),
+    assert:equal(sem:triple-object(sem:triple($multiple-triples-value[2])), sem:triple-object(sem:triple($params/sem:triples/sem:triple[2])), "Triple object should be the same")
+  )
+};
+

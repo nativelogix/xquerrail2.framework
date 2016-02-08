@@ -8,13 +8,9 @@ xquery version "1.0-ml";
 
 module namespace config = "http://xquerrail.com/config";
 
-import module namespace response = "http://xquerrail.com/response" at "response.xqy";
-
-import module namespace request  = "http://xquerrail.com/request" at "request.xqy";
-
-import module namespace cache = "http://xquerrail.com/cache" at "cache.xqy";
-
 import module namespace application = "http://xquerrail.com/application" at "application.xqy";
+import module namespace cache = "http://xquerrail.com/cache" at "cache.xqy";
+import module namespace xdmp-api = "http://xquerrail.com/xdmp/api" at "lib/xdmp-api.xqy";
 
 declare namespace domain = "http://xquerrail.com/domain";
 
@@ -23,6 +19,8 @@ declare namespace routing = "http://xquerrail.com/routing";
 declare option xdmp:mapping "false";
 
 declare variable $USE-MODULES-DB := (xdmp:modules-database() ne 0);
+
+declare variable $CACHE := cache:get-server-field-cache-map("config-cache");
 
 (:~
  : Defines the default base path for engines
@@ -99,50 +97,74 @@ declare variable $ERROR-ROUTING-CONFIGURATION  := xs:QName("ERROR-ROUTING-CONFIG
 declare variable $ERROR-DOMAIN-CONFIGURATION   := xs:QName("ERROR-DOMAIN-CONFIGURATION");
 
 (:Cache Keys:)
+declare variable $CONFIG-CACHE-KEY := "config";
 declare variable $BASE-PATH-CACHE-KEY := "base-path";
 declare variable $CONFIG-PATH-CACHE-KEY := "config-path";
 (:declare variable $CONFIG-CACHE-KEY := "http://xquerrail.com/cache/config" ;:)
-declare variable $DOMAIN-CACHE-KEY := "http://xquerrail.com/cache/domains/" ;
-declare variable $DOMAIN-CACHE-TS := "application-domains:timestamp::";
+(:declare variable $DOMAIN-CACHE-KEY := "http://xquerrail.com/cache/domains/" ;:)
+(:declare variable $DOMAIN-CACHE-TS := "application-domains:timestamp::";:)
 declare variable $CACHE-COLLECTION := "cache:domain";
 
-declare variable $CACHE-PERMISSIONS := (
-    xdmp:permission("xquerrail","read"),
-    xdmp:permission("xquerrail","update"),
-    xdmp:permission("xquerrail","insert"),
-    xdmp:permission("xquerrail","execute")
-);
-
 declare function config:version() as xs:string {
-  "${ version }"
+  "0.0.13"
 };
 
 declare function config:last-commit() as xs:string {
-  "${ lastcommit }"
+  "0e03db57094a497eae7f1edf98325b4ff8113454"
 };
 
 declare function config:get-config() as element(config:config)? {
-  cache:get-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, ())
+  (:if (cache:contains-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-CACHE-KEY)) then
+    cache:get-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-CACHE-KEY)
+  else if (cache:contains-config-cache($cache:DATABASE-CACHE-LOCATION, $CONFIG-CACHE-KEY)) then
+    cache:get-config-cache($cache:DATABASE-CACHE-LOCATION, $CONFIG-CACHE-KEY)/node()
+  else
+    ():)
+  cache:get-config((), $CONFIG-CACHE-KEY)
 };
 
 declare function config:set-config($config as element(config:config)?) as empty-sequence() {
-  cache:set-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, (), $config)
+  (:cache:set-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-CACHE-KEY, $config),
+  cache:set-config-cache($cache:DATABASE-CACHE-LOCATION, $CONFIG-CACHE-KEY, $config):)
+  cache:set-config($config, $CONFIG-CACHE-KEY, $config)
 };
 
 declare function config:get-base-path() as xs:string? {
-  cache:get-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY)
+  (:if (cache:contains-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY)) then
+  (
+    xdmp:log(text{"get-base-path from", $cache:SERVER-FIELD-CACHE-LOCATION}),
+    cache:get-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY)
+  )
+  else if (cache:contains-config-cache($cache:DATABASE-CACHE-LOCATION, $BASE-PATH-CACHE-KEY)) then
+    (
+    xdmp:log(text{"get-base-path from", $cache:DATABASE-CACHE-LOCATION}),
+      cache:get-config-cache($cache:DATABASE-CACHE-LOCATION, $BASE-PATH-CACHE-KEY)/node()
+    )
+  else
+    ():)
+  cache:get-config((), $BASE-PATH-CACHE-KEY)
 };
 
 declare function config:set-base-path($base-path as xs:string) as empty-sequence() {
-  cache:set-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY, $base-path)[0]
+  (:cache:set-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY, $base-path),
+  cache:set-config-cache($cache:DATABASE-CACHE-LOCATION, $BASE-PATH-CACHE-KEY, text{$base-path}):)
+  cache:set-config((), $BASE-PATH-CACHE-KEY, text{$base-path})
 };
 
 declare function config:get-config-path() as xs:string? {
-  cache:get-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)
+  (:if (cache:contains-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)) then
+    cache:get-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)
+  else if (cache:contains-config-cache($cache:DATABASE-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)) then
+    cache:get-config-cache($cache:DATABASE-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)/node()
+  else
+    ():)
+  cache:get-config((), $CONFIG-PATH-CACHE-KEY)
 };
 
 declare function config:set-config-path($config-path as xs:string) as empty-sequence() {
-  cache:set-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY, $config-path)[0]
+  (:cache:set-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY, $config-path),
+  cache:set-config-cache($cache:DATABASE-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY, text{$config-path}):)
+  cache:set-config((), $CONFIG-PATH-CACHE-KEY, text{$config-path})
 };
 
 (:~
@@ -160,21 +182,31 @@ declare function config:extensions-path() as xs:string {
 };
 
 (:Removes All Cache Keys:)
-declare function config:clear-cache() {
+declare function config:clear-cache(
+  $server-fields-only as xs:boolean
+) as empty-sequence() {
   let $config := config:get-config()
   return
-  if (fn:exists($config)) then (
-    for $application in config:get-applications()
-      return cache:remove-domain-cache(config:cache-location($config), xs:string($application/@name), config:anonymous-user($config))
+  (
+    if (fn:exists($config)) then (
+      for $application in config:get-applications()
+        return cache:clear-domain($config, fn:string($application/@name), $server-fields-only)
+    )
+    else
+      ()
+    ,
+    cache:clear-config($config, $CONFIG-CACHE-KEY, $server-fields-only),
+    cache:clear-config($config, $BASE-PATH-CACHE-KEY, $server-fields-only),
+    cache:clear-config($config, $CONFIG-PATH-CACHE-KEY, $server-fields-only),
+    cache:remove-server-field-maps(),
+    map:clear($CACHE)
   )
-  else
-    ()
-  ,
-  cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, ()),
-  cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY),
-  cache:remove-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)
 };
 
+declare function config:clear-cache(
+) as empty-sequence() {
+  config:clear-cache(fn:false())
+};
 (:~
  : Initializes the application domains and caches them in the application server.
  : When using a cluster please ensure you change configuration to cache from database
@@ -189,8 +221,10 @@ declare function config:refresh-app-cache($application as element(config:applica
       return config:get-domain(xs:string($application/@name))
 };
 
-declare function config:cache-location($config as element(config:config)) as xs:string {
-  ($config/config:cache-location/@value,"database")[1]
+declare function config:cache-location(
+  $config as element(config:config)?
+) as xs:string {
+  ($config/config:cache-location/@value, $cache:DEFAULT-CACHE-LOCATION)[1]
 };
 
 (:~
@@ -344,27 +378,52 @@ declare function config:default-format() as xs:string
  : Returns the default dispatcher for entire framework. By default the only dispatcher defined is the
   /_framework/displatcher/dispatcher.web.xqy. But if a custom dispatcher is implemented then the configuration will use that value.
  :)
-declare function config:get-dispatcher() as xs:string
-{
-  (
-    config:get-config()/config:dispatcher/@resource,
-    fn:concat($DEFAULT-DISPATCHER-PATH, "/dispatcher.web.xqy")
-  )[1]
+declare function config:get-dispatcher(
+  ) as xs:string {
+  let $key := "get-dispatcher"
+  return
+    if (cache:contains-cache-map($CACHE, $key)) then
+      cache:get-cache-map($CACHE, $key)
+    else
+      cache:set-cache-map(
+        $CACHE,
+        $key,
+        (
+          config:get-config()/config:dispatcher/@resource,
+          fn:concat($DEFAULT-DISPATCHER-PATH, "/dispatcher.web.xqy")
+        )[1]
+      )
 };
 
 (:~
  : Returns the application configuration for a given application by name
  : @param $application-name - The name of the application specified by the @name parameter
  :)
-declare function config:get-application($application-name as xs:string) as element(config:application)
-{
-  let $application := config:get-applications()[@name eq $application-name]
-  return
-    if($application)
-    then $application
-    else fn:error(xs:QName("INVALID-APPLICATION"),"Application with '" || $application-name || "' does not-exist",$application-name)
+declare function config:get-application(
+  $name as xs:string
+) as element(config:application)? {
+  config:get-application($name, fn:false())
 };
 
+declare function config:get-application(
+  $name as xs:string,
+  $safe as xs:boolean
+) as element(config:application)? {
+  let $key := fn:concat("get-application", $name)
+  return
+    if (cache:contains-cache-map($CACHE, $key)) then
+      cache:get-cache-map($CACHE, $key)
+    else
+      let $application := config:get-applications()[@name eq $name]
+      return
+        if(fn:exists($application)) then
+          cache:set-cache-map($CACHE, $key, $application)
+        else
+          if (fn:not($safe)) then
+            fn:error(xs:QName("INVALID-APPLICATION"),"Application with '" || $name || "' does not-exist", $name)
+          else
+            ()
+};
 
 (:~
  : Returns the resource directory for framework defined in /_config/config.xml
@@ -527,22 +586,29 @@ declare function config:application-controllers-path(
  : Gets the default anonymous user defined by the default application.
  : IF not present then returns the config:get-config()/config:anonymous-user/@value
  :)
-declare function config:anonymous-user($config as element(config:config)) as xs:string
-{
-  (
-    config:anonymous-user($config, config:default-application()),
-    xs:string($config/config:anonymous-user/@value),
-    $DEFAULT-ANONYMOUS-USER
-  )[1]
+declare function config:anonymous-user(
+  $config as element(config:config)?
+) as xs:string? {
+  if (fn:exists($config)) then
+    (
+      config:anonymous-user($config, config:default-application()),
+      xs:string($config/config:anonymous-user/@value),
+      $DEFAULT-ANONYMOUS-USER
+    )[1]
+  else
+    ()
 };
 
 (:~
  : Gets the default anonymous user defined by the application
  : TODO: Not implemented.
  :)
-declare function config:anonymous-user($config as element(config:config), $application-name as xs:string)
-{
-  xs:string(config:get-application($application-name)/config:anonymous-user/@value)
+declare function config:anonymous-user(
+  $config as element(config:config),
+  $application-name as xs:string
+) {
+  (:xdmp:log((text{"config:anonymous-user", $application-name}, $config)),:)
+  xs:string(config:get-application($application-name, fn:true())/config:anonymous-user/@value)
 };
 
 
@@ -554,7 +620,8 @@ declare function config:anonymous-user($config as element(config:config), $appli
 declare function config:get-domain($application-name as xs:string) as element(domain:domain)?
 {
   let $config := config:get-config()
-  let $domain := cache:get-domain-cache(config:cache-location($config), $application-name, config:anonymous-user($config))
+  (:let $domain := cache:get-domain-cache(config:cache-location($config), $application-name, config:anonymous-user($config)):)
+  let $domain := cache:get-domain($config, $application-name)
   let $domain :=
     typeswitch ($domain)
       case element(domain:domain)
@@ -572,21 +639,11 @@ declare function config:get-domain() as element(domain:domain)? {
    config:get-domain(config:default-application())
 };
 
-(:~
- : Registers a dynamic domain for inclusion in application domain
-~:)
-declare function config:register-domain($domain as element(domain:domain)) {
-  fn:error(xs:QName("NOT-IMPLEMENTED"))
-(:  let $application-name := $domain/domain:name
-  let $_ := if($application-name) then () else fn:error(xs:QName("DOMAIN-MISSING-NAME"),"Domain must have a name")
-  let $cache-key := fn:concat($DOMAIN-CACHE-KEY,$application-name)
-  return (
-    cache:set-cache($cache-key,config:_load-domain($domain)),
-    $domain
-  )
-:)};
+declare function config:resolve-path($path as xs:string?) as xs:string? {
+  config:resolve-path((), $path)
+};
 
-declare function config:resolve-path($base as xs:string, $path as xs:string?) as xs:string? {
+declare function config:resolve-path($base as xs:string?, $path as xs:string?) as xs:string? {
   if ($path) then
     if (fn:starts-with($path, "$(framework.path)/")) then
       config:resolve-framework-path(fn:substring-after($path, "$(framework.path)/"))
@@ -675,8 +732,8 @@ declare function config:error-handler() as xs:string
 (:~
  : Returns the list of all interceptors defined in the configuration
  :)
-declare function config:get-interceptors()
-{
+declare function config:get-interceptors(
+) {
   config:get-interceptors("all")
 };
 
@@ -687,25 +744,30 @@ declare function config:get-interceptors()
  :)
 declare function config:get-interceptors(
   $value as xs:string?
-){
-  let $interceptors :=
-    for $interceptor in config:get-config()/config:interceptors/config:interceptor
-    return element config:interceptor {
-      $interceptor/@*[. except $interceptor/@*[fn:local-name(.) eq "resource"]],
-      if (fn:exists($interceptor/@resource) and $interceptor/@resource ne "") then
-        attribute resource { config:resolve-config-path($interceptor/@resource) }
-      else
-        ()
-    }
+) {
+  let $key := fn:concat("get-interceptors", $value)
   return
-    switch($value)
-      case "before-request" return $interceptors[@before-request eq "true"]
-      case "after-request" return $interceptors[@after-request eq "true"]
-      case "before-response" return $interceptors[@before-response eq "true"]
-      case "after-response" return $interceptors[@after-response eq "true"]
-      case "all" return $interceptors
-      default return ()
-
+    if (cache:contains-cache-map($CACHE, $key)) then
+      cache:get-cache-map($CACHE, $key)
+    else
+      let $interceptors :=
+        for $interceptor in config:get-config()/config:interceptors/config:interceptor
+        return element config:interceptor {
+          $interceptor/@*[. except $interceptor/@*[fn:local-name(.) eq "resource"]],
+          if (fn:exists($interceptor/@resource) and $interceptor/@resource ne "") then
+            attribute resource { config:resolve-config-path($interceptor/@resource) }
+          else
+            ()
+        }
+      let $interceptors :=
+        switch($value)
+          case "before-request" return $interceptors[@before-request eq "true"]
+          case "after-request" return $interceptors[@after-request eq "true"]
+          case "before-response" return $interceptors[@before-response eq "true"]
+          case "after-response" return $interceptors[@after-response eq "true"]
+          case "all" return $interceptors
+          default return ()
+      return cache:set-cache-map($CACHE, $key, $interceptors)
 };
 (:~
  : Returns the default interceptor configuration.  If none is configured will map to the default
@@ -782,8 +844,14 @@ declare function config:property(
 declare function config:controller-location(
   $application-name as xs:string?,
   $controller-name as xs:string
-) as xs:string {
-   fn:concat(config:application-controllers-path($application-name), $controller-name, config:controller-suffix(), '.xqy')
+) as xs:string* {
+  (
+    fn:concat(config:application-controllers-path($application-name), $controller-name, config:controller-suffix(), '.xqy'),
+    if (xdmp-api:is-ml-8()) then
+      fn:concat(config:application-controllers-path($application-name), $controller-name, config:controller-suffix(), '.sjs')
+    else
+      ()
+  )
 };
 
 (:~

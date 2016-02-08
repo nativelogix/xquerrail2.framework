@@ -12,10 +12,7 @@ var xquerrail = {};
 describe('Authentication features', function() {
 
   before(function(done) {
-    xquerrailCommon.initialize(done/*function(error, response, body) {
-      expect(response.statusCode).to.equal(200);
-      done();
-    }*/);
+    xquerrailCommon.initialize(done);
   });
 
   describe('login', function() {

@@ -44,9 +44,6 @@ declare variable $current-identity := ();
 (:Stores a cache of any references resolved :)
 declare variable $REFERENCE-CACHE := map:map();
 
-declare variable $INSTANCE-CACHE  := map:map();
-declare variable $FUNCTION-CACHE  := map:map();
-
 declare function model-impl:uuid-string(
   $seed as xs:integer?
 ) as xs:string {
@@ -131,7 +128,6 @@ declare function model-impl:generate-iri(
       if (fn:not($field instance of element(domain:model))) then fn:string($field/@type) else (),
       "sem:iri"
     ))
-    let $_ := xdmp:log(text{"generate-iri", xdmp:describe($field, (), ()), "$type", $type})
     let $model := $field/ancestor-or-self::domain:model
     let $token-pattern := $model:EXPANDO-PATTERN
     let $patterns := fn:analyze-string($uri,$token-pattern)
@@ -385,7 +381,7 @@ declare function model-impl:create(
     if ($current) then
       fn:error(xs:QName("DOCUMENT-EXISTS"), text{"The document already exists.", "model:", $model/@name, "- key:", domain:get-field-value(domain:get-model-keyLabel-field($model), $current)})
     else
-      let $update := model-impl:new($model,$params)
+      let $update := model:new($model, $params)
       let $identity := xs:string(domain:get-field-value(domain:get-model-identity-field($model), $update))
       let $computed-collections :=
         model-impl:build-collections(
@@ -678,7 +674,7 @@ declare function model-impl:patch(
       let $key := domain:get-field-name-key($field)
       return
         if (fn:empty($field)) then
-          (xdmp:log(text{"Cannot find field from", $path}, "info"))
+          (xdmp:log(text{"Cannot find field from", $path}, "warning"))
         else
           if ($operation eq "add") then
           (
@@ -833,14 +829,17 @@ declare function model-impl:recursive-create(
   let $mode := if (fn:exists($updates)) then "update" else "create"
   return (
     let $model-key := xdmp:key-from-QName(domain:get-field-qname($model))
-    return
+    let $instance :=
       if(domain:get-value-type($updates) eq "xml" and generator:has-generator($model-key, "build")) then (
         xdmp:trace("xquerrail.generator", "Generator:" || $model-key),
         generator:get-generator($model-key, "build")($current, $updates)
       )
       else
-        model:recursive-build($model, $current, $updates, $partial),
-      model:validate-params($model, $updates, $mode)
+        model:recursive-build($model, $current, $updates, $partial)
+    return (
+      model:validate-params($model, $instance, $mode),
+      $instance
+    )
   )
 };
 
@@ -878,7 +877,7 @@ declare function model-impl:recursive-build(
           return namespace {$nsi/@prefix}{$nsi/@namespace-uri},
           $attributes,
           for $n in $context/(domain:element|domain:container)
-          return model-impl:recursive-build($n, $current, $updates, $partial)
+          return model:recursive-build($n, $current, $updates, $partial)
         }
       (:):)
       (: Build out any domain Elements :)
@@ -1093,17 +1092,13 @@ declare function model-impl:build-attribute(
   let $occurrence := (fn:data($context/@occurrence),"?")[1]
   let $value := model-impl:build-value($context, $update-value, $current-value)
   return
-    if(fn:exists($update-value)) then
+    if(fn:exists($value)) then
       attribute {$qname} {
         $value
       }
     else if($partial and fn:exists($current)) then
       attribute {$qname} {
         $current-value
-      }
-    else if(fn:exists($value)) then
-      attribute {$qname} {
-        $value
       }
     else if(fn:empty($current) and fn:exists($default-value)) then
       attribute {$qname} {
@@ -1135,7 +1130,7 @@ declare function model-impl:build-reference(
     else ()
   return
     if($map-values) then
-      for $value in model-impl:build-value($context, $map-values, $current-value)
+      for $value in model:build-value($context, $map-values, $current-value)
       return
         element {domain:get-field-qname($context)} {($value/(@*|node()))}
     else if($partial and $current) then
@@ -1175,7 +1170,7 @@ declare function model-impl:build-schema-element(
         )
       else if ($updates instance of map:map and fn:exists($update-value)) then
         $value
-      else if($value instance of element()) then $value/node()
+      else if($value instance of element()) then ($value/attribute::*, $value/node())
       else if($value instance of text()) then $value
       else if($partial and $current) then
         $current-value/node()
@@ -1339,14 +1334,23 @@ declare function model-impl:build-triple-subject(
 ) as element(sem:subject) {
   let $model := $field/ancestor-or-self::domain:model
   let $subject-definition := fn:string($field/domain:subject)
+  let $subject-value :=
+    if ($value instance of map:map) then
+      map:get($value, "subject")
+    else if ($value instance of node()) then
+      $value/sem:subject
+    else
+      ()
   return
     element sem:subject {
       model:generate-iri(
-        if (fn:exists($subject-definition)) then
+        if (fn:exists($subject-value)) then
+          $subject-value
+        else if (fn:exists($subject-definition)) then
           if (fn:starts-with($subject-definition, "{") and fn:ends-with($subject-definition, "}")) then
             xdmp:value(fn:substring($subject-definition, 2, fn:string-length($subject-definition) - 2))($field, $params, $value)
           else if (fn:exists($field/domain:subject/domain:expression)) then
-            model-impl:get-model-expression($model, $field/domain:subject/domain:expression, 3)($field/domain:subject, $params, $value)
+            model:get-model-expression($model, $field/domain:subject/domain:expression, 3)($field/domain:subject, $params, $value)
           else
             $subject-definition
         else
@@ -1463,7 +1467,7 @@ declare function model-impl:get-model-expression(
       $function
     else
       module-loader:load-function-module(
-        domain:get-default-application(),
+        (),
         (),
         $expression/@function,
         $arity,
@@ -1481,21 +1485,29 @@ declare function model-impl:build-triple(
   $updates as item()*,
   $partial as xs:boolean
 ) as element(sem:triple)* {
-  let $values := fn:head((
-    domain:get-field-value($context, $updates),
-    if (fn:exists($current)) then
-      domain:get-field-value($context, $current)
+  (: Get values from $updates :)
+  let $values := domain:get-field-value($context, $updates)
+  (: If empty get values from $current :)
+  let $values :=
+    if (fn:exists($values)) then
+      $values
     else
-      (),
-    (: Required for hasUri and hasType triple :)
-    if (xs:boolean($context/@autogenerate)) then
-      $context
+      if (fn:exists($current)) then
+        domain:get-field-value($context, $current)
+      else
+        ()
+  (: If empty get autogenerated triples :)
+  let $values :=
+    if (fn:exists($values)) then
+      $values
     else
-      ()
-  ))
+      if (xs:boolean($context/@autogenerate)) then
+        $context
+      else
+        ()
   return
-    if(domain:field-is-multivalue($context) and fn:count($values) > 1) then
-      fn:error(xs:QName("BUILD-TRIPLE-ERROR"), text{"Invalid occurence", $context/@occurrence, "but $value count greater than 1."}, ($context, $values))
+    if(fn:not(domain:field-is-multivalue($context)) and fn:count($values) > 1) then
+      fn:error(xs:QName("BUILD-TRIPLE-ERROR"), text{"Invalid occurrence", $context/@occurrence, $context/@name, "but $value count greater than 1."}, ($context, $values))
     else
       for $value in $values
       let $subject := model:build-triple-subject($context, $updates, $value)
@@ -1716,55 +1728,42 @@ declare function model-impl:filter-list-result(
     ()
   else
     typeswitch($field)
-      case element(domain:model)
-        return
-          element {domain:get-field-qname($field)} {
-             for $field in $field/(domain:attribute)
-             return model-impl:filter-list-result($field,$result,$params),
-             for $field in $field/(domain:element|domain:container)
-             return model-impl:filter-list-result($field,$result,$params)
-          }
-      case element(domain:element)
-        return
-          let $value := domain:get-field-value-node($field,$result)
-          let $fieldtype := domain:get-base-type($field)
-          for $val in $value
-          return
-           switch($fieldtype)
-             case "complex" return $val
-             default return
-              element {domain:get-field-qname($field)} {
-                for $field in $field/domain:attribute
-                return model-impl:filter-list-result($field,$val,$params),
-                if($val instance of node()) then $val/node()
-                else $val
-              }
-      case element(domain:container)
-        return
-          element {domain:get-field-qname($field)} {
-            for $field in $field/domain:attribute
-            return model-impl:filter-list-result($field,$result,$params),
-            for $field in $field/(domain:element|domain:container)
-            return model-impl:filter-list-result($field,$result,$params)
-          }
-      case element(domain:attribute)
-        return
-          attribute {domain:get-field-qname($field)} {
-            domain:get-field-value($field,$result,fn:true())
-          }
+      case element(domain:model) return
+        element {domain:get-field-qname($field)} {
+          for $field in $field/(domain:attribute)
+          return model-impl:filter-list-result($field,$result,$params),
+          for $field in $field/(domain:element|domain:container)
+          return model-impl:filter-list-result($field,$result,$params)
+        }
+      case element(domain:element) return
+        let $value := domain:get-field-value-node($field,$result)
+        let $fieldtype := domain:get-base-type($field)
+        for $val in $value
+        return switch($fieldtype)
+          case "complex" return $val
+          case "instance" return
+            let $model := domain:get-model($field/@type)
+            return model-impl:filter-list-result($model, $val, $params)
+          default return
+            element {domain:get-field-qname($field)} {
+              for $field in $field/domain:attribute
+              return model-impl:filter-list-result($field,$val,$params),
+              if($val instance of node()) then $val/node()
+              else $val
+            }
+      case element(domain:container) return
+        element {domain:get-field-qname($field)} {
+          for $field in $field/domain:attribute
+          return model-impl:filter-list-result($field,$result,$params),
+          for $field in $field/(domain:element|domain:container)
+          return model-impl:filter-list-result($field,$result,$params)
+        }
+      case element(domain:attribute) return
+        attribute {domain:get-field-qname($field)} {
+          domain:get-field-value($field,$result,fn:true())
+        }
       default return ()
 };
-
-(:~
-: Returns a list of packageType
-: @return  element(packageType)*
-:)
-(:declare function model-impl:list(
-  $model as element(domain:model),
-  $params as item()
-) as element(list)? {
-  model-impl:list($model, $params, ())
-};:)
 
 declare function model-impl:list(
   $model as element(domain:model),
@@ -1815,14 +1814,6 @@ declare function model-impl:list(
     return model-impl:render-list($model, $list, $params, $filter-function)
 };
 
-(:declare function model-impl:render-list(
-  $model as element(domain:model),
-  $list as xs:string,
-  $params as item()*
-) as element() {
-  model-impl:render-list($model, $list, $params, ())
-};:)
-
 (: Function responsible to render a list :)
 declare function model-impl:render-list(
   $model as element(domain:model),
@@ -1836,13 +1827,13 @@ declare function model-impl:render-list(
   let $namespace := domain:get-field-namespace($model)
   let $model-prefix := domain:get-field-prefix($model)
   let $model-qname := fn:concat("/",$model-prefix,":",$model/@name)
-  (:let $total := xdmp:with-namespaces(domain:declared-namespaces($model), xdmp:value(fn:concat("fn:count(", $list, ")"))):)
   let $total :=
     if($persistence = 'document') then
       xdmp:with-namespaces(domain:declared-namespaces($model), xdmp:value(fn:concat("fn:count(", $list, ")")))
     else
       xdmp:value(
-        fn:concat("xdmp:estimate(", $list, ")")
+        fn:concat("if(fn:exists(", $list, ")) then cts:remainder(", $list, "[1]) else 0")
+        (:fn:concat("xdmp:estimate(", $list, ")"):)
       )
   let $sorting := model-impl:sorting($model, $params, ("sort", "sort.name", "sidx"), ("", "sort.order", "sord"))
   let $sort :=
@@ -1853,7 +1844,7 @@ declare function model-impl:render-list(
         if (fn:contains($field/@name, "/")) then
           domain:find-field-from-path-model($model, $field/@name)
         else
-          domain:find-field-in-model($model, $field/@name)[1]
+          domain:find-field-in-model($model, $field/@name)
       let $domain-sort-field := $domain-path-sort-field[fn:last()]
       let $domain-sort-as :=
         if(fn:exists($domain-sort-field)) then
@@ -1867,7 +1858,15 @@ declare function model-impl:render-list(
               if($persistence = 'document') then
                 fn:substring-after(domain:get-field-absolute-xpath($domain-sort-field), $model-qname)
               else
-                fn:exactly-one(domain:build-field-xpath-from-model($model, $domain-path-sort-field))
+                fn:exactly-one(
+                  let $field-xpath := domain:build-field-xpath-from-model($model, $domain-path-sort-field)
+                  return
+                    if (fn:exists($field-xpath)) then
+                      $field-xpath
+                    else
+                      let $fields := domain:find-field-in-model($model, domain:get-field-key($domain-path-sort-field))
+                      return domain:build-field-xpath-from-model($model, $fields)
+                )
           return
             if($field/@order = ("desc","descending")) then
               fn:concat("($__context__",$sortPath,")",$domain-sort-as," descending", $collation-sort-field)
@@ -2298,12 +2297,6 @@ declare private function model-impl:operator-to-cts(
         ()
 };
 
-(:declare function model-impl:build-search-options(
-  $model as element(domain:model)
-) as element(search:options) {
-   model-impl:build-search-options($model,map:map())
-};:)
-
 (:~
  : Build search options for a given domain model
  : @param $model the model of the content type
@@ -2400,32 +2393,32 @@ declare function model-impl:build-search-options(
   return $options
 };
 
-(:declare function model-impl:build-search-constraints(
-  $model as element(domain:model),
-  $params as item()
-) {
-  model-impl:build-search-constraints($model, $params, ())
-};:)
-
 declare function model-impl:build-search-constraints(
-  $model as element(domain:model),
+  $field as element(),
   $params as item(),
   $prefix as xs:string*
 ) {
-  for $prop in $model//(domain:element|domain:attribute)
+  for $prop in $field/(domain:container|domain:element|domain:attribute)
     for $prop-nav in $prop/domain:navigation[xs:boolean(fn:data(./@searchable)) or xs:boolean(fn:data(./@facetable))]
-    let $name :=
-      fn:string-join(
-        (
-          $prefix,
-          if($prop-nav/@constraintName) then $prop-nav/@constraintName else $prop/@name
-        ),
-        "."
-      )
+    let $name := (
+      $prefix,
+      if (fn:empty($prefix) and xs:boolean(fn:data($field/ancestor::domain:domain/@useModelInConstraintName))) then
+        $field/@name
+      else ()
+      ,
+      if (fn:empty($prefix) and $prop instance of element(domain:attribute)) then
+        domain:get-parent-field-attribute($prop)/@name
+      else
+        ()
+      ,
+      $prop/@name
+    )
     let $base-type := domain:get-base-type($prop)
     return
-      if ($base-type eq "instance") then
-        model-impl:build-search-constraints(domain:get-model($prop/@type), $params, $name)
+      if ($prop instance of element(domain:container)) then
+        model:build-search-constraints($prop, $params, $name)
+      else if ($base-type eq "instance") then
+        model:build-search-constraints(domain:get-model($prop/@type), $params, $name)
       else
         let $search-type := (
           $prop-nav/@searchType,
@@ -2437,33 +2430,48 @@ declare function model-impl:build-search-constraints(
         let $facet-options := $prop-nav/search:facet-option
         let $term-options := $prop-nav/(search:term-option|search:weight)
         let $term-options := if($term-options) then $term-options else domain:get-param-value($params, "search:term-options")
-        return
-          <search:constraint name="{$name}" label="{$prop/@label}">{
-            element { fn:QName("http://marklogic.com/appservices/search",$search-type) } {
-              attribute collation {domain:get-field-collation($prop)},
-              if ($search-type eq "range") then
-                attribute type { domain:resolve-ctstype($prop) }
+        let $prop-type := domain:resolve-ctstype($prop)
+        let $contraint-name :=
+          if(fn:exists($prop-nav/@constraintName)) then
+            fn:string($prop-nav/@constraintName)
+          else if ($prop instance of element(domain:attribute)) then
+            fn:concat(fn:string-join($name[1 to fn:count($name) - 1], '.'), config:attribute-prefix(), $name[fn:count($name)])
+          else
+            fn:string-join($name, '.')
+        return (
+          element search:constraint {
+            attribute name {$contraint-name},
+            element { fn:QName("http://marklogic.com/appservices/search", (if ($search-type eq "path") then "range" else $search-type)) } {
+              attribute type { $prop-type },
+              if ($prop-type eq "xs:string") then
+                attribute collation {domain:get-field-collation($prop)}
               else
-                (: According to search:search documentation @type is not needed for value constraint :)
-                attribute type {"xs:string"}
+                ()
               ,
-              if (xs:boolean(fn:data($prop-nav/@facetable))) then
-                attribute facet { fn:true() }
+              attribute facet { xs:boolean((fn:data($prop-nav/@facetable), fn:false())[1]) }
+              ,
+              if ($search-type eq "path") then (
+                element search:path-index {
+                  attribute {"xmlns:" || domain:get-field-prefix($prop)} {domain:get-field-namespace($prop)},
+                  fn:string(domain:get-field-absolute-xpath($prop))
+                }
+              )
               else
-                attribute facet { fn:false() }
+                model-impl:build-search-element(
+                  $prop,
+                  $name[if ($prop instance of element(domain:attribute)) then (fn:last() - 1) else fn:last()]
+                )
               ,
-              model-impl:build-search-element($prop, $prefix[fn:last()]),
               $term-options,
               $facet-options
             }
-          }</search:constraint>
+          },
+          if ($prop instance of element(domain:element)) then
+            model:build-search-constraints($prop, $params, $name)
+          else
+            ()
+        )
 };
-
-(:declare function model-impl:build-search-element(
-  $field as element()
-) as element()* {
-  model-impl:build-search-element($field, ())
-};:)
 
 declare function model-impl:build-search-element(
   $field as element(),
@@ -2479,13 +2487,6 @@ declare function model-impl:build-search-element(
   else
     <search:element ns="{domain:get-field-namespace($field)}" name="{fn:head(($name, $field/@name))}"/>
 };
-
-(:declare function model-impl:search-sort-state(
-  $field as element(),
-  $order as xs:string?
-) as xs:string {
-  model-impl:search-sort-state($field, (), $order)
-};:)
 
 declare function model-impl:search-sort-state(
   $field as element(),
@@ -2541,13 +2542,6 @@ declare %private function model-impl:build-sort-element(
         ()
 };
 
-(:declare function model-impl:build-search-query(
-  $model as element(domain:model),
-  $params as item()
-) {
-  model-impl:build-search-query($model, $params, ())
-};:)
-
 declare function model-impl:build-search-query(
   $model as element(domain:model),
   $params as item(),
@@ -2579,26 +2573,26 @@ declare function model-impl:build-search-query(
  : @param $params the values to fill into the search
  : @return search response element
  :)
-declare function model-impl:search($model as element(domain:model), $params as item())
-as element(search:response)
-{
-   let $query as xs:string* := domain:get-param-value($params, "query")
-   let $sort as xs:string?  := domain:get-param-value($params, "sort")
-   let $page as xs:integer  := (domain:get-param-value($params, "pg"),1)[1] cast as xs:integer
-   let $page-size as xs:integer? := model-impl:page-size($model, $params, "ps")
-   let $start := (($page - 1) * $page-size) + 1
-   let $end := ($page * $page-size)
-   let $final := fn:concat($query," ",$sort)
-   let $options := model-impl:build-search-options($model,$params)
-   let $results :=
-     search:search($final,$options,$start,$page-size)
-   return
-     <search:response>
-     {attribute type {$model/@name}}
-     {attribute page {$page}}
-     {$results/(@*|node())}
-     {$options}
-     </search:response>
+declare function model-impl:search(
+  $model as element(domain:model),
+  $params as item()
+) as element(search:response) {
+  let $query as xs:string* := domain:get-param-value($params, "query")
+  let $sort as xs:string?  := domain:get-param-value($params, "sort")
+  let $page as xs:integer  := (domain:get-param-value($params, "pg"),1)[1] cast as xs:integer
+  let $page-size as xs:integer? := model-impl:page-size($model, $params, "ps")
+  let $start := (($page - 1) * $page-size) + 1
+  let $end := ($page * $page-size)
+  let $final := fn:concat($query," ",$sort)
+  let $options := model-impl:build-search-options($model,$params)
+  let $results := search:search($final,$options,$start,$page-size)
+  return
+    <search:response>
+    {attribute type {$model/@name}}
+    {attribute page {$page}}
+    {$results/(@*|node())}
+    {$options}
+    </search:response>
 };
 
 (:~
@@ -2632,7 +2626,7 @@ declare function model-impl:get-references($field as element(), $params as item(
     let $element := $refTokens[1]
     return
         switch ($element)
-        case "model"       return model-impl:get-model-references($field,$params)
+        case "model"       return model:get-model-references($field,$params)
         case "application" return model-impl:get-application-reference($field,$params)
         case "controller"  return model-impl:get-controller-reference($field,$params)
         case "optionlist"  return model-impl:get-optionlist-reference($field,$params)
@@ -2644,14 +2638,6 @@ declare function model-impl:get-function-cache(
   $function as function(*)?
 ) {
   $function
-  (:let $func-hash := xdmp:hmac-md5("function",xdmp:describe($function,(),()))
-  let $func := map:get($FUNCTION-CACHE,$func-hash)
-  return
-    if(fn:exists($func)) then $func
-    else (
-        map:put($FUNCTION-CACHE,$func-hash,$function),
-        $function
-    ):)
 };
 
 (:~
@@ -3003,7 +2989,6 @@ declare function model-impl:validate-params(
             case attribute(validator) return
               let $function-name := fn:string($attribute)
               let $validator-function := domain:get-model-function((), $model/@name, $function-name, 3, fn:false())
-              (:let $validator-function := model-impl:get-function-cache($validator-function):)
               return
                 if (fn:exists($validator-function)) then
                   $validator-function($element, $params, $mode)
@@ -3122,7 +3107,7 @@ declare function model-impl:build-value(
         then fn:data($value)
         else model-impl:get-identity()
     case "reference" return
-        model-impl:get-references($context,$value)
+        model:get-references($context,$value)
     case "update-timestamp" return
         fn:current-dateTime()
     case "update-user" return

@@ -15,12 +15,8 @@ function edit(model, data, callback) {
 
 describe('HTML view features', function() {
 
-  // this.timeout(10000);
   before(function(done) {
-    xquerrailCommon.initialize(done/*function(error, response, body) {
-      expect(response.statusCode).to.equal(200);
-      done();
-    }*/);
+    xquerrailCommon.initialize(done);
   });
 
   describe('model3', function() {

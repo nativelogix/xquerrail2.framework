@@ -4,11 +4,10 @@ module namespace app = "http://xquerrail.com/application";
 
 import module namespace config = "http://xquerrail.com/config" at "config.xqy";
 import module namespace cache = "http://xquerrail.com/cache" at "cache.xqy";
-
 import module namespace domain = "http://xquerrail.com/domain" at "domain.xqy";
 import module namespace module-loader = "http://xquerrail.com/module" at "module.xqy";
 
-declare namespace extension      = "http://xquerrail.com/application/extension";
+declare namespace extension = "http://xquerrail.com/application/extension";
 
 declare option xdmp:mapping "false";
 
@@ -37,6 +36,7 @@ declare function app:bootstrap($application as element(config:application)?) as 
   else
   (
     app:set-path($application),
+    module-loader:load-modules-framework(),
     for $application in config:get-applications()
     let $application-name := fn:string($application/@name)
       return (
@@ -50,15 +50,16 @@ declare %private function app:load-application(
   $application-name as xs:string
 ) as element(domain:domain)? {
   let $application-path := fn:concat(config:application-directory($application-name), "/domains/application-domain.xml")
-  let $_ := xdmp:log(text{"config:load-domain", $application-name, "$application-path", $application-path}, "debug")
   let $domain-config := config:get-resource($application-path)
   let $domain := app:load-domain($application-name, $domain-config)
   let $config := config:get-config()
-  let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config), fn:true())
-  let $domain := app:update-domain($application-name, $domain)
-  let $_ := cache:set-domain-cache(config:cache-location($config), $application-name, $domain, config:anonymous-user($config))
+  let $_ := cache:set-domain($config, $application-name, $domain, fn:true())
+  let $domain := app:custom-models($application-name, app:update-domain($application-name, $domain))
+  let $_ := cache:set-domain($config, $application-name, $domain, fn:false())
+  let $_ := map:clear(cache:domain-model-cache())
   let $_ := module-loader:load-modules($application-name, fn:false())
   let $_ := app:custom-bootstrap($application-name)
+  let $_ := app:load-cache-to-task-server()
   return $domain
 };
 
@@ -115,36 +116,72 @@ declare %private function app:load-domain(
   $application-name as xs:string,
   $domain as element(domain:domain)
 ) as element(domain:domain) {
-    let $app-path := config:application-directory($application-name)
-    let $imports :=
-        for $import in $domain/domain:import
-        return
-        config:get-resource(fn:concat($app-path,"/domains/",$import/@resource))
+  let $app-path := config:application-directory($application-name)
+  let $imports :=
+    for $import in $domain/domain:import
     return
-        element domain:domain {
-         namespace domain {"http://xquerrail.com/domain"},
-         ($domain/namespace::*,$imports/namespace::*),
-         $domain/@*,
-         $domain/(domain:name|domain:content-namespace|domain:application-namespace|domain:description|domain:author|domain:version|domain:declare-namespace|domain:default-collation|domain:permission|domain:language|domain:default-language|domain:navigation|domain:profiles|domain:validator),
-         ($domain/domain:model,$imports/domain:model),
-         ($domain/domain:optionlist,$imports/domain:optionlist),
-         ($domain/domain:controller,$imports/domain:controller),
-         ($domain/domain:view,$imports/domain:view)
-       }
+    config:get-resource(fn:concat($app-path,"/domains/",$import/@resource))
+  return
+    element { fn:QName("http://xquerrail.com/domain", "domain") } {
+      ($domain/namespace::*,$imports/namespace::*),
+      $domain/attribute::*,
+      $domain/(domain:name|domain:content-namespace|domain:application-namespace|domain:description|domain:author|domain:version|domain:declare-namespace|domain:default-collation|domain:permission|domain:language|domain:default-language|domain:navigation|domain:profiles|domain:validator),
+      ($domain/domain:model,$imports/domain:model),
+      ($domain/domain:optionlist,$imports/domain:optionlist),
+      ($domain/domain:controller,$imports/domain:controller),
+      ($domain/domain:view,$imports/domain:view)
+    }
 };
 
 declare %private function app:update-domain(
   $application-name as xs:string,
-  $domain
+  $domain as element(domain:domain)
 ) as element(domain:domain) {
-  element domain:domain {
-    namespace domain {"http://xquerrail.com/domain"},
+  element { fn:QName("http://xquerrail.com/domain", "domain") } {
     $domain/namespace::*,
-    $domain/@*,
+    $domain/attribute::*,
     attribute compiled {fn:true()},
+    attribute timestamp {fn:current-dateTime()},
     $domain/*[. except $domain/domain:model],
     $domain/domain:model ! (domain:compile-model($application-name, .))
   }
+};
+
+declare %private function app:custom-models(
+  $application-name as xs:string,
+  $domain as element(domain:domain)
+) as element(domain:domain) {
+  let $models-generator := module-loader:load-function-module(
+    $application-name,
+    $module-loader:DOMAIN-EXTENSION-TYPE,
+    "build-domain-extension",
+    2,
+    $domain:DOMAIN-EXTENSION-NAMESPACE,
+    ()
+  )
+  return
+    if (fn:exists($models-generator)) then
+      element { fn:QName("http://xquerrail.com/domain", "domain") } {
+        $domain/namespace::*,
+        $domain/attribute::*,
+        $domain/*,
+        for $item in $models-generator($application-name, $domain)/*
+        return
+          if ($item instance of element(domain:model)) then
+            domain:compile-model(
+              $application-name,
+              element { fn:QName("http://xquerrail.com/domain", "domain") } {
+                $domain/namespace::*,
+                $domain/attribute::*,
+                $domain/*,
+                $item
+              }/domain:model[fn:last()]
+            )
+          else
+            $item
+      }
+    else
+      $domain
 };
 
 declare %private function app:get-base() as element(config:application) {
@@ -163,11 +200,24 @@ declare %private function app:get-base-safe($path as xs:string) as element(confi
   }
 };
 
+declare function app:load-cache-to-task-server() {
+  let $cache := map:new((
+    for $key in cache:get-cache-keys($cache:SERVER-FIELD-CACHE-LOCATION, cache:cache-base())
+    return map:entry($key, cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key))
+  ))
+  return xdmp:spawn-function(
+    function() {
+      for $key in map:keys($cache)
+      return cache:set-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key, map:get($cache, $key))
+    }
+  )
+};
+
 declare function app:reset() as item()* {
   try {
     xdmp:function(xs:QName("extension:reset"), "generators/bootstrap-generator.xqy")()
-  } catch ($ex) {
-    xdmp:log($ex)
+  } catch ($exception) {
+    xdmp:log($exception, "warning")
   },
   config:clear-cache()
 };

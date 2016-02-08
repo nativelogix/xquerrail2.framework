@@ -34,12 +34,16 @@ declare option xdmp:output "indent-untyped=yes";
 declare option xdmp:ouput "omit-xml-declaration=yes";
 declare option xdmp:update "false";
 
+declare variable $domain:REQUEST-EXTERNAL as json:object external := json:object();
+declare variable $domain:REQUEST-BODY-EXTERNAL external := ();
+
+declare variable $EVENT-NAME := "xquerrail.dispatcher.web";
 declare variable $BASE-CONTROLLER-NAMESPACE := "http://xquerrail.com/controller/base";
 
 declare function dispatcher:get-controller-action(
   $application as xs:string,
   $action as xs:string,
-  $controller-namespace as xs:string,
+  $controller-namespace as xs:string?,
   $controller-location as xs:string?
 ) as xdmp:function? {
   let $module-type :=
@@ -47,6 +51,8 @@ declare function dispatcher:get-controller-action(
       "controller-extension"
     else if ($controller-namespace eq $BASE-CONTROLLER-NAMESPACE) then
       "base-controller"
+    else if ($controller-namespace eq $domain:DOMAINS-CONTROLLER-NAMESPACE) then
+      "domains-controller"
     else
       "controller"
   return module-loader:load-function-module(
@@ -68,17 +74,19 @@ declare function dispatcher:get-controller-action(
   $action as xs:string
 ) as xdmp:function? {
   let $controller-namespace := config:controller-uri($application, $controller)
-  let $controller-location := config:controller-location($application, $controller)
-  let $function :=
-    dispatcher:get-controller-action(
-    $application,
-    $action,
-    $controller-namespace,
-    $controller-location
-  )
-  return
-    if (fn:exists($function)) then
-      $function
+  let $controller-locations := config:controller-location($application, $controller)
+  let $functions :=
+    for $controller-location in $controller-locations
+    let $function := dispatcher:get-controller-action(
+      $application,
+      $action,
+      $controller-namespace,
+      $controller-location
+    )
+    return $function
+  let $functions :=
+    if (fn:exists($functions)) then
+      $functions
     else
       let $function :=
         dispatcher:get-controller-action(
@@ -92,17 +100,40 @@ declare function dispatcher:get-controller-action(
           $function
         else
           let $function :=
-            dispatcher:get-controller-action(
-            $application,
-            $action,
-            $BASE-CONTROLLER-NAMESPACE,
-            ()
-          )
+            if ($controller eq "domains") then
+              dispatcher:get-controller-action(
+              $application,
+              $action,
+              $domain:DOMAINS-CONTROLLER-NAMESPACE,
+              ()
+            )
+            else
+              ()
           return
-          if (fn:exists($function)) then
-            $function
-          else
-            ()
+            if (fn:exists($function)) then
+              $function
+            else
+              let $function :=
+                dispatcher:get-controller-action(
+                $application,
+                $action,
+                $BASE-CONTROLLER-NAMESPACE,
+                ()
+              )
+              return
+                if (fn:exists($function)) then
+                  $function
+                else
+                  ()
+
+  return
+    if (fn:count($functions) eq 2) then
+    (
+      xdmp:trace($EVENT-NAME, (text{"Found 2 controller actions. Will be using the first", $functions[1]}, $functions)),
+      $functions[1]
+    )
+    else
+      $functions
 };
 
 (:~
@@ -123,7 +154,7 @@ declare function dispatcher:error(
      map:put($error-map,"response",response:response())
     )
   return (
-    xdmp:log(("Error::[",$ex,"]"),"debug"),
+    xdmp:log($ex, "error"),
     xdmp:invoke( config:error-handler(),(xs:QName("_ERROR"),$error-map))
   )
 };
@@ -131,7 +162,7 @@ declare function dispatcher:error(
 
 declare %private function dispatcher:dump-request() {
   if (request:param("debug") eq "true") then (
-  	xdmp:log(
+    xdmp:log(
       (
         "DUMP-REQUEST",
         text{"url", request:url()},
@@ -143,8 +174,8 @@ declare %private function dispatcher:dump-request() {
       ),
       "info"
     )
-	)
-	else ()
+  )
+  else ()
 };
 
 (:~
@@ -158,22 +189,24 @@ declare function dispatcher:invoke-controller()
   let $route  as xs:string?      := request:route()[1]
   let $controller-location       := config:controller-location($application, $controller)
   let $controller-uri            := config:controller-uri($application, $controller)
-  let $_ := xdmp:log(
-  	text {
-  	  "dispatcher:invoke-controller()", "$application", $application, "$controller", $controller, "$action", $action,
-  	  "$route", $route, "$controller-location", $controller-location, "$controller-uri", $controller-uri, "method", request:method()
-  	},
-  	"fine"
+  let $_ := xdmp:trace(
+    $EVENT-NAME,
+    text {
+      "dispatcher:invoke-controller()", "$application", $application, "$controller", $controller, "$action", $action,
+      "$route", $route, "$controller-location", $controller-location, "$controller-uri", $controller-uri, "method", request:method()
+    }
   )
   let $_ := dispatcher:dump-request()
   let $request := request:request()
+  let $_ := xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "after request:request"})
   let $controller-action := dispatcher:get-controller-action($application, $controller, $action)
+  let $_ := xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "after dispatcher:get-controller-action"})
   (:let $base-invoke :=  xdmp:function(xs:QName("base:invoke"), config:get-base-controller-location()):)
   return
     if (fn:exists($controller-action)) then
     (
       let $controller-location := xdmp:function-module($controller-action)
-      let $controller-uri := fn:namespace-uri-from-QName(fn:function-name($controller-action))
+      let $controller-uri := ()(:fn:namespace-uri-from-QName(fn:function-name($controller-action)):)
       let $controller-initialize := dispatcher:get-controller-action($application, "initialize", $controller-uri, $controller-location)
       return (
         if (fn:exists($controller-initialize)) then
@@ -239,40 +272,82 @@ declare function dispatcher:invoke-response(
   let $debug  := request:debug()[1]
   return (
     if(response:set-response($response,$request)) then (
+      xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "dispatcher:invoke-response - response:set-response:true"}),
       if (fn:not(response:view()) and fn:exists($action)) then
-        response:set-view($action)
+        (
+          xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "dispatcher:invoke-response - before - response:set-view"}),
+          response:set-view($action)
+        )
       else
         ()
       ,
       if(response:is-download()) then
       (
+        xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "dispatcher:invoke-response - response:is-download:true"}),
         xdmp:set-response-content-type(response:content-type()),
         response:body()
       )
       else
         let $engine := engine:supported-engine($request, $response)
         let $_ := response:set-base(fn:true())
-        return engine:initialize($engine, $request, $response)
+        return (
+          xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "dispatcher:invoke-response - before - engine:initialize"}),
+          engine:initialize($engine, $request, $response)
+        )
     )
     else
       fn:error(xs:QName("INVALID-RESPONSE"),"Invalid Response",($response))
   )
 };
 
+declare function dispatcher:is-reponse-object(
+  $response as item()*
+) as xs:boolean {
+  (
+    $response instance of map:map and
+    (some $item in map:keys($response) satisfies fn:starts-with($item, "response:"))
+  )
+
+};
+
 declare function dispatcher:process-request() {
-  let $route := xdmp:get-request-field("_route","")
-  let $action := xdmp:get-request-field("_action","")
+  (:If the request is external then you cant rely on xdmp:get-request-xxx:)
+  if (fn:exists($domain:REQUEST-BODY-EXTERNAL)) 
+    then map:put($domain:REQUEST-EXTERNAL, "request:body", $domain:REQUEST-BODY-EXTERNAL)
+  else (),
+  if(map:count($domain:REQUEST-EXTERNAL) gt 0)  
+  then request:initialize($domain:REQUEST-EXTERNAL)
+  else (),
+  let $is-external := map:count($domain:REQUEST-EXTERNAL) gt 0
+  let $route := 
+    if($is-external)
+    then (request:route(),"GET")[1]
+    else xdmp:get-request-field("_route","")
+  let $action := 
+     if($is-external) 
+     then request:action()
+     else xdmp:get-request-field("_action","")
+  let $method := 
+    if($is-external)
+    then request:method()
+    else xdmp:get-request-method()
   let $eval-options :=
     dispatcher:get-eval-options(
       $route,
       $action,
-      fn:upper-case(xdmp:get-request-method())
+      fn:upper-case($method)
     )
   let $process := function() {
     try {
       let $init := interceptor:before-request()
-      let $request := request:parse($init, xdmp:function(xs:QName("engine:set-format")))
+      let $_ := xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "after - interceptor:before-request"})
+      let $request := 
+        if(map:count($domain:REQUEST-EXTERNAL) gt 0)
+        then request:initialize($domain:REQUEST-EXTERNAL)
+        else request:parse($init, xdmp:function(xs:QName("engine:set-format")))
+      let $_ := xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "after - request:parse"})
       let $request := interceptor:after-request(request:request())
+      let $_ := xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "after - interceptor:after-request"})
       return
         if (response:has-error()) then
           fn:error(xs:QName("RESPONSE-HAS-ERROR"))
@@ -286,8 +361,9 @@ declare function dispatcher:process-request() {
               xdmp:redirect-response(request:redirect())
             else
               let $response := dispatcher:invoke-controller()
+              let $_ := xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "after - dispatcher:invoke-controller"})
               let $response :=
-                if($response instance of map:map) then
+                if(dispatcher:is-reponse-object($response)) then
                   $response
                 else (
                   response:initialize(map:new()),
@@ -295,8 +371,11 @@ declare function dispatcher:process-request() {
                   response:response()
                 )
               let $response := interceptor:before-response($request, $response)
+              let $_ := xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "after - interceptor:before-response"})
               let $response := dispatcher:invoke-response($request, $response)
+              let $_ := xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "after - dispatcher:invoke-response"})
               let $response := interceptor:after-response(request:request(),$response)
+              let $_ := xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "after - interceptor:after-response"})
               return
                 if(response:redirect()) then
                   xdmp:redirect-response(response:redirect())
@@ -322,25 +401,27 @@ declare function dispatcher:process-request() {
       dispatcher:error($ex)
     }
   }
-  let $_ := xdmp:log(text{"action", $action, $route, xdmp:describe($eval-options)}, "debug")
+  let $_ := xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "dispatcher:process-request - before", $action, $route, xdmp:describe($eval-options)})
   return
     if (fn:empty($eval-options)) then (
       $process()
     )
-    else
+    else (
+      xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "before - xdmp:invoke-function"}),
       xdmp:invoke-function(
         function() {
-          xdmp:log(text{"invoke action", $action, xdmp:transaction(), xdmp:get-transaction-mode(), if (fn:exists(xdmp:request-timestamp())) then "query" else "update"}, "finest"),
+          xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "before - $process"}),
           $process(),
-          xdmp:log((text{"About to commit", xdmp:transaction()}), "finest"),
-          xdmp:commit()
+          xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "before - commmit"}),
+          xdmp:commit(),
+          xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "after - commit"})
         },
         $eval-options
       )
+    )
 
 };
-
-xdmp:log(text{"dispatcher.web", xdmp:transaction(), xdmp:get-transaction-mode(), if (fn:exists(xdmp:request-timestamp())) then "query" else "update"}, "finest"),
+xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "start", xdmp:get-transaction-mode(), if (fn:exists(xdmp:request-timestamp())) then "query" else "update"}),
 if (fn:exists(xdmp:request-timestamp())) then
   ()
 else xdmp:log("dispatcher.web is running in 'update' transaction type", "error"),
@@ -349,7 +430,8 @@ let $_ := interceptor:before-request()
 return
   if(fn:normalize-space(request:redirect()) ne "" and fn:exists(request:redirect())) then  (
     xdmp:redirect-response(request:redirect()),
-    xdmp:log(string-join(("dispatcher::after-request::[",request:redirect(),"]"),""), "debug")
+    xdmp:trace($EVENT-NAME, string-join(("dispatcher::after-request::[",request:redirect(),"]"),""))
   )
   else
-    dispatcher:process-request()
+    dispatcher:process-request(),
+xdmp:trace($EVENT-NAME, text{xdmp:transaction(), xdmp:elapsed-time(), "completed"})

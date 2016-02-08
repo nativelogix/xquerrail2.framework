@@ -90,12 +90,12 @@ return
           (:Metrics:)
           js:entry("metrics",js:object(
             $node/search:metrics ! (
-              if (fn:exists(./search:query-resolution-time/node())) then js:keyvalue("query_time", ./search:query-resolution-time/fn:data()) else (),
-              if (fn:exists(./search:facet-resolution-time/node())) then js:keyvalue("facet_time", ./search:facet-resolution-time/fn:data()) else (),
-              if (fn:exists(./search:snippet-resolution-time/node())) then js:keyvalue("snippet_time", ./search:snippet-resolution-time/fn:data()) else (),
-              if (fn:exists(./search:metadata-resolution-time/node())) then js:keyvalue("metadata_time", ./search:metadata-resolution-time/fn:data()) else (),
-              if (fn:exists(./search:extract-resolution-time/node())) then js:keyvalue("extract_time", ./search:extract-resolution-time/fn:data()) else (),
-              if (fn:exists(./search:total-time/node())) then js:keyvalue("total_time", ./search:total-time/fn:data()) else ()
+              if (fn:string(./search:query-resolution-time) ne "") then js:keyvalue("query_time",./search:query-resolution-time) else (),
+              if (fn:string(./search:facet-resolution-time) ne "") then js:keyvalue("facet_time",./search:facet-resolution-time) else (),
+              if (fn:string(./search:snippet-resolution-time) ne "") then js:keyvalue("snippet_time",./search:snippet-resolution-time) else (),
+              if (fn:string(./search:metadata-resolution-time) ne "") then js:keyvalue("metadata_time",./search:metadata-resolution-time) else (),
+              if (fn:string(./search:extract-resolution-time) ne "") then js:keyvalue("extract_time", ./search:extract-resolution-time) else (),
+              if (fn:string(./search:total-time) ne "") then js:keyvalue("total_time",./search:total-time) else ()
             )
           ))
         )))

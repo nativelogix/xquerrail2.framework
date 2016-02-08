@@ -231,3 +231,11 @@ declare %test:case function model22-json-name-attributes(
   )
 };
 
+declare %test:case function model11-key-name-attributes(
+) as item()* {
+  let $model11 := domain:get-model("model11")
+  let $child-id-field := domain:get-model-field($model11, "childId")
+  return (
+    assert:equal(xs:string($child-id-field/@keyName), "child@childId", "childId attribute field must have a keyName eq 'child@childId'")
+  )
+};

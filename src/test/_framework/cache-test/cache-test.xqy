@@ -73,9 +73,9 @@ declare %test:case function test-application-cache() as item()*
   let $cache-value-2 := cache:get-application-cache($cache-type, $key, $ANONYMOUS-USER)
   return
   (
-    assert:true($cache-value eq $TEST-VALUE),
+    assert:true($cache-value eq $TEST-VALUE, text{"cache value must be", $TEST-VALUE}),
     assert:false($cache-empty, "application cache should not be empty."),
-    assert:empty($cache-value-2),
+    assert:empty($cache-value-2, text{"key", $key, "must be removed from cache"}),
     assert:true(cache:is-application-cache-empty($cache-type, $key, $ANONYMOUS-USER), "application cache must be empty")
   )
 };

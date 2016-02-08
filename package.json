@@ -1,6 +1,6 @@
 {
   "name": "xquerrail2.framework",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "Is the XQuerrail Framework as a standalone library",
   "homepage": "https://github.com/nativelogix/xquerrail2.framework",
   "repository": {
@@ -31,7 +31,7 @@
     "gulp-template": "*",
     "gulp-util": "^3.0.4",
     "gulp-watch": "*",
-    "gulp-xray-runner": "https://github.com/rlouapre/gulp-xray-runner/tarball/v0.0.3",
+    "gulp-xray-runner": "https://github.com/rlouapre/gulp-xray-runner/tarball/v1.0.0",
     "nconf": "^0.7.1",
     "run-sequence": "*",
     "vinyl-map": "^1.0.1"

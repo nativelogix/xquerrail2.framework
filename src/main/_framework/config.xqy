@@ -100,70 +100,37 @@ declare variable $ERROR-DOMAIN-CONFIGURATION   := xs:QName("ERROR-DOMAIN-CONFIGU
 declare variable $CONFIG-CACHE-KEY := "config";
 declare variable $BASE-PATH-CACHE-KEY := "base-path";
 declare variable $CONFIG-PATH-CACHE-KEY := "config-path";
-(:declare variable $CONFIG-CACHE-KEY := "http://xquerrail.com/cache/config" ;:)
-(:declare variable $DOMAIN-CACHE-KEY := "http://xquerrail.com/cache/domains/" ;:)
-(:declare variable $DOMAIN-CACHE-TS := "application-domains:timestamp::";:)
 declare variable $CACHE-COLLECTION := "cache:domain";
 
 declare function config:version() as xs:string {
-  "0.0.13"
+  "{ version }"
 };
 
 declare function config:last-commit() as xs:string {
-  "0e03db57094a497eae7f1edf98325b4ff8113454"
+  "{ lastcommit }"
 };
 
 declare function config:get-config() as element(config:config)? {
-  (:if (cache:contains-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-CACHE-KEY)) then
-    cache:get-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-CACHE-KEY)
-  else if (cache:contains-config-cache($cache:DATABASE-CACHE-LOCATION, $CONFIG-CACHE-KEY)) then
-    cache:get-config-cache($cache:DATABASE-CACHE-LOCATION, $CONFIG-CACHE-KEY)/node()
-  else
-    ():)
   cache:get-config((), $CONFIG-CACHE-KEY)
 };
 
 declare function config:set-config($config as element(config:config)?) as empty-sequence() {
-  (:cache:set-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-CACHE-KEY, $config),
-  cache:set-config-cache($cache:DATABASE-CACHE-LOCATION, $CONFIG-CACHE-KEY, $config):)
   cache:set-config($config, $CONFIG-CACHE-KEY, $config)
 };
 
 declare function config:get-base-path() as xs:string? {
-  (:if (cache:contains-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY)) then
-  (
-    xdmp:log(text{"get-base-path from", $cache:SERVER-FIELD-CACHE-LOCATION}),
-    cache:get-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY)
-  )
-  else if (cache:contains-config-cache($cache:DATABASE-CACHE-LOCATION, $BASE-PATH-CACHE-KEY)) then
-    (
-    xdmp:log(text{"get-base-path from", $cache:DATABASE-CACHE-LOCATION}),
-      cache:get-config-cache($cache:DATABASE-CACHE-LOCATION, $BASE-PATH-CACHE-KEY)/node()
-    )
-  else
-    ():)
   cache:get-config((), $BASE-PATH-CACHE-KEY)
 };
 
 declare function config:set-base-path($base-path as xs:string) as empty-sequence() {
-  (:cache:set-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $BASE-PATH-CACHE-KEY, $base-path),
-  cache:set-config-cache($cache:DATABASE-CACHE-LOCATION, $BASE-PATH-CACHE-KEY, text{$base-path}):)
   cache:set-config((), $BASE-PATH-CACHE-KEY, text{$base-path})
 };
 
 declare function config:get-config-path() as xs:string? {
-  (:if (cache:contains-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)) then
-    cache:get-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)
-  else if (cache:contains-config-cache($cache:DATABASE-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)) then
-    cache:get-config-cache($cache:DATABASE-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY)/node()
-  else
-    ():)
   cache:get-config((), $CONFIG-PATH-CACHE-KEY)
 };
 
 declare function config:set-config-path($config-path as xs:string) as empty-sequence() {
-  (:cache:set-config-cache($cache:SERVER-FIELD-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY, $config-path),
-  cache:set-config-cache($cache:DATABASE-CACHE-LOCATION, $CONFIG-PATH-CACHE-KEY, text{$config-path}):)
   cache:set-config((), $CONFIG-PATH-CACHE-KEY, text{$config-path})
 };
 
@@ -207,6 +174,7 @@ declare function config:clear-cache(
 ) as empty-sequence() {
   config:clear-cache(fn:false())
 };
+
 (:~
  : Initializes the application domains and caches them in the application server.
  : When using a cluster please ensure you change configuration to cache from database
@@ -240,21 +208,31 @@ declare function config:get-applications(
 declare function config:resolve-application (
   $application as element(config:application)
 ) as element(config:application) {
-  let $uri := $application/@uri
+  let $key := fn:concat("resolve-application:", $application/@name)
   return
-  element config:application {
-    attribute name { $application/@name },
-    attribute uri { $uri },
-    attribute namespace { $application/@namespace },
-    $application/* ! (if(./@resource) then (
-      element { fn:QName("http://xquerrail.com/config", fn:local-name(.)) } {
-        if (./@resource) then
-          attribute resource { config:resolve-path($uri, ./@resource) }
-        else ()
-      }
-    ) else .)
-  }
-
+    if (cache:contains-cache-map($CACHE, $key)) then
+      cache:get-cache-map($CACHE, $key)
+    else
+      cache:set-cache-map(
+        $CACHE,
+        $key,
+        (
+          let $uri := $application/@uri
+          return
+          element config:application {
+            attribute name { $application/@name },
+            attribute uri { $uri },
+            attribute namespace { $application/@namespace },
+            $application/* ! (if(./@resource) then (
+              element { fn:QName("http://xquerrail.com/config", fn:local-name(.)) } {
+                if (./@resource) then
+                  attribute resource { config:resolve-path($uri, ./@resource) }
+                else ()
+              }
+            ) else .)
+          }
+        )
+      )
 };
 
 (:~
@@ -313,8 +291,8 @@ declare function config:get-config-value($node as element()?) {
  : Returns the default application defined in the config or application config
  : The default application is "application"
  :)
- declare function config:default-application() as xs:string
- {
+declare function config:default-application(
+) as xs:string {
   let $applications := config:get-applications()
   return
     if(fn:count($applications) = 1)
@@ -322,14 +300,15 @@ declare function config:get-config-value($node as element()?) {
     else (config:get-config()/config:default-application/@value/fn:string(),
      "application"
     )[1]
- };
+};
+
 (:~
  : Returns the default controller for entire application usually default
  : This reads the configuration in the following order:
  : config:get-config()/config:application/config:default-controller
  :)
-declare function config:default-controller() as xs:string
-{
+declare function config:default-controller(
+) as xs:string {
   (
     config:get-config()/config:default-controller/@value,
     "default"

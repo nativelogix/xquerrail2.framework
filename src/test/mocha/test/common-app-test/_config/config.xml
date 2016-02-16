@@ -19,7 +19,7 @@
   <controller-extension resource="/test/mocha/test/common-app-test/app/extensions/controller.extension-1.xqy"/>
   <controller-extension resource="/test/mocha/test/common-app-test/app/extensions/controller.extension-2.xqy"/>
   <anonymous-user value="xquerrail2-anonymous-user"/>
-  <xquerrail-role value="xquerrail-xquerrail2-framework"/>
+  <xquerrail-role value="xquerrail2-framework-role"/>
   <!--    <dispatcher resource="/main/xquerrail2/_framework/dispatchers/dispatcher.web.xqy"/>-->
   <!--    <controller resource="base/base-controller.xqy"/>-->
   <!--<controller-extension  resource="/_extensions/controller.extension.xqy"/>-->

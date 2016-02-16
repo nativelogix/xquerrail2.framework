@@ -3,7 +3,7 @@
   <routes-config resource="routes.xml"/>
   <cache-location value="server-field"/>
   <anonymous-user value="xquerrail2-anonymous-user"/>
-  <xquerrail-role value="xquerrail-xquerrail2-framework"/>
+  <xquerrail-role value="xquerrail2-framework-role"/>
   <default-application value="app-test"/>
   <model-extension resource="/test/_framework/helpers/model-helper-test/_extensions/test-model.extension.xqy"/>
   <!--Register Your Application(s) Here-->

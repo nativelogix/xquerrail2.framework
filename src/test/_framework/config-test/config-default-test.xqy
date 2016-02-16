@@ -34,7 +34,7 @@ declare %test:case function test-anonymous-user() as item()*
 
 declare %test:case function test-xquerrail-role() as item()*
 {
-  assert:equal(config:xquerrail-role(config:get-config()), "xquerrail-xquerrail2-framework")
+  assert:equal(config:xquerrail-role(config:get-config()), "xquerrail2-framework-role")
 };
 
 declare %test:case function test-anonymous-user-by-application() as item()*

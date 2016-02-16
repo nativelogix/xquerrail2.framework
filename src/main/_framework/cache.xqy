@@ -262,7 +262,6 @@ declare function cache:set-cache(
   $database-persist as xs:boolean
 ) as empty-sequence() {
   let $document-insert := function($key, $value, $user) {
-    xdmp:log((text{"About to persist cache to database", $key(:, $value:)}, cache:get-permissions())),
     if (fn:exists(cache:get-permissions())) then
       xdmp:eval('
         declare variable $key as xs:string external;

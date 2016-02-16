@@ -26,7 +26,7 @@
 
     <anonymous-user value="xquerrail2-anonymous-user"/>
 
-    <xquerrail-role value="xquerrail-xquerrail2-framework"/>
+    <xquerrail-role value="xquerrail2-framework-role"/>
 
 <!--    <dispatcher resource="/main/xquerrail2/_framework/dispatchers/dispatcher.web.xqy"/>-->
 <!--    <controller resource="base/base-controller.xqy"/>-->

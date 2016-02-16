@@ -12,6 +12,7 @@ import module namespace config = "http://xquerrail.com/config" at "../config.xqy
 
 declare option xdmp:mapping "false";
 
+declare variable $EVENT-NAME := "xquerrail.generator.base";
 declare variable $GENERATOR-PREFIX := "generator";
 
 declare variable $TAB := "&#9;";
@@ -567,24 +568,29 @@ declare function generate-main-module(
         )
     )
     case "database" return
-      xdmp:spawn-function(
-        function() {
-          xdmp:log(text{"About to save generated module", $module-uri}),
-          xdmp:document-insert(
-            $module-uri,
-            text {$module-expression},
-            $cache:CACHE-PERMISSIONS,
-            xdmp:default-collections()
-          ),
-          xdmp:commit()
-        },
-        <options xmlns="xdmp:eval">
-          <database>{xdmp:modules-database()}</database>
-          <transaction-mode>update</transaction-mode>
-        </options>
-      )
+      let $permissions := cache:get-permissions()
+      return
+        domain:spawn-function(
+          function() {
+            xdmp:trace($EVENT-NAME, fn:concat("About to save generated module [", $module-uri, "]")),
+            xdmp:document-insert(
+              $module-uri,
+              text {$module-expression},
+              $permissions,
+              xdmp:default-collections()
+            ),
+            xdmp:commit()
+          },
+          <options xmlns="xdmp:eval">
+            <database>{xdmp:modules-database()}</database>
+            <transaction-mode>update</transaction-mode>
+          </options>
+        )
      default return fn:error(xs:QName("PERSISTENCE-ERROR"),"Could not resolve module-persistence")
-   return $module-uri
+  return (
+    generator:register-generator($model/@name, xdmp:eval($module-expression)),
+    $module-uri
+  )
 };
 
 (:~
@@ -609,18 +615,17 @@ declare function reset(
  : Implements a keyed generator where the key is a qname representing the model
  : using the generator
 ~:)
-declare function register-generator(
+declare function generator:register-generator(
   $key as xs:string,
   $funct-map
 ) as empty-sequence() {
-  (:map:put($GENERATOR-CACHE, $key, $funct-map):)
   cache:set-domain-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key, $funct-map)
 };
 
 (:~
  : Returns if the key and mode are present in generator map
 ~:)
-declare function has-generator(
+declare function generator:has-generator(
   $key,
   $mode as xs:string
 ) as xs:boolean {
@@ -660,11 +665,25 @@ declare function get-generator(
           fn:doc-available($generator-path)},
           <options xmlns="xdmp:eval"><database>{xdmp:modules-database()}</database></options>
         )
-    let $generator := xdmp:invoke($generator-path)
-    return (
-      xdmp:log("Invoking Generator Module:" || $generator-path),
-      register-generator($key,$generator),
-      $generator($mode)
-    )
+    return
+      if (fn:not($generator-exists)) then
+        fn:error(xs:QName("GENERATOR-NOT-FOUND"), text{"Could not find generator from path", $generator-path})
+      else
+        let $generator := xdmp:invoke(
+          $generator-path,
+          (),
+          if(xdmp:modules-database() eq 0) then
+            ()
+          else
+          <options xmlns="xdmp:eval">
+            <modules>{xdmp:modules-database()}</modules>
+            <root>/</root>
+          </options>
+        )
+        return (
+          xdmp:trace($EVENT-NAME, fn:concat("Invoking Generator Module [", $generator-path, "]")),
+          generator:register-generator($key, $generator),
+          $generator($mode)
+        )
 };
 

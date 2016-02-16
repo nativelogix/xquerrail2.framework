@@ -1,26 +1,17 @@
-<config xmlns="http://xquerrail.com/config"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://xquerrail.com/domain file:..schemas/config.xsd"
-    >
-    <!--Configurations-->
-
+<config xmlns="http://xquerrail.com/config" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xquerrail.com/domain file:..schemas/config.xsd">
+  <!--Configurations-->
   <routes-config resource="routes.xml"/>
   <cache-location value="server-field"/>
-
   <anonymous-user value="xquerrail2-anonymous-user"/>
-
+  <xquerrail-role value="xquerrail-xquerrail2-framework"/>
   <default-application value="app-test"/>
-
   <model-extension resource="/test/_framework/helpers/model-helper-test/_extensions/test-model.extension.xqy"/>
-
   <!--Register Your Application(s) Here-->
   <application name="app-test" namespace="http://xquerrail.com/app-test" uri="/test/_framework/helpers/model-helper-test/app-test">
-    <domain resource="domains/application-domain.xml" />
+    <domain resource="domains/application-domain.xml"/>
     <script-directory value="resources/js/"/>
     <stylesheet-directory value="resources/css/"/>
     <default-template value="main"/>
   </application>
-
   <properties/>
-
 </config>

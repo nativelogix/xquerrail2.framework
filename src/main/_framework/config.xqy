@@ -22,6 +22,8 @@ declare variable $USE-MODULES-DB := (xdmp:modules-database() ne 0);
 
 declare variable $CACHE := cache:get-server-field-cache-map("config-cache");
 
+declare variable $REQUEST-CACHE := map:new();
+
 (:~
  : Defines the default base path for engines
  :)
@@ -86,6 +88,12 @@ declare variable $DBRESOURCE-PREFIX := "http://xquerrail.com/";
  : Defines the default anonymous-user configuration
  :)
 declare variable $DEFAULT-ANONYMOUS-USER   := "anonymous-user";
+
+(:~
+ : Defines the default xquerrail role configuration
+ :)
+declare variable $DEFAULT-XQUERRAIL-ROLE   := "xquerrail";
+
 (:~
  : Defines the default routing module configuration
  :)
@@ -111,10 +119,14 @@ declare function config:last-commit() as xs:string {
 };
 
 declare function config:get-config() as element(config:config)? {
-  cache:get-config((), $CONFIG-CACHE-KEY)
+  if (map:contains($REQUEST-CACHE, "config")) then
+    map:get($REQUEST-CACHE, "config")
+  else
+    cache:get-config((), $CONFIG-CACHE-KEY)
 };
 
 declare function config:set-config($config as element(config:config)?) as empty-sequence() {
+  map:put($REQUEST-CACHE, "config", $config),
   cache:set-config($config, $CONFIG-CACHE-KEY, $config)
 };
 
@@ -590,6 +602,37 @@ declare function config:anonymous-user(
   xs:string(config:get-application($application-name, fn:true())/config:anonymous-user/@value)
 };
 
+(:~
+ : Gets the default anonymous user defined by the application
+ :)
+declare function config:xquerrail-role(
+  $config as element(config:config)?
+) as xs:string? {
+  let $config :=
+    if (fn:exists($config)) then
+      $config
+    else
+      config:get-config()
+  return (
+    if (map:contains($REQUEST-CACHE, "xquerrail-role")) then
+      ()
+    else if (fn:exists($config)) then
+      (
+        map:put(
+          $REQUEST-CACHE,
+          "xquerrail-role",
+          fn:head((
+            xs:string($config/config:xquerrail-role/@value),
+            $DEFAULT-XQUERRAIL-ROLE
+          ))
+        )
+      )
+    else
+      (fn:error(xs:QName("XQUERRAIL-ROLE-NOT-FOUND")))
+    ,
+    map:get($REQUEST-CACHE, "xquerrail-role")
+  )
+};
 
 (:~
  :  Get the domain for a given application. The domain is cached to optimize performance

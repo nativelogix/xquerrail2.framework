@@ -31,13 +31,6 @@ declare variable $APPLICATION-CACHE-KEY := cache:cache-base() || "applications/"
 declare variable $GLOBAL-CACHE-KEY := cache:cache-base() || "global/";
 declare variable $CACHE-COLLECTION := "cache:domain";
 
-declare variable $CACHE-PERMISSIONS := (
-  xdmp:permission("xquerrail","read"),
-  xdmp:permission("xquerrail","update"),
-  xdmp:permission("xquerrail","insert"),
-  xdmp:permission("xquerrail","execute")
-);
-
 declare variable $CACHE-MAP := json:object();
 
 declare function cache:cache-base() as xs:string {
@@ -48,6 +41,16 @@ declare function cache:cache-base() as xs:string {
       fn:string(xdmp:server())
     ,
     "/"
+  )
+};
+
+declare function cache:get-permissions(
+) {
+  config:get-config() ! config:xquerrail-role(.) ! (
+    xdmp:permission(., "read"),
+    xdmp:permission(., "update"),
+    xdmp:permission(., "insert"),
+    xdmp:permission(., "execute")
   )
 };
 
@@ -128,9 +131,9 @@ declare %private function cache:server-field-cache-map-key(
   $application as xs:string?,
   $key as xs:string
 ) as xs:string {
-  if (fn:exists($application)) then 
-    fn:concat($APPLICATION-CACHE-KEY, $key) 
-  else 
+  if (fn:exists($application)) then
+    fn:concat($APPLICATION-CACHE-KEY, $key)
+  else
     fn:concat($GLOBAL-CACHE-KEY, $key)
 };
 
@@ -145,9 +148,9 @@ declare function cache:contains-server-field-cache-map(
   $key as xs:string
 ) as xs:boolean {
   let $key := cache:server-field-cache-map-key($application, $key)
-    (:if (fn:exists($application)) then 
-      fn:concat($APPLICATION-CACHE-KEY, $key) 
-    else 
+    (:if (fn:exists($application)) then
+      fn:concat($APPLICATION-CACHE-KEY, $key)
+    else
       fn:concat($GLOBAL-CACHE-KEY, $key):)
   return cache:contains-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key)
 };
@@ -218,7 +221,7 @@ declare function cache:remove-server-field-maps() {
 };
 
 declare function cache:remove-server-field-maps($application as xs:string?) {
-  let $keys := 
+  let $keys :=
     if (fn:exists($application)) then
       fn:concat($APPLICATION-CACHE-KEY, $application)
     else
@@ -259,25 +262,30 @@ declare function cache:set-cache(
   $database-persist as xs:boolean
 ) as empty-sequence() {
   let $document-insert := function($key, $value, $user) {
-    xdmp:eval('
-      declare variable $key as xs:string external;
-      declare variable $value as node() external;
-      declare variable $CACHE-PERMISSIONS external;
-      declare variable $CACHE-COLLECTION external;
-      function() {
-         xdmp:document-insert($key,$value,$CACHE-PERMISSIONS/*,($CACHE-COLLECTION)),
-         xdmp:commit()
-      }()',
-      (xs:QName("key"),$key,
-      xs:QName("value"),$value,
-      xs:QName("CACHE-PERMISSIONS"),<x>{$CACHE-PERMISSIONS}</x>,
-      xs:QName("CACHE-COLLECTION"),$CACHE-COLLECTION),
-      <options xmlns="xdmp:eval">
-       <isolation>different-transaction</isolation>
-       <transaction-mode>update</transaction-mode>
-       <user-id>{get-user-id($user)}</user-id>
-      </options>
-    ),
+    xdmp:log((text{"About to persist cache to database", $key(:, $value:)}, cache:get-permissions())),
+    if (fn:exists(cache:get-permissions())) then
+      xdmp:eval('
+        declare variable $key as xs:string external;
+        declare variable $value as node() external;
+        declare variable $CACHE-PERMISSIONS external;
+        declare variable $CACHE-COLLECTION external;
+        function() {
+           xdmp:document-insert($key,$value,$CACHE-PERMISSIONS/*,($CACHE-COLLECTION)),
+           xdmp:commit()
+        }()',
+        (xs:QName("key"),$key,
+        xs:QName("value"),$value,
+        xs:QName("CACHE-PERMISSIONS"),<x>{cache:get-permissions()}</x>,
+        xs:QName("CACHE-COLLECTION"),$CACHE-COLLECTION),
+        <options xmlns="xdmp:eval">
+         <isolation>different-transaction</isolation>
+         <transaction-mode>update</transaction-mode>
+         <user-id>{get-user-id($user)}</user-id>
+        </options>
+      )
+    else
+      ()
+    ,
     (:xdmp:log(text{"xdmp:document-timestamp($key)", xdmp:document-timestamp($key)}),:)
     cache:set-cache-map(
       $TIMESTAMP-CACHE,
@@ -311,15 +319,15 @@ declare function cache:get-cache($key as xs:string) {
 };
 
 declare function cache:get-cache(
-  $type as xs:string, 
+  $type as xs:string,
   $key as xs:string
 ) {
   cache:get-cache($type, $key, ())
 };
 
 declare function cache:get-cache(
-  $type as xs:string, 
-  $key as xs:string, 
+  $type as xs:string,
+  $key as xs:string,
   $user as xs:string?
 ) {
   cache:get-cache($type, $key, $user, fn:false())
@@ -354,7 +362,7 @@ declare function cache:get-cache(
         switch($type)
           case $SERVER-FIELD-CACHE-LOCATION
             return xdmp:get-server-field($key)
-          default 
+          default
             return $fn-doc($key, $user)
       let $_ := cache:set-cache-map-for-type($type, $key, $value)
       return $value
@@ -425,16 +433,16 @@ declare function cache:remove-cache($type as xs:string, $key as xs:string) as em
 };
 
 declare function cache:remove-cache(
-  $type as xs:string, 
-  $key as xs:string, 
+  $type as xs:string,
+  $key as xs:string,
   $user as xs:string?
 ) as empty-sequence() {
   cache:remove-cache($type, $key, $user, fn:false())
 };
 
 declare function cache:remove-cache(
-  $type as xs:string, 
-  $key as xs:string, 
+  $type as xs:string,
+  $key as xs:string,
   $user as xs:string?,
   $database-fallback as xs:boolean
 ) as empty-sequence() {
@@ -465,7 +473,7 @@ declare function cache:remove-cache(
       return xdmp:set-server-field($key, ())
     default
       return $delete-from-db($key, $user)
-  let $_ := 
+  let $_ :=
     if ($database-fallback) then
       $delete-from-db($key, $user)
     else
@@ -593,61 +601,6 @@ declare function cache:get-domain-cache($type as xs:string?, $key as xs:string) 
 declare function cache:get-domain-cache($type as xs:string?, $key as xs:string, $user as xs:string?) {
   cache:get-cache(cache:cache-location($type), cache:get-cache-key($DOMAIN-CACHE-TYPE, $key), $user)
 };
-
-(:declare function cache:get-domain(
-  $config as element(config:config),
-  $key as xs:string
-) as element(domain:domain)? {
-  let $user := config:anonymous-user($config, $key)
-  let $domain := cache:get-domain-cache($SERVER-FIELD-CACHE-LOCATION, $key, $user)
-  return
-  (
-    let $domain :=
-      if (fn:exists($domain)) then
-        (
-          let $timestamp := xdmp:document-timestamp(cache:get-cache-key($DOMAIN-CACHE-TYPE, $key))
-          return
-            if (fn:empty($timestamp) or $timestamp = cache:get-domain-cache-timestamp($key)) then
-              $domain
-            else
-              (xdmp:log(text{"Timestamp", $timestamp, "is not the same for", cache:get-cache-key($DOMAIN-CACHE-TYPE, $key)}))
-        )
-      else
-        ()
-    return
-      if (fn:exists($domain)) then
-        $domain
-      else
-        (
-          let $_ := xdmp:log(text{"Trying to get domain", $DATABASE-CACHE-LOCATION, "from", $key})
-          let $domain := cache:get-domain-cache($DATABASE-CACHE-LOCATION, $key, $user)
-          return
-          (
-            if (fn:exists($domain)) then
-            (
-              let $_ := xdmp:log(text{"Find domain from", $DATABASE-CACHE-LOCATION})
-              let $uri := xdmp:node-uri($domain)
-              let $timestamp := xdmp:document-timestamp($uri)
-              let $domain := document{$domain}/node()
-              return
-              (
-                if (fn:exists($domain)) then
-                (
-                  cache:set-domain-cache-timestamp($key, $timestamp),
-                  cache:set-domain-cache($SERVER-FIELD-CACHE-LOCATION, $key, $domain, $user)
-                  ,
-                  $domain
-                )
-                else
-                  ()
-              )
-            )
-              else
-              (xdmp:log(text{"COULD NOT find domain from", $DATABASE-CACHE-LOCATION}))
-          )
-        )
-  )
-};:)
 
 declare function cache:get-domain(
   $config as element(config:config),

@@ -522,7 +522,7 @@
     </role>
     <!-- xquerrail role -->
     <role>
-      <role-name>xquerrail</role-name>
+      <role-name>@ml.xquerrail-role-name</role-name>
       <description/>
       <collections/>
       <external-names/>
@@ -730,7 +730,7 @@
       <password>@ml.appuser-password</password>
       <role-names>
         <role-names>@ml.app-role</role-names>
-        <role-names>xquerrail</role-names>
+        <role-names>@ml.xquerrail-role-name</role-names>
         <role-names>xquerrail2-anonymous</role-names>
       </role-names>
       <permissions/>

@@ -480,6 +480,7 @@
     <emailAddress>@ml.ssl-certificate-emailAddress</emailAddress>
   </certificate>
   <roles xmlns="http://marklogic.com/xdmp/security">
+    <!-- xquerrail role -->
     <role>
       <role-name>@ml.app-role</role-name>
       <description>A role for users of the @ml.app-name application</description>
@@ -505,29 +506,6 @@
       </permissions>
       <collections>
       </collections>
-      <privileges>
-        <privilege>
-          <privilege-name>xdmp:value</privilege-name>
-        </privilege>
-        <privilege>
-          <privilege-name>xdmp:add-response-header</privilege-name>
-        </privilege>
-        <privilege>
-          <privilege-name>xdmp:invoke</privilege-name>
-        </privilege>
-        <privilege>
-          <privilege-name>xdmp:with-namespaces</privilege-name>
-        </privilege>
-      </privileges>
-    </role>
-    <!-- xquerrail role -->
-    <role>
-      <role-name>xquerrail</role-name>
-      <description/>
-      <collections/>
-      <external-names/>
-      <role-names/>
-      <permissions/>
       <privileges>
         <!-- Require to execute xray unit tests - xdmp:login must be removed for other scenario -->
         <privilege>
@@ -730,7 +708,7 @@
       <password>@ml.appuser-password</password>
       <role-names>
         <role-names>@ml.app-role</role-names>
-        <role-names>xquerrail</role-names>
+        <!-- <role-names>@ml.xquerrail-role-name</role-names> -->
         <role-names>xquerrail2-anonymous</role-names>
       </role-names>
       <permissions/>

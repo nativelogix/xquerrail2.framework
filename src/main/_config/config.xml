@@ -26,6 +26,8 @@
 
     <anonymous-user value="xquerrail2-anonymous-user"/>
 
+    <xquerrail-role value="xquerrail2-framework-role"/>
+
 <!--    <dispatcher resource="/main/xquerrail2/_framework/dispatchers/dispatcher.web.xqy"/>-->
 <!--    <controller resource="base/base-controller.xqy"/>-->
     <!--<controller-extension  resource="/_extensions/controller.extension.xqy"/>-->
@@ -33,7 +35,7 @@
     <!--Register Default Values for engine-->
 <!--    <default-engine value="engine.html"/>-->
     <default-application value="app-test"/>
-   <default-controller value="default"/>
+    <default-controller value="default"/>
 <!--    <default-action value="index"/>    -->
 <!--    <default-format value="html"/>-->
 <!--    <default-template value="main"/>-->

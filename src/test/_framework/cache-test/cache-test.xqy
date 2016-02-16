@@ -3,6 +3,7 @@ xquery version "1.0-ml";
 module namespace test = "http://github.com/robwhitby/xray/test";
 import module namespace assert = "http://github.com/robwhitby/xray/assertions" at "/xray/src/assertions.xqy";
 
+import module namespace setup = "http://xquerrail.com/test/setup" at "../../../test/_framework/setup.xqy";
 import module namespace cache = "http://xquerrail.com/cache" at "../../../main/_framework/cache.xqy";
 
 declare option xdmp:mapping "false";
@@ -25,11 +26,11 @@ declare variable $TEST-VALUE-2 :=
 ;
 
 declare %test:setup function setup() {
-  ()
+  setup:setup($TEST-APPLICATION)
 };
 
 declare %test:teardown function teardown() {
-  ()
+  setup:teardown()
 };
 
 declare %private function _test-cache($type as xs:string, $user as xs:string?) as item()*
@@ -41,6 +42,7 @@ declare %private function _test-cache($type as xs:string, $user as xs:string?) a
   let $_ := cache:set-cache($type, $key2, $TEST-VALUE-2, $user)
   let $cache-value := cache:get-cache($type, $key, $user)
   let $keys := cache:get-cache-keys($type, $path, $user)
+  let $_ := xdmp:log(("$cache-value", $cache-value, "$keys", $keys))
   let $_ := cache:remove-cache($type, $key, $user)
   let $_ := cache:remove-cache($type, $key2, $user)
   let $cache-value-2 := cache:get-cache($type, $key, $user)

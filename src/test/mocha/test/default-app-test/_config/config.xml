@@ -1,37 +1,23 @@
-<config xmlns="http://xquerrail.com/config"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://xquerrail.com/domain file:../_framework/schemas/config.xsd"
-    >
-    <!--Configurations-->
-    <!--Routing Module and Configuration-->
-    <routes-config resource="routes.xml"/>
-    <routes-module resource="routing.xqy"/>
-    <cache-location value="server-field"/>
-
-    <controller-extension resource="/test/mocha/test/default-app-test/app/extensions/default.controller.extension.xqy"/>
-
-    <anonymous-user value="xquerrail2-anonymous-user"/>
-
-    <default-application value="app-test"/>
-
-    <!--Register Your Application(s) Here-->
-    <application name="app-test" namespace="http://xquerrail.com/app-test" uri="/test/mocha/test/default-app-test/app">
-      <domain resource="domains/application-domain.xml" />
-      <script-directory resource="resources/js/"/>
-      <stylesheet-directory resource="resources/css/"/>
-      <default-template value="main"/>
-    </application>
-
-    <!--Interceptors-->
-    <interceptors>
-       <interceptor
-            name="ml-security"
-            resource="ml-security.xml"
-            before-request="false"
-            after-request="true"
-            before-response="false"
-            after-response="false"
-        />
-    </interceptors>
-    <properties/>
+<config xmlns="http://xquerrail.com/config" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xquerrail.com/domain file:../_framework/schemas/config.xsd">
+  <!--Configurations-->
+  <!--Routing Module and Configuration-->
+  <routes-config resource="routes.xml"/>
+  <routes-module resource="routing.xqy"/>
+  <cache-location value="server-field"/>
+  <controller-extension resource="/test/mocha/test/default-app-test/app/extensions/default.controller.extension.xqy"/>
+  <anonymous-user value="xquerrail2-anonymous-user"/>
+  <xquerrail-role value="xquerrail2-framework-role"/>
+  <default-application value="app-test"/>
+  <!--Register Your Application(s) Here-->
+  <application name="app-test" namespace="http://xquerrail.com/app-test" uri="/test/mocha/test/default-app-test/app">
+    <domain resource="domains/application-domain.xml"/>
+    <script-directory resource="resources/js/"/>
+    <stylesheet-directory resource="resources/css/"/>
+    <default-template value="main"/>
+  </application>
+  <!--Interceptors-->
+  <interceptors>
+    <interceptor after-request="true" after-response="false" before-request="false" before-response="false" name="ml-security" resource="ml-security.xml"/>
+  </interceptors>
+  <properties/>
 </config>

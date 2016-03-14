@@ -3631,7 +3631,7 @@ declare function domain-impl:spawn-function(
     return map:put($context-cache, $key, context:get($key))
   let $fn := $function
   let $cache-map := map:new((
-    xdmp:get-server-field-names() ! map:entry(., if (xdmp:get-server-field(.) instance of map:map) then map:new(xdmp:get-server-field(.)) else xdmp:get-server-field(.))
+    xdmp:get-server-field-names() ! map:entry(., xdmp:get-server-field(.))
   ))
   return xdmp:spawn-function(
     function() {

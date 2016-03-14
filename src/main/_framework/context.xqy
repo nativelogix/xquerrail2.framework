@@ -79,6 +79,11 @@ declare function context:server(
     xdmp:server()
 };
 
+declare function context:keys(
+) as xs:string* {
+  map:keys(context:public-map())
+};
+
 declare function context:get(
   $key as xs:string
 ) as item()* {

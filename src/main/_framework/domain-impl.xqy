@@ -3142,7 +3142,7 @@ declare function domain-impl:get-model-function(
   $function-arity as xs:integer?,
   $fatal as xs:boolean?
 ) as xdmp:function? {
-  let $application := 
+  let $application :=
     if (fn:exists($application)) then
       $application
     else
@@ -3317,13 +3317,13 @@ declare function domain-impl:find-field-in-model(
   return
     if(fn:exists($cache)) then $cache
     else
-      let $fields := 
+      let $fields :=
         if (fn:exists($model//(domain:element)[domain:get-base-type(.) = "instance"])) then
           for $field in $model//(domain:element)[domain:get-base-type(.) = "instance"]
           return domain-impl:find-field-in-model(domain:get-model($field/@type), $key, ($accumulator, $field))
         else
           ()
-      let $fields := 
+      let $fields :=
         if (fn:exists($fields)) then
           $fields
         else
@@ -3333,7 +3333,7 @@ declare function domain-impl:find-field-in-model(
               ($accumulator, $field)
             else
               ()
-      return domain-impl:set-identity-cache($cache-key, $fields) 
+      return domain-impl:set-identity-cache($cache-key, $fields)
 };
 
 declare function domain-impl:build-field-xpath-from-model(
@@ -3573,21 +3573,21 @@ declare function domain-impl:generate-json-schema(
       map:new()
   return
     typeswitch($field)
-    case element(domain:domain) return 
+    case element(domain:domain) return
       let $dom-obj := json:object-define($field/domain:model/@name)
       let $anchor := map:put($options,"anchor","domain")
-      let $models := 
+      let $models :=
          for $m in $field/domain:model
          return
           map:put($dom-obj,$m/@name,domain:generate-json-schema($m,$options)/*)
-      return 
+      return
        $dom-obj
-    case element(domain:model) return 
+    case element(domain:model) return
       let $prop-obj := json:object()
       let $model-obj := json:object-define(("$schema","name","type","properties"))
-      let $_ := 
+      let $_ :=
        for $f in $field/(domain:element|domain:attribute|domain:container)
-       return 
+       return
           map:put($prop-obj,$f/@name, domain:generate-json-schema($f,$options))
 
       let $_ := (
@@ -3597,10 +3597,10 @@ declare function domain-impl:generate-json-schema(
         map:put($model-obj,"name",$field/@name),
         map:put($model-obj,"title",$field/@label)
       )
-      return 
+      return
       xdmp:to-json(map:entry($field/@name,$model-obj))
-    case element(domain:element) return 
-      let $obj := json:object-define($field/@name) 
+    case element(domain:element) return
+      let $obj := json:object-define($field/@name)
       let $properties := json:object-define(("id",$field/(@name|@type|@label)/fn:local-name(.)))
       let $_ := (
           $field/@name ! map:put($properties,fn:local-name(.),.),
@@ -3609,7 +3609,7 @@ declare function domain-impl:generate-json-schema(
           $field/@description ! map:put($properties,"description",fn:string(.)),
           map:put($properties,"id",fn:concat(domain:get-field-namespace($field),domain:get-field-absolute-xpath($field)!fn:replace(.,domain:get-field-prefix($field)||":?",""))),
           $field/@default ! map:put($properties,"default",.),
-          if($field/domain:attribute) then 
+          if($field/domain:attribute) then
            map:put($properties,"properties",for $f in $field/domain:attribute return domain:generate-json-schema($f,$options))
           else ()
         )
@@ -3625,10 +3625,20 @@ declare function domain-impl:spawn-function(
   $options as item()?
 ) as item()* {
   let $server := xdmp:server()
+  let $context-cache := json:object()
+  let $_ :=
+    for $key in context:keys()
+    return map:put($context-cache, $key, context:get($key))
   let $fn := $function
+  let $cache-map := map:new((
+    xdmp:get-server-field-names() ! map:entry(., if (xdmp:get-server-field(.) instance of map:map) then map:new(xdmp:get-server-field(.)) else xdmp:get-server-field(.))
+  ))
   return xdmp:spawn-function(
     function() {
       context:server($server),
+      map:keys($cache-map) ! xdmp:set-server-field(., map:get($cache-map, .))[0],
+      for $key in map:keys($context-cache)
+      return context:put($key, map:get($context-cache, $key)),
       $fn()
     },
     $options

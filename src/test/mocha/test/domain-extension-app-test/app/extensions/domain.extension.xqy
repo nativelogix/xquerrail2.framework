@@ -24,7 +24,12 @@ declare function extension:build-domain-extension(
   $domain as element(domain:domain)
 ) as element(domain:domain) {
   <domain xmlns="http://xquerrail.com/domain">
-    <model name="dynamic-model1" persistence="directory" label="Dnyamic Model #1" extends="base" namespace-uri="http://marklogic.com/model/model1" key="uuid" keyLabel="id">
+  {
+    $domain/namespace::*,
+    $domain/attribute::*,
+    $domain/*
+  },
+    <model name="dynamic-model1" persistence="directory" label="Dynamic Model #1" extends="base" namespace-uri="http://marklogic.com/model/model1" key="uuid" keyLabel="id">
       <directory>/test/dynamic-model1/</directory>
       <element name="id" type="string" label="Id"/>
       <element name="name" type="string" label="Name"/>

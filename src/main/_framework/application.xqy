@@ -139,7 +139,7 @@ declare %private function app:update-domain(
 ) as element(domain:domain) {
   element { fn:QName("http://xquerrail.com/domain", "domain") } {
     $domain/namespace::*,
-    $domain/attribute::*,
+    $domain/attribute::*[. except ($domain/@compiled|$domain/@timestamp)],
     attribute compiled {fn:true()},
     attribute timestamp {fn:current-dateTime()},
     $domain/*[. except $domain/domain:model],
@@ -161,25 +161,14 @@ declare %private function app:custom-models(
   )
   return
     if (fn:exists($models-generator)) then
-      element { fn:QName("http://xquerrail.com/domain", "domain") } {
-        $domain/namespace::*,
-        $domain/attribute::*,
-        $domain/*,
-        for $item in $models-generator($application-name, $domain)/*
-        return
-          if ($item instance of element(domain:model)) then
-            domain:compile-model(
-              $application-name,
-              element { fn:QName("http://xquerrail.com/domain", "domain") } {
-                $domain/namespace::*,
-                $domain/attribute::*,
-                $domain/*,
-                $item
-              }/domain:model[fn:last()]
-            )
-          else
-            $item
-      }
+      fn:fold-left(
+        function($domain, $funct) {
+          let $updated-domain := $funct($application-name, $domain)
+          return app:update-domain($application-name, $updated-domain)
+        },
+        $domain,
+        $models-generator
+      )
     else
       $domain
 };

@@ -6,6 +6,7 @@ import module namespace assert = "http://github.com/robwhitby/xray/assertions" a
 import module namespace setup = "http://xquerrail.com/test/setup" at "/test/_framework/setup.xqy";
 import module namespace app = "http://xquerrail.com/application" at "/main/_framework/application.xqy";
 import module namespace config = "http://xquerrail.com/config" at "/main/_framework/config.xqy";
+import module namespace context = "http://xquerrail.com/context" at "/main/_framework/context.xqy";
 import module namespace domain = "http://xquerrail.com/domain" at "/main/_framework/domain.xqy";
 import module namespace xdmp-api = "http://xquerrail.com/xdmp/api" at "/main/_framework/lib/xdmp-api.xqy";
 
@@ -641,6 +642,19 @@ declare %test:case function spawn-function-test() as item()* {
   return (
     assert:not-empty($model),
     assert:equal(fn:string($model/@name), "model2")
+  )
+};
+
+declare %test:case function spawn-function-with-context-test() as item()* {
+  let $_ := context:put("key1", "value1")
+  let $context-value := domain:spawn-function(
+    function() {context:get("key1")},
+    <options xmlns="xdmp:eval">
+      <result>true</result>
+    </options>
+    )
+  return (
+    assert:equal($context-value, "value1")
   )
 };
 

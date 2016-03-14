@@ -215,8 +215,6 @@ declare function cache:set-cache-map(
 };
 
 declare function cache:remove-server-field-maps() {
-  (:for $key in cache:get-cache-keys($cache:SERVER-FIELD-CACHE-LOCATION, $GLOBAL-CACHE-KEY)
-  return cache:remove-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key):)
   cache:remove-server-field-maps(())
 };
 
@@ -226,9 +224,21 @@ declare function cache:remove-server-field-maps($application as xs:string?) {
       fn:concat($APPLICATION-CACHE-KEY, $application)
     else
       $GLOBAL-CACHE-KEY
-  return
-    for $key in cache:get-cache-keys($cache:SERVER-FIELD-CACHE-LOCATION, $keys(:fn:concat($APPLICATION-CACHE-KEY, $application):))
+  return (
+    for $key in cache:get-cache-keys($cache:SERVER-FIELD-CACHE-LOCATION, $keys)
     return cache:remove-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key)
+    ,
+    (
+      let $server := xdmp:server()
+      return xdmp:spawn-function(
+        function() {
+          context:server($server),
+          for $key in cache:get-cache-keys($cache:SERVER-FIELD-CACHE-LOCATION, $APPLICATION-CACHE-KEY)
+          return cache:remove-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key)
+        }
+      )
+    )
+  )
 };
 
 declare function cache:set-cache($key as xs:string, $value as item()*) as empty-sequence() {

@@ -16,6 +16,9 @@ declare %private variable $CACHE := map:new((
         <json:entry key="user">
           <json:value xsi:type="xs:string">{xdmp:get-current-user()}</json:value>
         </json:entry>
+        <json:entry key="database-name">
+          <json:value xsi:type="xs:string">{xdmp:database-name(xdmp:database())}</json:value>
+        </json:entry>
       </json:object>
     )
   ),
@@ -77,6 +80,19 @@ declare function context:server(
     map:get(context:private-map(), "server")
   else
     xdmp:server()
+};
+
+declare function context:database-name() as xs:string {
+  map:get(context:private-map(), "database-name")
+};
+
+declare function context:database-name(
+  $database-name as xs:string?
+) as empty-sequence() {
+  if (fn:exists($database-name)) then
+    map:put(context:private-map(), "database-name", $database-name)
+  else
+    ()
 };
 
 declare function context:keys(

@@ -661,3 +661,23 @@ declare %test:case function spawn-function-with-context-test() as item()* {
 declare %test:case function get-model-function-test() as item()* {
   assert:not-empty(domain:get-model-function((), "model2", "create", 2, fn:true()), "It should return create from /main/_framework/base/base-model.xqy")
 };
+
+declare %test:case function get-permissions-mulitple-default-permission-test() as item()* {
+  let $model := domain:get-model("secured-author")
+  let $permissions := domain:build-model-permission($model)
+  return (
+    assert:not-empty($permissions, "$permission should not be empty"),
+    assert:equal(fn:count($permissions), 2, "secured-author must have 2 default permissions"),
+    assert:equal($permissions[1]/@role/fn:string(), "role1-test", "$permission[1]/@role equal 'role1-test'"),
+    assert:equal($permissions[1]/@read/fn:string(), "true", "$permissions[1]/@read is true"),
+    assert:equal($permissions[1]/@update/fn:string(), "true", "$permissions[1]/@update is true"),
+    assert:equal($permissions[1]/@insert/fn:string(), "true", "$permissions[1]/@insert is true"),
+    assert:equal($permissions[1]/@execute/fn:string(), "true", "$permissions[1]/@execute is true"),
+    assert:equal($permissions[2]/@role/fn:string(), "role2-test", "$permission[2]/@role equal 'role2-test'"),
+    assert:equal($permissions[2]/@read/fn:string(), "true", "$permissions[2]/@read is true"),
+    assert:equal($permissions[2]/@update/fn:string(), "false", "$permissions[2]/@update is false"),
+    assert:equal($permissions[2]/@insert/fn:string(), "true", "$permissions[2]/@insert is true"),
+    assert:equal($permissions[2]/@execute/fn:string(), "false", "$permissions[2]/@execute is false")
+  )
+};
+

@@ -94,4 +94,10 @@
     <element name="name" type="string" label="Name"/>
   </model>
 
+  <model name="secured-author" persistence="document" label="Secured Author" extends="author" key="uuid" keyLabel="name">
+    <document root="authors">/test/secured-author.xml</document>
+    <permission role="role1-test" read="true" update="true" insert="true" execute="true" />
+    <permission role="role2-test" read="true" update="false" insert="true" execute="false" />
+  </model>
+
 </domain>

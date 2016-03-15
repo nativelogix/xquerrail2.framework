@@ -636,7 +636,7 @@ declare function domain:validators(
 :)
 declare function domain:build-model-permission(
   $model as element(domain:model)
-) as element(domain:permission)? {
+) as element(domain:permission)* {
   domain:domain-function("build-model-permission", 1)($model)
 };
 
@@ -1658,7 +1658,7 @@ declare function domain:get-models(
 :)
 declare function domain:get-permissions(
   $model as element(domain:model)
-) {
+) as element(sec:permission)* {
   domain:domain-function("get-permissions", 1)($model)
 };
 

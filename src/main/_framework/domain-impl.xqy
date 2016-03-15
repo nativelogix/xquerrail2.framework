@@ -1105,26 +1105,32 @@ declare %private function domain-impl:build-navigation-attribute(
       attribute {$attribute-name} { fn:false() }
 };
 
+declare function domain-impl:get-model-permissions(
+  $model as element(domain:model)
+) as element(domain:permission)* {
+  let $base-model := domain-impl:find-base-model($model)
+  let $profile := domain-impl:find-profile($model, $model/domain:permission/@profile, "permission")
+  return
+    if (fn:exists($model/domain:permission) and fn:exists($model/domain:permission/@role)) then
+      $model/domain:permission
+    else if (fn:exists($profile) and fn:exists($profile/domain:permission) and fn:exists($profile/domain:permission/@role)) then
+      $profile/domain:permission
+    else if (fn:exists($base-model)) then
+      domain-impl:get-model-permissions($base-model)
+    else if (fn:exists($model/ancestor::domain:domain/domain:permission) and fn:exists($model/ancestor::domain:domain/domain:permission/@role)) then
+      $model/ancestor::domain:domain/domain:permission
+    else
+      ()
+};
+
 (:~
   permission from model, profile, abstract or domain are merged in this order
 :)
 declare %private function domain-impl:build-permission-attribute(
-  $model as element(domain:model),
+  $permission as element(domain:permission),
   $attribute-name as xs:string
 ) as attribute()? {
-  let $base-model := domain-impl:find-base-model($model)
-  let $profile := domain-impl:find-profile($model, $model/domain:permission/@profile, "permission")
-  return
-    if ($model/domain:permission/@*[./fn:local-name() eq $attribute-name]) then
-      $model/domain:permission/@*[./fn:local-name() eq $attribute-name]
-    else if (fn:exists($profile) and $profile/domain:permission/@*[./fn:local-name() eq $attribute-name]) then
-      ($profile/domain:permission/@*[./fn:local-name() eq $attribute-name])[1]
-    else if (fn:exists($base-model)) then
-      domain-impl:build-permission-attribute($base-model, $attribute-name)
-    else if ($model/ancestor::domain:domain/domain:permission/@*[./fn:local-name() eq $attribute-name]) then
-      $model/ancestor::domain:domain/domain:permission/@*[./fn:local-name() eq $attribute-name]
-    else
-      ()
+  $permission/@*[./fn:local-name() eq $attribute-name]
 };
 
 (:~
@@ -1132,11 +1138,12 @@ declare %private function domain-impl:build-permission-attribute(
 :)
 declare function domain-impl:build-model-permission(
   $model as element(domain:model)
-) as element(domain:permission)? {
-  element domain:permission {
+) as element(domain:permission)* {
+  for $permission in domain-impl:get-model-permissions($model)
+  return element domain:permission {
     $MODEL-PERMISSION-ATTRIBUTES ! (
       let $attribute-name := .
-      return domain-impl:build-permission-attribute($model, $attribute-name)
+      return domain-impl:build-permission-attribute($permission, $attribute-name)
     )
   }
 };
@@ -3211,22 +3218,21 @@ declare function domain-impl:get-models (
  : @param $model for a given permission set
 :)
 declare function domain-impl:get-permissions(
-    $model as element(domain:model)
- ) {
+  $model as element(domain:model)
+) as element(sec:permission)* {
   let $permset := (
     $model/domain:permission,
     $model/ancestor::domain:domain/domain:permission
   )
-  return
-    functx:distinct-deep(
-     for $perm in $permset
-     return
-       (
-        if($perm/@read = "true") then xdmp:permission($perm/@role,"read") else (),
-        if($perm/@insert = "true") then xdmp:permission($perm/@role,"insert") else (),
-        if($perm/@update = "true") then xdmp:permission($perm/@role,"update") else (),
-        if($perm/@execute = "true") then xdmp:permission($perm/@role,"execute") else ()
-       ))
+  return functx:distinct-deep(
+    for $perm in $permset
+    return (
+      if($perm/@read = "true") then xdmp:permission($perm/@role,"read") else (),
+      if($perm/@insert = "true") then xdmp:permission($perm/@role,"insert") else (),
+      if($perm/@update = "true") then xdmp:permission($perm/@role,"update") else (),
+      if($perm/@execute = "true") then xdmp:permission($perm/@role,"execute") else ()
+    )
+  )
 };
 (:~
  : Returns all models that have been descended(@extends) from the given model.

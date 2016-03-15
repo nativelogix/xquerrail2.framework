@@ -554,18 +554,21 @@ declare function config:application-controllers-path(
   if(xdmp:modules-database() = 0) then
       if (xdmp:filesystem-file-exists(fn:concat(xdmp:modules-root(), $path))) then
         $path
-      else (
+      else if (xdmp:filesystem-file-exists(fn:concat(xdmp:modules-root(), $old-path))) then (
         xdmp:log(text{"controllers-path", $path, "does not exist. Please rename controller to controllers"}),
         $old-path
       )
+      else
+        $old-path
   else
     xdmp:eval(
       "if (fn:exists(xdmp:directory('" || $path || "'))) then
         '" || $path || "'
-       else (
+       else if (fn:exists(xdmp:directory('" || $old-path || "'))) then (
         xdmp:log(text{'controllers-path', '" || $path || "', 'does not exist. Please rename controller to controllers'}),
         '" || $old-path || "'
-       )",
+       )" ||
+       "else ()",
       (),
       <options xmlns="xdmp:eval">
         <database>{xdmp:modules-database()}</database>

@@ -37,6 +37,14 @@ describe('Custom app1 features', function() {
       });
     });
 
+    it('should list entity and validate ETag header', function(done) {
+      xquerrailCommon.model.list('model1', undefined, function(error, response, entity) {
+        expect(response.statusCode).to.equal(200);
+        expect(response.headers['etag']).to.exist;
+        done();
+      });
+    });
+
   });
 
 });

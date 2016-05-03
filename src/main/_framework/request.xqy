@@ -50,6 +50,7 @@ declare private variable $ERROR-MESSAGE     := "request:error-message";
 declare private variable $SYS-PARAMS := ("_application","_controller","_action","_view","_context","_format","_url","_route","_partial","_debug");
 declare private variable $IS-MULTIPART      := "request:multipart";
 declare private variable $MULTIPART-BOUNDARY := "request:multipart-boundary";
+declare private variable $TIMESTAMP         := "request:timestamp";
 
 (:~Global Request Variable  :)
 declare private variable $request as map:map :=
@@ -148,7 +149,8 @@ declare function request:parse($parameters, $set-format) as map:map {
         map:put($request, $URL,        xdmp:get-request-url()),
         map:put($request, $PROTOCOL,   xdmp:get-request-protocol()),
         map:put($request, $USERNAME,   xdmp:get-request-username()),
-        map:put($request, $USERID,     xs:unsignedLong(xdmp:get-request-user()))
+        map:put($request, $USERID,     xs:unsignedLong(xdmp:get-request-user())),
+        map:put($request, $TIMESTAMP,  xs:unsignedLong(xdmp:get-request-field("_timestamp", xdmp:get-request-header("If-None-Match"))))
       )
    let $fields :=
          for $i in xdmp:get-request-field-names()[fn:not(. = $SYS-PARAMS)]
@@ -799,4 +801,8 @@ declare function request:is-multipart() as xs:boolean {
 
 declare function request:multipart-boundary() {
   fn:string(map:get($request,$MULTIPART-BOUNDARY))
+};
+
+declare function request:timestamp() as xs:unsignedLong? {
+  map:get($request,$TIMESTAMP)
 };

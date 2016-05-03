@@ -2346,13 +2346,29 @@ declare function domain-impl:model-root-query(
         )
 };
 
+declare function domain-impl:get-field-query-operator(
+  $field as element(),
+  $operator as xs:string?
+) as xs:string {
+  let $field-indexed := fn:exists($field/domain:navigation/@searchType)
+  return
+    if (fn:exists($operator) and $operator != "=" and $field-indexed) then
+      if ($operator = ("<", "<=", ">", ">=", "=", "!=")) then
+        $operator
+      else
+        fn:error(xs:QName("INVALID-FIELD-QUERY-OPERATOR"), "Invalid field query operator", $operator)
+    else
+      "="
+};
+
 (:~
  :
 :)
 declare function domain-impl:get-field-query(
   $field as element(),
   $value as xs:anyAtomicType*,
-  $options as xs:string*
+  $options as xs:string*,
+  $operator as xs:string?
 ) {
   let $options := (
     $options, (
@@ -2364,14 +2380,17 @@ declare function domain-impl:get-field-query(
   let $name := $field/@name
   let $ns := domain:get-field-namespace($field)
   let $index := $field/domain:navigation/@searchType
+  let $is-abstract := $field/ancestor::domain:model/@persistence eq "abstract"
+  let $operator := domain:get-field-query-operator($field, $operator)
   return typeswitch($field)
     case element(domain:element) return
-      if($index eq "range") then
-        cts:element-range-query(fn:QName($ns,$name), "=", $value, $options)
+      (: path range index cannot be used from abstract model - replace by range index :)
+      if($index eq "range" or ($is-abstract and fn:exists($index))) then
+        cts:element-range-query(fn:QName($ns,$name), $operator, $value, $options)
       else if ($index eq "path") then
         xdmp:with-namespaces(
           domain:declared-namespaces($field),
-          cts:path-range-query(domain:get-field-absolute-xpath($field), "=", $value, $options)
+          cts:path-range-query(domain:get-field-absolute-xpath($field), $operator, $value, $options)
         )
       else
         cts:element-value-query(fn:QName($ns,$name), $value ! xs:string(.), $options ! (if (fn:starts-with(., "collation=")) then () else .))
@@ -2380,12 +2399,13 @@ declare function domain-impl:get-field-query(
       let $parent-ns := domain:get-field-namespace($parent)
       let $parent-name := $parent/@name
       return
-        if($index eq "range") then
-          cts:element-attribute-range-query(fn:QName($parent-ns,$parent-name),fn:QName("",$name), "=", $value, $options)
+        (: path range index cannot be used from abstract model - replace by range index :)
+        if($index eq "range" or ($is-abstract and fn:exists($index))) then
+          cts:element-attribute-range-query(fn:QName($parent-ns,$parent-name),fn:QName("",$name), $operator, $value, $options)
       else if ($index eq "path") then
         xdmp:with-namespaces(
           domain:declared-namespaces($field),
-          cts:path-range-query(domain:get-field-absolute-xpath($field), "=", $value, $options)
+          cts:path-range-query(domain:get-field-absolute-xpath($field), $operator, $value, $options)
         )
         else
           cts:element-attribute-value-query(fn:QName($parent-ns,$parent-name),fn:QName($ns,$name), $value ! xs:string(.), $options ! (if (fn:starts-with(., "collation=")) then () else .))

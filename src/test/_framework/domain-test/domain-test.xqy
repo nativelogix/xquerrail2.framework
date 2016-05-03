@@ -570,6 +570,13 @@ declare %test:case function find-field-from-path-model-with-container-test() as 
   )
 };
 
+declare %test:case function get-field-query-operator-test() as item()* {
+  let $model := domain:get-model("model1")
+  let $field-name := domain:get-model-field($model, "name")
+  let $operator := domain:get-field-query-operator($field-name, ">")
+  return assert:equal($operator, ">")
+};
+
 declare %test:case function get-field-query-path-test() as item()* {
   let $model := domain:get-model("model1")
   let $field-name := domain:get-model-field($model, "name")
@@ -586,6 +593,22 @@ declare %test:case function get-field-query-path-test() as item()* {
   )
 };
 
+declare %test:case function get-field-query-path-with-operator-test() as item()* {
+  let $model := domain:get-model("model1")
+  let $field-name := domain:get-model-field($model, "name")
+  let $field-query := domain:get-field-query($field-name, "dummy", (), ">")
+  return (
+    assert:not-empty($field-query),
+    assert:equal(
+      $field-query,
+      xdmp:with-namespaces(
+        domain:declared-namespaces($field-name),
+        cts:path-range-query(domain:get-field-absolute-xpath($field-name), ">", "dummy", ("collation=" || domain:get-field-collation($field-name)))
+      )
+    )
+  )
+};
+
 declare %test:case function get-field-query-range-test() as item()* {
   let $model := domain:get-model("model2")
   let $field-name := domain:get-model-field($model, "name")
@@ -595,6 +618,19 @@ declare %test:case function get-field-query-range-test() as item()* {
     assert:equal(
       $field-query,
       cts:element-range-query(domain:get-field-qname($field-name), "=", "dummy", ("collation=" || domain:get-field-collation($field-name)))
+    )
+  )
+};
+
+declare %test:case function get-field-query-range-with-operator-test() as item()* {
+  let $model := domain:get-model("model2")
+  let $field-name := domain:get-model-field($model, "name")
+  let $field-query := domain:get-field-query($field-name, "dummy", (), "<")
+  return (
+    assert:not-empty($field-query),
+    assert:equal(
+      $field-query,
+      cts:element-range-query(domain:get-field-qname($field-name), "<", "dummy", ("collation=" || domain:get-field-collation($field-name)))
     )
   )
 };

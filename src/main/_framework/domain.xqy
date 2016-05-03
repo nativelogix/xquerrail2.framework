@@ -1204,6 +1204,13 @@ declare function domain:model-root-query(
   domain:domain-function("model-root-query", 1)($model)
 };
 
+declare function domain:get-field-query-operator(
+  $field as element(),
+  $operator as xs:string?
+) as xs:string {
+  domain:domain-function("get-field-query-operator", 2)($field, $operator)
+};
+
 (:~
  :
 :)
@@ -1222,7 +1229,16 @@ declare function domain:get-field-query(
   $value as xs:anyAtomicType*,
   $options as xs:string*
 ) {
-  domain:domain-function("get-field-query", 3)($field, $value, $options)
+  domain:get-field-query($field, $value, $options, ())
+};
+
+declare function domain:get-field-query(
+  $field as element(),
+  $value as xs:anyAtomicType*,
+  $options as xs:string*,
+  $operator as xs:string?
+) {
+  domain:domain-function("get-field-query", 4)($field, $value, $options, $operator)
 };
 
 declare function domain:get-field-tuple-reference(

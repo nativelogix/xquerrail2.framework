@@ -55,6 +55,7 @@ declare %private function app:load-application(
   let $config := config:get-config()
   let $_ := cache:set-domain($config, $application-name, $domain, fn:true())
   let $domain := app:custom-models($application-name, app:update-domain($application-name, $domain))
+  let $_ := app:validate-domain($application-name, $domain)
   let $_ := cache:set-domain($config, $application-name, $domain, fn:false())
   let $_ := map:clear(cache:domain-model-cache())
   let $_ := module-loader:load-modules($application-name, fn:false())
@@ -128,6 +129,7 @@ declare %private function app:load-domain(
       $domain/(domain:name|domain:content-namespace|domain:application-namespace|domain:description|domain:author|domain:version|domain:declare-namespace|domain:default-collation|domain:permission|domain:language|domain:default-language|domain:navigation|domain:profiles|domain:validator),
       ($domain/domain:model,$imports/domain:model),
       ($domain/domain:optionlist,$imports/domain:optionlist),
+      ($domain/domain:enumeration,$imports/domain:enumeration),
       ($domain/domain:controller,$imports/domain:controller),
       ($domain/domain:view,$imports/domain:view)
     }
@@ -171,6 +173,32 @@ declare %private function app:custom-models(
       )
     else
       $domain
+};
+
+declare %private function app:validate-domain(
+  $application-name as xs:string,
+  $domain as element(domain:domain)
+) as empty-sequence() {
+  let $validate-functions := module-loader:load-function-module(
+    $application-name,
+    $module-loader:DOMAIN-EXTENSION-TYPE,
+    "validate-domain-extension",
+    2,
+    $domain:DOMAIN-EXTENSION-NAMESPACE,
+    ()
+  )
+  return
+    if (fn:exists($validate-functions)) then
+      let $errors :=
+        for $validate-function in $validate-functions
+        return $validate-function($application-name, $domain)
+      return
+        if (fn:exists($errors)) then
+          fn:error(xs:QName("VALIDATE-DOMAIN-ERROR"), "Domain is not valid", $errors)
+        else
+          ()
+    else
+      ()
 };
 
 declare %private function app:get-base() as element(config:application) {

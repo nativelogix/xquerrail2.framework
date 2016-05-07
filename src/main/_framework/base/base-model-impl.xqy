@@ -2421,7 +2421,12 @@ declare function model-impl:build-search-constraints(
         model:build-search-constraints(domain:get-model($prop/@type), $params, $name)
       else
         let $search-type := (
-          $prop-nav/@searchType,
+          (: path range index cannot be used from abstract model :)
+          if (fn:exists($prop-nav/@searchType) and $prop/ancestor::domain:model/@persistence eq "abstract") then
+            "range"
+          else
+            $prop-nav/@searchType
+          ,
           if(xs:boolean(fn:data($prop-nav/@suggestable)) or xs:boolean(fn:data($prop-nav/@facetable))) then
             "range"
           else

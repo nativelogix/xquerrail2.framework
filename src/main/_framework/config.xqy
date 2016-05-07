@@ -18,7 +18,8 @@ declare namespace routing = "http://xquerrail.com/routing";
 
 declare option xdmp:mapping "false";
 
-declare variable $USE-MODULES-DB := (xdmp:modules-database() ne 0);
+declare variable $MODULES-DB := xdmp:modules-database();
+declare variable $USE-MODULES-DB := ($MODULES-DB ne 0);
 
 declare variable $CACHE := cache:get-server-field-cache-map("config-cache");
 

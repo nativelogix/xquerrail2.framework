@@ -22,7 +22,6 @@ declare variable $GLOBAL-FUNCTION-CACHE-KEY := "global-function-cache";
 declare variable $FUNCTION-CACHE := cache:get-server-field-cache-map("module-function-cache");
 declare variable $GLOBAL-FUNCTION-CACHE := cache:get-server-field-cache-map($GLOBAL-FUNCTION-CACHE-KEY);
 declare variable $FUNCTION-NOT-FOUND := "function-not-found";
-declare variable $MODULES-DB := xdmp:modules-database();
 declare variable $CONTROLLER-EXTENSION-TYPE := "controller-extension";
 declare variable $DOMAIN-EXTENSION-TYPE := "domain-extension";
 declare variable $ENGINE-EXTENSION-TYPE := "engine-extension";
@@ -51,7 +50,7 @@ declare function module:resource-exists(
       if ($config:USE-MODULES-DB) then
         xdmp:eval(fn:concat('fn:doc-available("', $uri, '")'), (),
           <options xmlns="xdmp:eval">
-            <database>{$MODULES-DB}</database>
+            <database>{$config:MODULES-DB}</database>
           </options>
         )
       else
@@ -81,16 +80,12 @@ declare function module:normalize-uri(
   $parts as xs:string*,
   $base as xs:string
 ) as xs:string {
-  let $uri :=
-    fn:string-join(
-        fn:tokenize(
-          fn:string-join($parts ! fn:normalize-space(fn:data(.)),"/"),"/+")
-    ,"/")
-  let $final := fn:concat($base,$uri)
+  let $final := fn:string-join(($base, $parts) ! fn:replace(., "^/|/$", ""), "/")
   return
-     if(fn:matches($final,"^(http(s)?://|/)"))
-     then $final
-     else "/" || $final
+     if(fn:not($config:USE-MODULES-DB) or fn:matches($final,"^(http(s)?://|/)")) then
+      $final
+     else
+      fn:concat("/", $final)
 };
 
 declare function module:get-modules-map(
@@ -231,12 +226,12 @@ declare function module:load-function-module(
 ) as xdmp:function? {
   let $key := fn:string-join(($application, $module-type, $function-name, fn:string($function-arity), $namespace, $location, fn:string($interface)), ":")
   let $cache := (
-    if (fn:exists($application)) then 
+    if (fn:exists($application)) then
       (
         $FUNCTION-CACHE,
         $GLOBAL-FUNCTION-CACHE
       )
-    else 
+    else
       (
         $GLOBAL-FUNCTION-CACHE,
         $FUNCTION-CACHE
@@ -261,7 +256,7 @@ declare function module:load-function-module(
             ()
         else
           $namespace
-      let $libraries := 
+      let $libraries :=
         if (fn:exists($application)) then
         (
           module:get-modules($application),
@@ -497,25 +492,19 @@ declare function module:load-model-event-functions(
   $application as xs:string,
   $model as element(domain:model)
 ) as element(library)* {
-  let $map := map:new()
   for $event in $model/domain:event
   let $model-namespace := fn:string($event/@module-namespace)
   let $model-location := fn:string($event/@module-uri)
   return (
-    if (fn:not(map:contains($map, $model-namespace))) then 
-      module:load-module-definition(
-        $model-namespace,
-        $model-location,
-        (
-          attribute name {$model/@name},
-          attribute type { $module:EVENT-TYPE }
-        )
+    module:load-module-definition(
+      $model-namespace,
+      $model-location,
+      (
+        attribute name {$model/@name},
+        attribute type { $module:EVENT-TYPE }
       )
-    else
-      ()
-    ,
-    map:put($map, $model-namespace, $model-location)
-  ) 
+    )
+  )
 };
 
 declare function module:load-model-expression-functions(
@@ -671,7 +660,7 @@ declare function module:load-modules(
               if ($transient) then
                 ()
               else
-                ( 
+                (
                   module:load-model-expression-functions($application),
                   module:load-controller-functions($application),
                   (

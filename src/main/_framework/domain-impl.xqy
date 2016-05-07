@@ -754,10 +754,22 @@ declare function domain-impl:get-controller-model(
   $application as xs:string,
   $controller-name as xs:string
 ) as element(domain:model)? {
-  let $domain := config:get-domain($application)
-  let $controller := domain-impl:get-controller($application,$controller-name)
-  let $model := domain:get-domain-model(fn:data($controller/@model))
-  return $model
+  let $key := fn:string-join(("get-controller-model", $application, $controller-name), ":")
+  return
+    if (cache:contains-cache-map($domain:CACHE, $key)) then
+      cache:get-cache-map($domain:CACHE, $key)
+    else
+      cache:set-cache-map(
+        $domain:CACHE,
+        $key,
+        let $domain := config:get-domain($application)
+        let $controller := domain-impl:get-controller($application,$controller-name)
+        return
+          if (fn:exists($controller/@model)) then
+            domain:get-domain-model($controller/@model/fn:string())
+          else
+            ()
+      )
 };
 
 (:~
@@ -770,8 +782,17 @@ declare function domain-impl:get-model-controller-name(
   $application as xs:string,
   $model-name as xs:string?
 ) as xs:string* {
-  let $domain := config:get-domain($application)
-  return fn:data($domain/domain:controller[@model = $model-name]/@name)
+  let $key := fn:string-join(("get-model-controller-name", $application, $model-name), ":")
+  return
+    if (cache:contains-cache-map($domain:CACHE, $key)) then
+      cache:get-cache-map($domain:CACHE, $key)
+    else
+      cache:set-cache-map(
+        $domain:CACHE,
+        $key,
+        let $domain := config:get-domain($application)
+        return fn:data($domain/domain:controller[@model = $model-name]/@name)
+      )
 };
 
 (:~
@@ -1771,7 +1792,7 @@ declare function domain-impl:get-field-xpath(
  :)
 declare function domain-impl:get-field-absolute-xpath(
   $field as element()
-) {
+) as xs:string {
   if($field/@absXpath) then
     $field/@absXpath
   else
@@ -3329,6 +3350,27 @@ declare function domain-impl:get-model-from-instance(
     else
       ()
 };
+
+(:declare function domain-impl:find-field-in-model(
+  $model as element(domain:model),
+  $key as xs:string,
+  $accumulator as element()*
+) as element()* {
+  let $cache-key := ($model/@name || ":find-field-in-model:" || $key)
+  let $cache := domain-impl:get-identity-cache($cache-key)
+  return
+    if(fn:exists($cache)) then $cache
+    else
+      let $field := domain:get-model-field($model, $key)
+      return
+        if (fn:exists($field)) then
+          domain-impl:set-identity-cache($cache-key, ($accumulator, $field))
+        else if (fn:exists($model//(domain:element)[domain:get-base-type(.) = "instance"])) then
+          for $field in $model//(domain:element)[domain:get-base-type(.) = "instance"]
+          return domain-impl:find-field-in-model(domain:get-model($field/@type), $key, ($accumulator, $field))
+        else
+          ()
+};:)
 
 declare function domain-impl:find-field-in-model(
   $model as element(domain:model),

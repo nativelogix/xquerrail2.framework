@@ -107,6 +107,11 @@ declare function json-engine:render-json(
 ) {
   if (fn:not($node instance of node())) then
     $node
+  else if (
+    xdmp:type($node) eq xs:QName("json:array") or
+    xdmp:type($node) eq xs:QName("json:object")
+  ) then
+    $node
   else
     let $is-multiple := xs:boolean(($node/@multi, fn:false())[1])
     let $is-array := xs:boolean(($node/@array, fn:false())[1])

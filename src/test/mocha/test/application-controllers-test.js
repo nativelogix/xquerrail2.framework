@@ -61,11 +61,11 @@ describe('Application controllers (applications, domains)', function() {
         expect(application.domain.link).to.equal('/applications/' + application.name + '/domain/get.json');
         xquerrailCommon.httpMethod('GET', 'applications/' + application.name + '/domain', 'get', undefined, undefined, function(error, response, entity) {
           expect(response.statusCode).to.equal(200);
-          expect(entity).to.have.property('domain');
-          expect(entity.domain).to.not.be.empty;
-          expect(entity.domain).to.have.property('model');
-          expect(entity.domain.model).to.be.instanceof(Array);
-          expect(entity.domain.model).to.not.be.empty;
+          // Add swagger validation
+          expect(entity).to.have.property('$schema');
+          expect(entity['$schema']).to.not.be.empty;
+          expect(entity).to.have.property('definitions');
+          expect(entity).to.have.property('properties');
           done();
         }, 'json', undefined);
       }, 'json', undefined);

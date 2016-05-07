@@ -1,5 +1,5 @@
 xquery version "1.0-ml";
-(:~ 
+(:~
 
 Copyright 2011 - NativeLogix
 
@@ -57,28 +57,28 @@ declare variable $BUILT-IN-TYPES := (
     jsh:e("properties", jsh:o((
       jsh:e("subject",jsh:o(jsh:e("type","string"))),
       jsh:e("predicate",jsh:o(jsh:e("type","string"))),
-      jsh:e("object",jsh:o(jsh:e("type","string")))  
+      jsh:e("object",jsh:o(jsh:e("type","string")))
     ))),
     jsh:e("required",jsh:a(("subject","predicate","object")))
   )))
 );
 declare function swagger:get-annotations($field,$options) {
   if(map:get($options,"annotations") = "true")
-  then 
+  then
     jsh:o((
       jsh:e("attributes",jsh:o((
         for $nav in $field/@*
-        return 
+        return
           jsh:e(fn:local-name($nav),fn:data($nav))
       ))),
       jsh:e("navigation",jsh:o((
         for $nav in $field/domain:navigation/@*
-        return 
+        return
           jsh:e(fn:local-name($nav),fn:data($nav))
       ))),
       jsh:e("constraints",jsh:o((
         for $nav in $field/domain:constraint/@*
-        return 
+        return
           jsh:e(fn:local-name($nav),fn:data($nav))
       )))
     ))
@@ -86,32 +86,32 @@ declare function swagger:get-annotations($field,$options) {
 };
 declare function swagger:get-field-type($field) {
   let $simple := map:get($TYPE-MAP,$field/@type)
-  return 
-    if($simple) 
-    then jsh:e("type", $simple) 
-    else 
+  return
+    if($simple)
+    then jsh:e("type", $simple)
+    else
       if($field/ancestor::domain:domain/domain:model[fn:not(@name eq $field/@type)])
-      then jsh:e("type", "string") 
+      then jsh:e("type", "string")
       else jsh:e("oneOf",jsh:a(jsh:e("$ref", fn:concat("#/definitions/",$field/@type))))
 };
 declare function swagger:get-iri($uri,$joiner) {
   if(fn:not(
-  	fn:ends-with($uri,"#") or 
+  	fn:ends-with($uri,"#") or
   	fn:ends-with($uri,":") or
   	fn:ends-with($uri,"/")
-  )) 
+  ))
   then fn:concat($uri,$SUFFIX-DEFAULT)
   else $uri
 };
 declare function swagger:build-json($entity,$params) {
   typeswitch($entity)
-  case element(domain:domain) return 
-      let $appns := 
+  case element(domain:domain) return
+      let $appns :=
 	  	swagger:get-iri(
 	  		$entity/domain:application-namespace/@namespace-uri,
 	  		map:get($params,$SUFFIX-PARAM)
 	    )
-	  return 
+	  return
         jsh:o((
 	      jsh:e("$schema",$SCHEMA-DEFAULT-VERSION),
 	      jsh:e("id",$appns),
@@ -129,7 +129,7 @@ declare function swagger:build-json($entity,$params) {
 	              $entity/domain:content-namespace/@namespace-uri
 	         )))),
 	         jsh:e("declareNamespace", jsh:o(
-	         	$entity/domain:declare-namespace ! 
+	         	$entity/domain:declare-namespace !
 	         	jsh:o((
 	         	jsh:e(
 	         	  ./@prefix,
@@ -141,30 +141,30 @@ declare function swagger:build-json($entity,$params) {
 	       (:Generate Models:)
 	       jsh:e("definitions", jsh:o((
 	       	for $model in $entity/domain:model
-		      return 
+		      return
             swagger:build-json($model,$params)
 		    ))),
 		    jsh:e("properties",	jsh:o(
 		        for $model in $entity/domain:model
-		        return 
+		        return
             jsh:e($model/@name, jsh:o(jsh:e("$ref",fn:concat($SUFFIX-DEFAULT,"/definitions/",$model/@name))))
 		    ))
-	       
+
 	    ))
   case element(domain:model) return
     jsh:e($entity/@name, jsh:o((
       jsh:e("id",fn:concat($entity/@name)) ,
       jsh:e("title",fn:data($entity/@label)),
       jsh:e("type","object"),
-      jsh:e("required", 
+      jsh:e("required",
       	jsh:a(
       		for $field in $entity/(domain:element|domain:attribute|domain:container)[
-      		@required = "true" or 
+      		@required = "true" or
       		@identity = "true" or
-      		@occurrence = ("+") or 
+      		@occurrence = ("+") or
       		fn:matches(@occurrence,"\d") or
-      		./ancestor::domain:model/@key = @name or 
-      		./ancestor::domain:model/@keyLabel = @name 
+      		./ancestor::domain:model/@key = @name or
+      		./ancestor::domain:model/@keyLabel = @name
       		]
         	return $field/@name
         )
@@ -177,7 +177,7 @@ declare function swagger:build-json($entity,$params) {
     ))
   )
   (:
-    case element(domain:element) return 
+    case element(domain:element) return
     case element(domain:attribute) return jsh:e($entity/@name,jsh:o(()))
     case element(domain:container) return jsh:e($entity/@name,jsh:o(()))
   :)
@@ -191,17 +191,17 @@ declare function swagger:build-json($entity,$params) {
      ))
   )))
 
-  case element(domain:triple) return 
+  case element(domain:triple) return
      jsh:e($entity/@name, jsh:o((
         jsh:e("$ref", "#/builtins/triple"),
         jsh:e("title",($entity/@label,$entity/@name)[1])
      )))
-  
+
   case element(domain:optionlist) return jsh:o(())
-  
+
   case element(domain:enumeration) return jsh:o(())
-  
-  default return   
+
+  default return
 	  jsh:e($entity/@name,jsh:o((
 	  	  swagger:get-field-type($entity),
 	  	  jsh:e("title",$entity/@label),
@@ -212,6 +212,7 @@ declare function swagger:build-json($entity,$params) {
         jsh:e("annotations",swagger:get-annotations($entity,$params))
 	  )))
 };
-declare function swagger:to-json($entity,$params) as object-node(){
-  xdmp:to-json(swagger:build-json($entity,$params))/node()
-};  
+
+declare function swagger:to-json($entity,$params) {
+  xdmp:to-json(swagger:build-json($entity,$params)) ! (if (. instance of document-node()) then ./node() else .)
+};

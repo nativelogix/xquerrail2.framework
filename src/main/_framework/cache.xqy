@@ -147,12 +147,7 @@ declare function cache:contains-server-field-cache-map(
   $application as xs:string?,
   $key as xs:string
 ) as xs:boolean {
-  let $key := cache:server-field-cache-map-key($application, $key)
-    (:if (fn:exists($application)) then
-      fn:concat($APPLICATION-CACHE-KEY, $key)
-    else
-      fn:concat($GLOBAL-CACHE-KEY, $key):)
-  return cache:contains-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key)
+  cache:contains-cache($cache:SERVER-FIELD-CACHE-LOCATION, cache:server-field-cache-map-key($application, $key))
 };
 
 declare function cache:get-server-field-cache-map(
@@ -165,16 +160,19 @@ declare function cache:get-server-field-cache-map(
   $application as xs:string?,
   $key as xs:string
 ) as json:object {
-  let $key := cache:server-field-cache-map-key($application, $key)
-  return
-    if (cache:is-cache-empty($cache:SERVER-FIELD-CACHE-LOCATION, $key)) then
-      let $cache := json:object()
-      return (
-        cache:set-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key, $cache),
-        $cache
-      )
-    else
-      cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key)
+  if ($config:USE-MODULES-DB) then
+    let $key := cache:server-field-cache-map-key($application, $key)
+    return
+      if (cache:is-cache-empty($cache:SERVER-FIELD-CACHE-LOCATION, $key)) then
+        let $cache := json:object()
+        return (
+          cache:set-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key, $cache),
+          $cache
+        )
+      else
+        cache:get-cache($cache:SERVER-FIELD-CACHE-LOCATION, $key)
+  else
+    json:object()
 };
 
 declare function cache:domain-model-cache(

@@ -7,7 +7,7 @@ Continuous Integration
 [![Circle CI](https://circleci.com/gh/nativelogix/xquerrail2.framework/tree/master.svg?style=svg)](https://circleci.com/gh/nativelogix/xquerrail2.framework/tree/master)
 
 MarkLogic supported versions:  
-- 7.0-6, 8.0-5.1  
+- 7.0-6.3, 8.0-5.1  
 
 Install XQuerrail Framework using npm (from src/main) run:
 - ```npm install https://github.com/nativelogix/xquerrail2.framework/tarball/v0.0.12 --save```

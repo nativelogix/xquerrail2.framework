@@ -150,7 +150,8 @@ declare function request:parse($parameters, $set-format) as map:map {
         map:put($request, $PROTOCOL,   xdmp:get-request-protocol()),
         map:put($request, $USERNAME,   xdmp:get-request-username()),
         map:put($request, $USERID,     xs:unsignedLong(xdmp:get-request-user())),
-        map:put($request, $TIMESTAMP,  xs:unsignedLong(xdmp:get-request-field("_timestamp", xdmp:get-request-header("If-None-Match"))))
+        (:map:put($request, $TIMESTAMP,  xs:unsignedLong(xdmp:get-request-field("_timestamp", xdmp:get-request-header("If-None-Match")))):)
+        map:put($request, $TIMESTAMP,  xs:unsignedLong(xdmp:get-request-field("_timestamp")))
       )
    let $fields :=
          for $i in xdmp:get-request-field-names()[fn:not(. = $SYS-PARAMS)]

@@ -14,6 +14,7 @@ import module namespace response = "http://xquerrail.com/response" at "../respon
 import module namespace domain = "http://xquerrail.com/domain" at "../domain.xqy";
 import module namespace config = "http://xquerrail.com/config" at "../config.xqy";
 import module namespace module-loader = "http://xquerrail.com/module" at "../module.xqy";
+import module namespace swagger = "http://xquerrail.com/helper/swagger" at "../helpers/swagger-helper.xqy";
 
 (:Global Option:)
 declare option xdmp:mapping "false";
@@ -44,5 +45,15 @@ declare function controller:initialize(
  :)
 declare function controller:get(
 ) {
-  config:get-domain(request:application())
+  let $domain := config:get-domain(request:application())
+  let $response :=
+    if(request:format() = "json")
+    then  swagger:to-json($domain,request:params())
+    else $domain
+  return (
+     response:initialize(map:new(),request:request()),
+     response:set-content-type(config:get-engines-configuration()/config:engines/config:engine[@format eq request:format()]/config:mimetypes/config:mimetype/fn:string()),
+     response:set-body($response),
+     response:flush()
+  )
 };

@@ -6,6 +6,7 @@ xquery version "1.0-ml";
  :)
 module namespace domain-impl = "http://xquerrail.com/domain/impl";
 
+import module namespace cache = "http://xquerrail.com/cache" at "cache.xqy";
 import module namespace config = "http://xquerrail.com/config" at "config.xqy";
 import module namespace context = "http://xquerrail.com/context" at "context.xqy";
 import module namespace domain = "http://xquerrail.com/domain" at "domain.xqy";
@@ -562,17 +563,17 @@ declare function domain-impl:get-model-field(
   $name as xs:string,
   $include-container as xs:boolean
 ) {
-  let $key := ($model/@name || ":field:" || $name || $include-container)
-  let $cache := domain-impl:get-identity-cache($key)
+  let $key := fn:string-join(("get-model-field", $model/@name, $name, xs:string($include-container)), ":")
   return
-    if(fn:exists($cache)) then $cache
+    if (cache:contains-cache-map($domain:CACHE, $key)) then
+      cache:get-cache-map($domain:CACHE, $key)
     else
       let $value :=
         if ($include-container) then
           $model//(domain:container|domain:element|domain:attribute)[$name eq @name or $name eq @keyId or $name eq @keyName or $name eq @jsonName]
         else
           $model//(domain:element|domain:attribute)[$name eq @name or $name eq @keyId or $name eq @keyName or $name eq @jsonName]
-      return domain-impl:set-identity-cache($key,$value)
+      return cache:set-cache-map($domain:CACHE, $key, $value)
 };
 
 (:~
@@ -753,10 +754,22 @@ declare function domain-impl:get-controller-model(
   $application as xs:string,
   $controller-name as xs:string
 ) as element(domain:model)? {
-  let $domain := config:get-domain($application)
-  let $controller := domain-impl:get-controller($application,$controller-name)
-  let $model := domain:get-domain-model(fn:data($controller/@model))
-  return $model
+  let $key := fn:string-join(("get-controller-model", $application, $controller-name), ":")
+  return
+    if (cache:contains-cache-map($domain:CACHE, $key)) then
+      cache:get-cache-map($domain:CACHE, $key)
+    else
+      cache:set-cache-map(
+        $domain:CACHE,
+        $key,
+        let $domain := config:get-domain($application)
+        let $controller := domain-impl:get-controller($application,$controller-name)
+        return
+          if (fn:exists($controller/@model)) then
+            domain:get-domain-model($controller/@model/fn:string())
+          else
+            ()
+      )
 };
 
 (:~
@@ -769,8 +782,17 @@ declare function domain-impl:get-model-controller-name(
   $application as xs:string,
   $model-name as xs:string?
 ) as xs:string* {
-  let $domain := config:get-domain($application)
-  return fn:data($domain/domain:controller[@model = $model-name]/@name)
+  let $key := fn:string-join(("get-model-controller-name", $application, $model-name), ":")
+  return
+    if (cache:contains-cache-map($domain:CACHE, $key)) then
+      cache:get-cache-map($domain:CACHE, $key)
+    else
+      cache:set-cache-map(
+        $domain:CACHE,
+        $key,
+        let $domain := config:get-domain($application)
+        return fn:data($domain/domain:controller[@model = $model-name]/@name)
+      )
 };
 
 (:~
@@ -1770,7 +1792,7 @@ declare function domain-impl:get-field-xpath(
  :)
 declare function domain-impl:get-field-absolute-xpath(
   $field as element()
-) {
+) as xs:string {
   if($field/@absXpath) then
     $field/@absXpath
   else
@@ -1787,13 +1809,12 @@ declare function domain-impl:get-field-absolute-xpath(
 declare function domain-impl:get-field-qname(
   $field as element()
 ) {
- typeswitch($field)
-   case element(domain:model)       return fn:QName(domain-impl:get-field-namespace($field),$field/@name)
-   case element(domain:element)     return fn:QName(domain-impl:get-field-namespace($field),$field/@name)
-   case element(domain:attribute)   return fn:QName(domain-impl:get-field-namespace($field),$field/@name)
-   case element(domain:container)   return fn:QName(domain-impl:get-field-namespace($field),$field/@name)
-   case element(domain:triple)      return xs:QName("sem:triple")
-   default return fn:error(xs:QName("QNAME-ERROR"),"Cannot create qname from field",fn:local-name($field))
+  typeswitch($field)
+    case element(domain:model)
+    return fn:QName(domain:get-field-namespace($field), $field/@name)
+    case element(domain:element) | element(domain:attribute) | element(domain:container)
+    return fn:QName(domain:get-field-namespace($field), fn:string-join(($field/@prefix, $field/@name), ":"))
+    default return fn:error(xs:QName("QNAME-ERROR"),"Cannot create qname from field",fn:local-name($field))
 };
 
 (:~
@@ -2379,6 +2400,7 @@ declare function domain-impl:get-field-query(
   )
   let $name := $field/@name
   let $ns := domain:get-field-namespace($field)
+  let $field-qname := domain:get-field-qname($field)
   let $index := $field/domain:navigation/@searchType
   let $is-abstract := $field/ancestor::domain:model/@persistence eq "abstract"
   let $operator := domain:get-field-query-operator($field, $operator)
@@ -2386,29 +2408,30 @@ declare function domain-impl:get-field-query(
     case element(domain:element) return
       (: path range index cannot be used from abstract model - replace by range index :)
       if($index eq "range" or ($is-abstract and fn:exists($index))) then
-        cts:element-range-query(fn:QName($ns,$name), $operator, $value, $options)
+        cts:element-range-query($field-qname, $operator, $value, $options)
       else if ($index eq "path") then
         xdmp:with-namespaces(
           domain:declared-namespaces($field),
           cts:path-range-query(domain:get-field-absolute-xpath($field), $operator, $value, $options)
         )
       else
-        cts:element-value-query(fn:QName($ns,$name), $value ! xs:string(.), $options ! (if (fn:starts-with(., "collation=")) then () else .))
+        cts:element-value-query($field-qname, $value ! xs:string(.), $options ! (if (fn:starts-with(., "collation=")) then () else .))
     case element(domain:attribute) return
       let $parent := $field/..
+      let $parent-field-qname := domain:get-field-qname($parent)
       let $parent-ns := domain:get-field-namespace($parent)
       let $parent-name := $parent/@name
       return
         (: path range index cannot be used from abstract model - replace by range index :)
         if($index eq "range" or ($is-abstract and fn:exists($index))) then
-          cts:element-attribute-range-query(fn:QName($parent-ns,$parent-name),fn:QName("",$name), $operator, $value, $options)
+          cts:element-attribute-range-query($parent-field-qname,fn:QName("",$name), $operator, $value, $options)
       else if ($index eq "path") then
         xdmp:with-namespaces(
           domain:declared-namespaces($field),
           cts:path-range-query(domain:get-field-absolute-xpath($field), $operator, $value, $options)
         )
         else
-          cts:element-attribute-value-query(fn:QName($parent-ns,$parent-name),fn:QName($ns,$name), $value ! xs:string(.), $options ! (if (fn:starts-with(., "collation=")) then () else .))
+          cts:element-attribute-value-query($parent-field-qname,$field-qname, $value ! xs:string(.), $options ! (if (fn:starts-with(., "collation=")) then () else .))
       default return
         fn:error(xs:QName("FIELD-QUERY-ERROR"), "Unable to resolve query for",$field/@name)
 };
@@ -3169,11 +3192,6 @@ declare function domain-impl:get-model-function(
   $function-arity as xs:integer?,
   $fatal as xs:boolean?
 ) as xdmp:function? {
-  let $application :=
-    if (fn:exists($application)) then
-      $application
-    else
-      config:default-application()
   let $function := domain:get-model-module-function($application, $model-name, $action, $function-arity)
   return
     if (fn:exists($function)) then
@@ -3332,6 +3350,27 @@ declare function domain-impl:get-model-from-instance(
     else
       ()
 };
+
+(:declare function domain-impl:find-field-in-model(
+  $model as element(domain:model),
+  $key as xs:string,
+  $accumulator as element()*
+) as element()* {
+  let $cache-key := ($model/@name || ":find-field-in-model:" || $key)
+  let $cache := domain-impl:get-identity-cache($cache-key)
+  return
+    if(fn:exists($cache)) then $cache
+    else
+      let $field := domain:get-model-field($model, $key)
+      return
+        if (fn:exists($field)) then
+          domain-impl:set-identity-cache($cache-key, ($accumulator, $field))
+        else if (fn:exists($model//(domain:element)[domain:get-base-type(.) = "instance"])) then
+          for $field in $model//(domain:element)[domain:get-base-type(.) = "instance"]
+          return domain-impl:find-field-in-model(domain:get-model($field/@type), $key, ($accumulator, $field))
+        else
+          ()
+};:)
 
 declare function domain-impl:find-field-in-model(
   $model as element(domain:model),
@@ -3657,6 +3696,7 @@ declare function domain-impl:spawn-function(
     return map:put($context-cache, $key, context:get($key))
   let $fn := $function
   let $cache-map := map:new((
+    (:xdmp:get-server-field-names() ! map:entry(., if (xdmp:get-server-field(.) instance of map:map) then map:new(xdmp:get-server-field(.)) else xdmp:get-server-field(.)):)
     xdmp:get-server-field-names() ! map:entry(., xdmp:get-server-field(.))
   ))
   return xdmp:spawn-function(

@@ -61,5 +61,4 @@
     <model name="extends2" extends="baseClass" description="Base Extension Class" persistence="directory" key="uuid" keyLabel="uuid">
         <directory>/extends/2/</directory>
     </model>
-    <controller name="contries" model="country" />
 </domain>

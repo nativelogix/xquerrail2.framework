@@ -3,12 +3,13 @@ xquery version "1.0-ml";
 module namespace generator  = "http://xquerrail.com/generator/module";
 
 import module namespace xdmp-api = "http://xquerrail.com/xdmp/api" at "../lib/xdmp-api.xqy";
+import module namespace cache = "http://xquerrail.com/cache" at "../cache.xqy";
 
 declare variable $XQUERY-EXTENSIONS := "(xqy|xq|xquery|xqm)$";
 
 declare option xdmp:mapping "false";
 
-declare variable $CACHE := map:new();
+declare variable $CACHE := cache:get-server-field-cache-map("generator-module-cache");
 
 (:~
  : Recursively processes a filesystem path and returns all files matching the criteria specified
@@ -76,7 +77,7 @@ declare function generator:key-cache(
     $annotations ! (
       xs:string(.)
     )
-    ),""
+    ),":"
   )
 };
 
@@ -126,7 +127,8 @@ declare function generator:get-module-definition(
             let $arity := fn:function-arity($function)
             let $function-name := fn:function-name($function)
             return
-              <function name="{fn:local-name-from-QName($function-name)}" arity="{$arity}">
+              <function name="{fn:local-name-from-QName($function-name)}" arity="{$arity}" namespace="{$module-namespace}" location="{$module-location}">
+              {$attributes/@type},
                 <return>{xdmp:function-return-type($function)}</return>
                 {
                   for $anntype in $annotations
@@ -236,30 +238,48 @@ declare function generator:function-contains-annotation(
   $function as element(function),
   $annotations as xs:QName*
 ) as xs:boolean {
-  cts:contains(
-    $function,
-    cts:and-query((
-      for $annotation in $annotations
-      return (
-        cts:element-attribute-value-query(
-          xs:QName("implements"),
-          xs:QName("name"),
-          fn:local-name-from-QName($annotation),
-          ("exact")
-        ),
-        cts:element-attribute-value-query(
-          xs:QName("implements"),
-          xs:QName("namespace"),
-          fn:namespace-uri-from-QName($annotation),
-          ("exact")
+  let $key := fn:string-join(("function-contains-annotation", fn:generate-id($function), $annotations ! xs:string(.)), ":")
+  return
+    if (cache:contains-cache-map($CACHE, $key)) then
+      cache:get-cache-map($CACHE, $key)
+    else
+      cache:set-cache-map(
+        $CACHE,
+        $key,
+        cts:contains(
+          $function,
+          cts:and-query((
+            for $annotation in $annotations
+            return (
+              cts:element-attribute-value-query(
+                xs:QName("implements"),
+                xs:QName("name"),
+                fn:local-name-from-QName($annotation),
+                ("exact")
+              ),
+              cts:element-attribute-value-query(
+                xs:QName("implements"),
+                xs:QName("namespace"),
+                fn:namespace-uri-from-QName($annotation),
+                ("exact")
+              )
+            )
+          ))
         )
       )
-    ))
-  )
 };
 
 declare function generator:get-xdmp-function(
   $function as element(function)
 ) as xdmp:function {
-  xdmp:function(fn:QName($function/../@namespace, $function/@name), $function/../@location)
+  let $key := fn:string-join(("get-xdmp-function", $function/@namespace, $function/@location, $function/@name), ":")
+  return
+    if (cache:contains-cache-map($CACHE, $key)) then
+      cache:get-cache-map($CACHE, $key)
+    else
+      cache:set-cache-map(
+        $CACHE,
+        $key,
+        xdmp:function(fn:QName($function/@namespace, $function/@name), $function/@location)
+      )
 };

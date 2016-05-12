@@ -11,7 +11,7 @@ import module namespace config = "http://xquerrail.com/config" at "config.xqy";
 import module namespace context = "http://xquerrail.com/context" at "context.xqy";
 import module namespace domain = "http://xquerrail.com/domain" at "domain.xqy";
 import module namespace model = "http://xquerrail.com/model/base" at "base/base-model.xqy";
-import module namespace module-loader = "http://xquerrail.com/module" at "module.xqy";
+import module namespace module = "http://xquerrail.com/module" at "module.xqy";
 
 import module namespace functx = "http://www.functx.com" at "/MarkLogic/functx/functx-1.0-doc-2007-01.xqy";
 import module namespace sem = "http://marklogic.com/semantics" at "/MarkLogic/semantics.xqy";
@@ -410,32 +410,34 @@ declare function domain-impl:get-model-identity-field-name(
  : Returns the field that is the identity key for a given model.
  : @param $model - The model to extract the given identity field
  :)
-declare function domain-impl:get-model-identity-field(
+declare %module:memoize function domain-impl:get-model-identity-field(
   $model as element(domain:model)
 ) {
-  let $key := fn:concat($model/@name , ":identity")
+  ($model//(domain:element|domain:attribute)[fn:node-name(.) = $DOMAIN-NODE-FIELDS][@identity eq "true" or @type = ("identity","id")])[1]
+  (:let $key := fn:concat($model/@name , ":identity")
   let $cache := domain-impl:get-identity-cache($key)
   return
     if($cache) then $cache[1]
     else
     let $id-field := $model//(domain:element|domain:attribute)[fn:node-name(.) = $DOMAIN-NODE-FIELDS][@identity eq "true" or @type =( "identity","id")]
-    return domain-impl:set-identity-cache($key,$id-field)[1]
+    return domain-impl:set-identity-cache($key,$id-field)[1]:)
 };
 
 (:~
  : Returns the field that is the identity key for a given model.
  : @param $model - The model to extract the given identity field
  :)
-declare function domain-impl:get-model-keylabel-field(
+declare %module:memoize function domain-impl:get-model-keylabel-field(
   $model as element(domain:model)
 ) {
-  let $key := fn:concat($model/@name , ":keyLabel")
+  $model//(domain:element|domain:attribute)[@name = $model/@keyLabel][1]
+  (:let $key := fn:concat($model/@name , ":keyLabel")
   let $cache := domain-impl:get-identity-cache($key)
   return
     if($cache) then fn:exactly-one($cache)
     else
     let $key-field := $model//(domain:element|domain:attribute)[@name = $model/@keyLabel][1]
-    return domain-impl:set-identity-cache($key,$key-field)
+    return domain-impl:set-identity-cache($key,$key-field):)
 };
 
 (:~
@@ -482,38 +484,57 @@ declare function domain-impl:get-model-identity-query(
  : Returns the field that is the identity key for a given model.
  : @param $model - The model to extract the given identity field
  :)
-declare function domain-impl:get-model-key-field(
+declare %module:memoize function domain-impl:get-model-key-field(
   $model as element(domain:model)
 ) {
-  let $key := ($model/@name || ":key")
+  $model//(domain:element|domain:attribute)[@name eq $model/@key]
+  (:let $key := ($model/@name || ":key")
   let $cache := domain-impl:get-identity-cache($key)
   return
     if($cache) then $cache
     else
       let $field := $model//(domain:element|domain:attribute)[@name eq $model/@key]
-      return domain-impl:set-identity-cache($key,$field)
+      return domain-impl:set-identity-cache($key,$field):)
 };
 
 (:~
  : Returns the field that is the identity key for a given model.
  : @param $model - The model to extract the given identity field
  :)
-declare function domain-impl:get-model-keyLabel-field(
+declare %module:memoize function domain-impl:get-model-keyLabel-field(
   $model as element(domain:model)
 ) {
-  let $key := ($model/@name || ":keyLabel")
+  $model//(domain:element|domain:attribute)[fn:node-name(.) = $DOMAIN-NODE-FIELDS][@name eq $model/@keyLabel]
+  (:let $key := ($model/@name || ":keyLabel")
   let $cache := domain-impl:get-identity-cache($key)
   return
     if($cache) then $cache
     else
       let $field := $model//(domain:element|domain:attribute)[fn:node-name(.) = $DOMAIN-NODE-FIELDS][@name eq $model/@keyLabel]
-      return domain-impl:set-identity-cache($key,$field)
+      return domain-impl:set-identity-cache($key,$field):)
 };
 
-declare function domain-impl:get-field-prefix(
+declare %module:memoize function domain-impl:get-field-prefix(
   $field as element()
 ) as xs:string? {
   if($field/@prefix) then
+    $field/@prefix
+  else if ($field instance of element(domain:attribute)) then
+    ()
+  else
+    let $ns := domain-impl:get-field-namespace($field)
+    let $nses := domain:declared-namespaces($field)
+    let $pos :=
+      if (fn:exists($ns)) then
+        fn:index-of($nses, $ns)
+      else
+        ()
+    return
+      if (fn:empty($pos)) then
+        fn:error(xs:QName("PREFIX-NOT-DEFINED"), text{"Prefix", $ns, "is not defined in domain"})
+      else
+        fn:subsequence($nses,$pos -1 ,1)
+  (:if($field/@prefix) then
     $field/@prefix
   else if ($field instance of element(domain:attribute)) then
     ()
@@ -533,24 +554,10 @@ declare function domain-impl:get-field-prefix(
             ()
         let $prefix :=
           if (fn:empty($pos)) then
-            (:if ($field instance of element(domain:attribute)) then
-              ()
-            else:)
-              fn:error(xs:QName("PREFIX-NOT-DEFINED"), text{"Prefix", $ns, "is not defined in domain"})
+            fn:error(xs:QName("PREFIX-NOT-DEFINED"), text{"Prefix", $ns, "is not defined in domain"})
           else
             fn:subsequence($nses,$pos -1 ,1)
-        (:let $prefix :=:)
-          (:if($pos) then:)
-            (:fn:subsequence($nses,$pos -1 ,1):)
-          (:if ($prefix) then:)
-            (:$prefix:)
-          (:else:)
-            (:fn:error( :)
-              (:xs:QName("UNPREFIXED-NAMESPACE"),:)
-              (:"Cannot resolve prefix for namespace " || $ns,:)
-              (:fn:string($field/ancestor::domain:domain/fn:local-name(.)):)
-            (:):)
-        return domain-impl:set-identity-cache($key,$prefix)
+        return domain-impl:set-identity-cache($key,$prefix):)
 };
 
 (:~
@@ -558,12 +565,16 @@ declare function domain-impl:get-field-prefix(
  : @param $model - The model to extract the given field
  : @param $name  - name or key of the field
  :)
-declare function domain-impl:get-model-field(
+declare %module:memoize function domain-impl:get-model-field(
   $model as element(domain:model),
   $name as xs:string,
   $include-container as xs:boolean
 ) {
-  let $key := fn:string-join(("get-model-field", $model/@name, $name, xs:string($include-container)), ":")
+  if ($include-container) then
+    $model//(domain:container|domain:element|domain:attribute)[$name eq @name or $name eq @keyId or $name eq @keyName or $name eq @jsonName]
+  else
+    $model//(domain:element|domain:attribute)[$name eq @name or $name eq @keyId or $name eq @keyName or $name eq @jsonName]
+  (:let $key := fn:string-join(("get-model-field", $model/@name, $name, xs:string($include-container)), ":")
   return
     if (cache:contains-cache-map($domain:CACHE, $key)) then
       cache:get-cache-map($domain:CACHE, $key)
@@ -573,14 +584,14 @@ declare function domain-impl:get-model-field(
           $model//(domain:container|domain:element|domain:attribute)[$name eq @name or $name eq @keyId or $name eq @keyName or $name eq @jsonName]
         else
           $model//(domain:element|domain:attribute)[$name eq @name or $name eq @keyId or $name eq @keyName or $name eq @jsonName]
-      return cache:set-cache-map($domain:CACHE, $key, $value)
+      return cache:set-cache-map($domain:CACHE, $key, $value):)
 };
 
 (:~
  : Returns model fields with unique constraints
  : @param $model - The model that returns all the unique constraint fields
  :)
-declare function domain-impl:get-model-unique-constraint-fields(
+declare %module:memoize function domain-impl:get-model-unique-constraint-fields(
   $model as element(domain:model)
 ) {
   $model//(domain:element|domain:attribute)[domain:constraint/@unique = "true"]
@@ -590,7 +601,7 @@ declare function domain-impl:get-model-unique-constraint-fields(
  : Resolves a domain type to xsi:type
  : @param $model - The model to extract the given identity field
  :)
-declare function domain-impl:resolve-datatype(
+declare %module:memoize function domain-impl:resolve-datatype(
   $field as element()
 ) {
   let $data-type := element{$field/@type}{$field}
@@ -636,7 +647,7 @@ declare function domain-impl:resolve-datatype(
  : Resolves the field to its xs:Type equivalent
  : @return - String representing the schema
  :)
-declare function domain-impl:resolve-ctstype(
+declare %module:memoize function domain-impl:resolve-ctstype(
   $field as element()
 ) {
   let $data-type := element{$field/@type}{$field}
@@ -678,7 +689,7 @@ declare function domain-impl:resolve-ctstype(
  : Returns the default application domain content-namespace-uri
  : @return the content-namespace for the default application
  :)
-declare function domain-impl:get-content-namespace-uri(
+declare %module:memoize function domain-impl:get-content-namespace-uri(
 ) as xs:string {
   domain-impl:get-content-namespace-uri(config:default-application())
 };
@@ -688,17 +699,18 @@ declare function domain-impl:get-content-namespace-uri(
  : @param $application - name of the application
  : @return - The namespace URI of the given application
  :)
-declare function domain-impl:get-content-namespace-uri(
+declare %module:memoize function domain-impl:get-content-namespace-uri(
   $application as xs:string
 ) as xs:string {
-  let $key := fn:concat($application, ":namespace-uri")
+  config:get-domain($application)/domain:content-namespace/@namespace-uri/fn:string()
+  (:let $key := fn:concat($application, ":namespace-uri")
   let $cache := domain-impl:get-identity-cache($key)
   return
     if($cache) then
       $cache
     else
       let $value := fn:data(config:get-domain($application)/domain:content-namespace/@namespace-uri)
-      return domain-impl:set-identity-cache($key,$value)
+      return domain-impl:set-identity-cache($key,$value):)
 };
 
 (:~
@@ -706,12 +718,11 @@ declare function domain-impl:get-content-namespace-uri(
  : @param $application - Name of the application
  : @param $controller-name - Name of the controller
  :)
-declare function domain-impl:get-controller(
+declare %module:memoize function domain-impl:get-controller(
    $application as xs:string,
    $controller-name as xs:string
 ) as element(domain:controller)? {
-  let $domain := config:get-domain($application)
-  return $domain/domain:controller[@name eq $controller-name]
+  config:get-domain($application)/domain:controller[@name eq $controller-name]
 };
 
 (:~
@@ -719,14 +730,19 @@ declare function domain-impl:get-controller(
  : @param $application - Name of the application
  : @param $controller-name - Name of the controller
  :)
+ (: TODO: Implementation seems buggy - it only return action for base-controller... :)
 declare function domain-impl:get-controller-actions(
   $application as xs:string,
   $controller-name as xs:string
-) {
-  let $controller := domain-impl:get-controller($application,$controller-name)
+) as xs:string* {
+  fn:distinct-values(
+    for $funct in module:lookup-functions-module($application, "base-controller", (), 0, "http://xquerrail.com/controller/base", ())
+    return fn:local-name-from-QName(xdmp:function-name($funct))
+  )
+  (:let $controller := domain:get-controller($application,$controller-name)
   let $base-uri := config:application-directory($application)
   let $base-ns  := config:application-namespace($application)
-  let $controller-ns := config:controller-uri($application, $controller-name)(:fn:concat($base-ns,"/controllers/",$controller-name):)
+  let $controller-ns := config:controller-uri($application, $controller-name)
   let $stmt := fn:concat(
     "import module namespace controller = 'http://xquerrail.com/controller/base' at '../base/base-controller.xqy'; ",
     "&#xA;xdmp:functions()[fn:namespace-uri-from-QName(fn:function-name(.)) = 'http://xquerrail.com/controller/base']"
@@ -741,7 +757,7 @@ declare function domain-impl:get-controller-actions(
     let $name := fn:local-name-from-QName(fn:function-name($func))
     where fn:function-arity($func) = 0
     return $name
-  )
+  ):)
 };
 
 (:~
@@ -750,11 +766,18 @@ declare function domain-impl:get-controller-actions(
  :  @param $controller-name - Name of the controller
  :  @return  - returns the model associated with the given controller.
  :)
-declare function domain-impl:get-controller-model(
+declare %module:memoize function domain-impl:get-controller-model(
   $application as xs:string,
   $controller-name as xs:string
 ) as element(domain:model)? {
-  let $key := fn:string-join(("get-controller-model", $application, $controller-name), ":")
+  let $domain := config:get-domain($application)
+  let $controller := domain-impl:get-controller($application,$controller-name)
+  return
+    if (fn:exists($controller/@model)) then
+      domain:get-domain-model($controller/@model/fn:string())
+    else
+      ()
+  (:let $key := fn:string-join(("get-controller-model", $application, $controller-name), ":")
   return
     if (cache:contains-cache-map($domain:CACHE, $key)) then
       cache:get-cache-map($domain:CACHE, $key)
@@ -769,7 +792,7 @@ declare function domain-impl:get-controller-model(
             domain:get-domain-model($controller/@model/fn:string())
           else
             ()
-      )
+      ):)
 };
 
 (:~
@@ -778,11 +801,13 @@ declare function domain-impl:get-controller-model(
  :  @param $model-name - Name of the controller
  :  @return - the name of the controller
  :)
-declare function domain-impl:get-model-controller-name(
+declare %module:memoize function domain-impl:get-model-controller-name(
   $application as xs:string,
   $model-name as xs:string?
 ) as xs:string* {
-  let $key := fn:string-join(("get-model-controller-name", $application, $model-name), ":")
+  domain:get-controller($application, $model-name)/@name/fn:string()
+  (:config:get-domain($application)/domain:controller[@model = $model-name]/@name/fn:string():)
+  (:let $key := fn:string-join(("get-model-controller-name", $application, $model-name), ":")
   return
     if (cache:contains-cache-map($domain:CACHE, $key)) then
       cache:get-cache-map($domain:CACHE, $key)
@@ -792,7 +817,7 @@ declare function domain-impl:get-model-controller-name(
         $key,
         let $domain := config:get-domain($application)
         return fn:data($domain/domain:controller[@model = $model-name]/@name)
-      )
+      ):)
 };
 
 (:~
@@ -800,12 +825,12 @@ declare function domain-impl:get-model-controller-name(
  : @param $domain-name - Name of the domain model
  : @param $extension - If true then returns the extension fields, false returns the raw model
  :)
-declare function domain-impl:get-domain-model(
+declare %module:memoize function domain-impl:get-domain-model(
   $application as xs:string,
   $model-names as xs:string+,
   $extension as xs:boolean
 ) as element(domain:model)* {
-  let $cached := domain-impl:get-model-cache($application, $model-names)
+  let $cached := () (:domain-impl:get-model-cache($application, $model-names):)
   return
     if(fn:exists($cached)) then
       $cached
@@ -1127,7 +1152,7 @@ declare %private function domain-impl:build-navigation-attribute(
       attribute {$attribute-name} { fn:false() }
 };
 
-declare function domain-impl:get-model-permissions(
+declare %module:memoize function domain-impl:get-model-permissions(
   $model as element(domain:model)
 ) as element(domain:permission)* {
   let $base-model := domain-impl:find-base-model($model)
@@ -1158,7 +1183,7 @@ declare %private function domain-impl:build-permission-attribute(
 (:~
   Build model permission
 :)
-declare function domain-impl:build-model-permission(
+declare %module:memoize function domain-impl:build-model-permission(
   $model as element(domain:model)
 ) as element(domain:permission)* {
   for $permission in domain-impl:get-model-permissions($model)
@@ -1352,26 +1377,18 @@ declare function domain-impl:model-validation-enabled(
  : Returns a list of all defined controllers for a given application domain
  : @param $application - application domain name
  :)
-declare function domain-impl:get-controllers(
+declare %module:memoize function domain-impl:get-controllers(
   $application as xs:string
 ) as element(domain:controller)* {
   config:get-domain($application)/domain:controller
 };
 
 (:~
- : Returns the default application domain defined in the config.xml
- :)
-(:declare function domain-impl:get-default-application(
-) as xs:string {
-  config:default-application()
-};:)
-
-(:~
  : Returns the default content namespace for a given application. Convenience wrapper for @see config:default-namespace() function.
  : @param $application - Name of the application
  : @return default content namespace
  :)
-declare function domain-impl:get-default-namespace(
+declare %module:memoize function domain-impl:get-default-namespace(
   $application as xs:string
 ) as xs:string {
     let $application := config:get-domain($application)
@@ -1384,9 +1401,9 @@ declare function domain-impl:get-default-namespace(
  : @param $application - Name of the application
  : @return sequence of element(namespace).
  :)
-declare function domain-impl:get-domain-namespaces(
+declare %module:memoize function domain-impl:get-domain-namespaces(
   $application as xs:string
-)  as element(namespace) {
+)  as element(namespace)* {
     let $application := config:get-domain($application)
     for $ns in $application/(domain:content-namespace | domain:declare-namespace)
     return
@@ -1400,8 +1417,8 @@ declare function domain-impl:get-domain-namespaces(
  : @param $class - the selector class it can be space delimitted
  :)
 declare function domain-impl:model-selector(
-   $application as xs:string,
-   $class as xs:string*
+  $application as xs:string,
+  $class as xs:string*
 ) as element(domain:model)*
 {
    let $domain := config:get-domain($application)
@@ -1412,30 +1429,28 @@ declare function domain-impl:model-selector(
  : Returns a list of all the fields defined by the selector.
  :)
 declare function domain-impl:model-fields(
-    $model-name as xs:string
-)  as element()*{
+  $model-name as xs:string
+) as element()* {
   domain:model-fields(config:default-application(),$model-name)
 };
 
 (:~
  : Returns the list of fields associated iwth
  :)
-declare function domain-impl:model-fields(
-   $application as xs:string,
-   $model-name as xs:string
-) as element()*
-{
-   let $domain := config:get-domain($application)
-   return
-       domain:get-model($model-name)//(domain:element|domain:attribute)
+declare %module:memoize function domain-impl:model-fields(
+  $application as xs:string,
+  $model-name as xs:string
+) as element()* {
+  let $domain := config:get-domain($application)
+  return domain:get-model($model-name)//(domain:element|domain:attribute)
 };
 (:~
  : Returns the unique hash of an element suitable for creating a named element.
  :)
-declare function domain-impl:get-field-key(
+declare %module:memoize function domain-impl:get-field-key(
   $node as node()
 ) {
-   domain:get-field-id($node)
+  domain:get-field-id($node)
 };
 
 (:~
@@ -1443,10 +1458,11 @@ declare function domain-impl:get-field-key(
  : (ex.  <b>Customer.Address.Line1)</b>.  This is useful for creating ID field in an html form.
  : @param $field - Field in a <b>domain:model</b>
  :)
-declare function domain-impl:get-field-name-key(
+declare %module:memoize function domain-impl:get-field-name-key(
   $field as node()
 ) {
-  if($field/@keyName) then fn:string($field/@keyName) else
+  $field/@keyName/fn:string()
+  (:if($field/@keyName) then fn:string($field/@keyName) else
   let $key   := fn:concat("field-name-key::",fn:generate-id($field))
   let $cache := domain-impl:get-identity-cache($key)
   return
@@ -1454,7 +1470,7 @@ declare function domain-impl:get-field-name-key(
       $cache
     else
       let $value := $field/@keyName/fn:string()
-      return domain-impl:set-identity-cache($key,$value)
+      return domain-impl:set-identity-cache($key,$value):)
 };
 
 declare %private function domain-impl:build-field-name-key(
@@ -1494,32 +1510,36 @@ declare function domain-impl:hash(
  :  @param $context - is any domain:model field such as (domain:element|domain:attribute|domain:container)
  :  @return The unique identifier representing the field
  :)
-declare function domain-impl:get-field-id($field as node()) {
-  if($field/@keyId) then fn:string($field/@keyId) else
+declare %module:memoize function domain-impl:get-field-id(
+  $field as node()
+) {
+  $field/@keyId/fn:string()
+  (:if($field/@keyId) then fn:string($field/@keyId) else
   let $key   := fn:concat("field-id::",fn:generate-id($field))
   let $cache := domain-impl:get-identity-cache($key)
   return
        if($cache) then $cache
        else
         let $value := $field/@keyId/fn:string()
-        return domain-impl:set-identity-cache($key,$value)
+        return domain-impl:set-identity-cache($key,$value):)
 };
 
-declare %private function domain-impl:build-field-id($field as node()) {
+declare %private function domain-impl:build-field-id(
+  $field as node()
+) {
   (:let $items := $field/ancestor-or-self::*[fn:node-name(.) = $DOMAIN-FIELDS]:)
   let $ns := domain-impl:get-field-namespace($field)
   let $path :=
-     fn:string-join(
-         for $item in domain-impl:get-field-ancestors($field)
-         return
-             fn:concat("{" , $ns, "}", $item/@name)
-         ,"/"
-     )
+    fn:string-join(
+      for $item in domain-impl:get-field-ancestors($field)
+      return fn:concat("{" , $ns, "}", $item/@name),
+      "/"
+    )
   let $path := fn:concat($field/@name,"__", xdmp:md5($path))
   return $path
 };
 
-declare function domain-impl:get-field-ancestors(
+declare %private function domain-impl:get-field-ancestors(
   $field as node()
 ) {
   let $key   := fn:concat("field-ancestors::",fn:generate-id($field))
@@ -1532,7 +1552,7 @@ declare function domain-impl:get-field-ancestors(
       return domain-impl:set-identity-cache($key, $fields)
 };
 
-declare function domain-impl:get-field-node-ancestors(
+declare %private function domain-impl:get-field-node-ancestors(
   $field as node()
 ) {
   let $key   := fn:concat("field-node-ancestors::",fn:generate-id($field))
@@ -1551,10 +1571,42 @@ declare function domain-impl:get-field-node-ancestors(
  :  @param $field - is any domain:model field such as (domain:element|domain:attribute|domain:container)
  :  @return The unique identifier representing the field
  :)
-declare function domain-impl:get-field-namespace(
+declare %module:memoize function domain-impl:get-field-namespace(
   $field as element()
 ) as xs:string? {
   if($field/@namespace) then
+    fn:string($field/@namespace)
+  else if ($field instance of element(domain:attribute)) then
+    ()
+  else
+    (
+      if ($field instance of element(domain:attribute)) then
+        (
+          if($field/(@namespace-uri|@namespace)) then
+            $field/(@namespace-uri|@namespace)/fn:string()
+          else
+            ()
+        )
+      else
+
+        if($field/(@namespace-uri|@namespace)) then
+          $field/(@namespace-uri|@namespace)/fn:string()
+        else if($field/ancestor::domain:model/(@namespace-uri|@namespace)) then
+          $field/ancestor::domain:model/(@namespace-uri|@namespace)/fn:string()
+        else if($field/ancestor::domain:domain/domain:content-namespace/(@namespace-uri|text())) then
+          $field/ancestor::domain:domain/domain:content-namespace/(@namespace-uri|/text())
+        (:else (domain-impl:get-content-namespace-uri(),""):)
+        else if (domain-impl:get-content-namespace-uri()) then
+          domain-impl:get-content-namespace-uri()
+        else
+          (
+            config:application-namespace(config:default-application()),
+            ""
+          )
+
+    )[1]
+
+  (:if($field/@namespace) then
     fn:string($field/@namespace)
   else if ($field instance of element(domain:attribute)) then
     ()
@@ -1591,7 +1643,7 @@ declare function domain-impl:get-field-namespace(
             )
 
       )[1]
-      return domain-impl:set-identity-cache($key,$field-namespace)
+      return domain-impl:set-identity-cache($key,$field-namespace):)
 };
 
 (:~
@@ -2696,7 +2748,7 @@ declare function domain-impl:get-field-value(
   else
     let $return-value := domain:get-field-value-node($field, $value, $relative)
     return
-    domain-impl:cast-value(
+    domain:cast-value(
       $field,
       if (fn:exists($return-value)) then
         $return-value
@@ -2731,14 +2783,14 @@ declare function domain-impl:field-value-exists(
   $value as item()*
 ) as xs:boolean {
   typeswitch($value)
-    case json:object          return domain-impl:field-json-exists($field,$value)
-    case json:array           return domain-impl:field-json-exists($field,$value)
-    case element(json:object) return domain-impl:field-json-exists($field,$value)
-    case element(json:array)  return domain-impl:field-json-exists($field,$value)
-    case element(map:map)     return domain-impl:field-param-exists($field,map:map($value))
-    case map:map              return domain-impl:field-param-exists($field,$value)
-    case element()            return domain-impl:field-xml-exists($field,$value)
-    case document-node()      return domain-impl:field-xml-exists($field,$value/element())
+    case json:object          return domain:field-json-exists($field,$value)
+    case json:array           return domain:field-json-exists($field,$value)
+    case element(json:object) return domain:field-json-exists($field,$value)
+    case element(json:array)  return domain:field-json-exists($field,$value)
+    case element(map:map)     return domain:field-param-exists($field,map:map($value))
+    case map:map              return domain:field-param-exists($field,$value)
+    case element()            return domain:field-xml-exists($field,$value)
+    case document-node()      return domain:field-xml-exists($field,$value/element())
     case empty-sequence()     return fn:false()
     default return fn:false()
 };
@@ -2755,7 +2807,7 @@ declare function domain-impl:field-param-exists(
   return (fn:exists($key-value) or fn:exists($namekey-value) or fn:exists($name-value))
 };
 
-declare function domain-impl:field-json-exists(
+declare %module:memoize function domain-impl:field-json-exists(
   $field as element(),
   $values as item()?
 ) as xs:boolean {
@@ -2787,9 +2839,9 @@ declare function domain-impl:field-json-exists(
           case "simple" return xdmp:value(fn:concat("function($value) { fn:exists($value",$path, ")}"))
           default return xdmp:value(fn:concat("function($value) { fn:exists($value", $path,")}"))
       return domain-impl:set-field-function-cache($field,"json-exists",$func)($value)
- };
+};
 
-declare function domain-impl:field-xml-exists(
+declare %module:memoize function domain-impl:field-xml-exists(
   $field as element(),
   $value as item()*
 ) as xs:boolean {
@@ -2858,7 +2910,7 @@ declare function domain-impl:get-field-xml-value(
 (:~
  : Returns the base type of field definition.  The base type of the domain
  :)
-declare function domain-impl:get-base-type(
+declare %module:memoize function domain-impl:get-base-type(
   $field as element(),
   $safe as xs:boolean
 ) {
@@ -2875,7 +2927,7 @@ declare function domain-impl:get-base-type(
 (:~
  : Returns true if the field is multivalue or occurrence allows for more than 1 value.
  :)
-declare function domain-impl:field-is-multivalue(
+declare %module:memoize function domain-impl:field-is-multivalue(
   $field
 ) as xs:boolean {
   if($field/@occurrence =  ("*","+")) then
@@ -3055,7 +3107,7 @@ declare function domain-impl:get-param-value(
 (:~
  :
  :)
-declare function domain-impl:model-exists(
+declare %module:memoize function domain-impl:model-exists(
   $model-name as xs:string?
 ) as xs:boolean {
   domain:model-exists(config:default-application(),$model-name)
@@ -3064,17 +3116,18 @@ declare function domain-impl:model-exists(
 (:~
  :
  :)
-declare function domain-impl:model-exists(
+declare %module:memoize function domain-impl:model-exists(
   $application as xs:string,
   $model-name as xs:string?
 ) as xs:boolean {
-  let $cache-key := fn:concat($application, ":model-exists:", $model-name)
+  fn:exists(config:get-domain($application)//domain:model[@name = $model-name])
+  (:let $cache-key := fn:concat($application, ":model-exists:", $model-name)
   let $cache := domain:get-identity-cache($cache-key)
   return
     if(fn:exists($cache)) then $cache
     else
       let $model-exists := fn:exists(config:get-domain($application)//domain:model[@name = $model-name])
-      return domain:set-identity-cache($cache-key, $model-exists)
+      return domain:set-identity-cache($cache-key, $model-exists):)
 };
 
 (:~
@@ -3083,7 +3136,7 @@ declare function domain-impl:model-exists(
 declare function domain-impl:module-exists(
   $module-location as xs:string
 ) as xs:boolean {
-  module-loader:resource-exists($module-location)
+  module:resource-exists($module-location)
 };
 
 declare function domain-impl:get-function-key(
@@ -3092,7 +3145,8 @@ declare function domain-impl:get-function-key(
   $function-name as xs:string,
   $function-arity as xs:integer
 ) as element() {
-  let $function-keys :=
+  fn:error(xs:QName("DEPRECATED"))
+  (:let $function-keys :=
     if (map:contains($FUNCTION-CACHE, $FUNCTION-KEYS)) then
       map:get($FUNCTION-CACHE, $FUNCTION-KEYS)
     else
@@ -3116,8 +3170,7 @@ declare function domain-impl:get-function-key(
       return (
         map:put($function-keys, $key, $function-key),
         $function-key
-      )
-
+      ):)
 };
 
 (:
@@ -3134,7 +3187,7 @@ declare function domain-impl:get-module-function(
   $function-name as xs:string,
   $function-arity as xs:integer?
 ) as xdmp:function? {
-  module-loader:load-function-module(
+  module:load-function-module(
     $application,
     $module-type,
     $function-name,
@@ -3219,7 +3272,7 @@ declare function domain-impl:get-model-extension-function(
  ) as xdmp:function? {
   domain:get-module-function(
     (),
-    $module-loader:MODEL-EXTENSION-TYPE,
+    $module:MODEL-EXTENSION-TYPE,
     (),
     (),
     $action,
@@ -3230,9 +3283,9 @@ declare function domain-impl:get-model-extension-function(
 (:~
  : Returns all models for all domains
 :)
-declare function domain-impl:get-models (
+declare  function domain-impl:get-models (
 ) as element(domain:model)* {
-  domain-impl:get-models(domain:get-default-application(), fn:false())
+  domain:get-models(domain:get-default-application(), fn:false())
 };
 
 (:~
@@ -3240,7 +3293,7 @@ declare function domain-impl:get-models (
  : @param $application - Name of the application
  : @param $include-abstract - Determines if to include abstract models.
  :)
-declare function domain-impl:get-models (
+declare %module:memoize function domain-impl:get-models (
   $application as xs:string,
   $include-abstract as xs:boolean
 ) as element(domain:model)* {
@@ -3255,7 +3308,7 @@ declare function domain-impl:get-models (
  : Returns all in scope permissions associated with a model.
  : @param $model for a given permission set
 :)
-declare function domain-impl:get-permissions(
+declare %module:memoize function domain-impl:get-permissions(
   $model as element(domain:model)
 ) as element(sec:permission)* {
   let $permset := (
@@ -3275,8 +3328,8 @@ declare function domain-impl:get-permissions(
 (:~
  : Returns all models that have been descended(@extends) from the given model.
 :)
-declare function domain-impl:get-descendant-models(
-    $parent as element(domain:model)
+declare %module:memoize function domain-impl:get-descendant-models(
+  $parent as element(domain:model)
  ) {
   config:get-domain($parent/ancestor::domain:domain/domain:name[1])/domain:model[@extends  = $parent/@name]
 };
@@ -3285,16 +3338,18 @@ declare function domain-impl:get-descendant-models(
  : Returns the query for descendant(@extends) models.
  : @param $model - Model which is the extension model
  :)
-declare function domain-impl:get-descendant-model-query(
-    $parent as element(domain:model)
+declare %module:memoize function domain-impl:get-descendant-model-query(
+  $parent as element(domain:model)
 ) {
-   domain-impl:get-descendant-models($parent) ! domain:get-base-query(.)
+  domain-impl:get-descendant-models($parent) ! domain:get-base-query(.)
 };
 
 (:~
  : returns the default language associated with langString field.
  :)
-declare function domain-impl:get-default-language($field) {
+declare %module:memoize function domain-impl:get-default-language(
+  $field as element()
+) as xs:string {
   if($field/@defaultLanguage) then $field/@defaultLanguage
   else if($field/ancestor::domain:domain/domain:default-language) then $field/ancestor::domain:domain/domain:default-language
   else "en"
@@ -3303,7 +3358,9 @@ declare function domain-impl:get-default-language($field) {
 (:~
  : Returns the languages associated with a given domain field whose type is langString
  :)
-declare function domain-impl:get-field-languages($field as element()) {
+declare %module:memoize function domain-impl:get-field-languages(
+  $field as element()
+) as xs:string* {
    fn:distinct-values((
    $field/ancestor::domain:domain/domain:language,
    fn:tokenize($field/@languages,"\s"),
@@ -3314,13 +3371,13 @@ declare function domain-impl:get-field-languages($field as element()) {
  : Returns the default sort field for a given model
  : @param $model - Model instance
  :)
-declare function domain-impl:get-model-sort-field(
+declare %module:memoize function domain-impl:get-model-sort-field(
   $model as element(domain:model)
 ) as element()* {
   $model/domain:navigation/@sortField[. ne ""] ! domain:get-model-field($model, .)
 };
 
-declare function domain-impl:get-parent-field-attribute(
+declare %module:memoize function domain-impl:get-parent-field-attribute(
   $field as element(domain:attribute)
 ) as element() {
   let $parent := $field/..
@@ -3331,7 +3388,7 @@ declare function domain-impl:get-parent-field-attribute(
       fn:error(xs:QName("UNSUPPORTED-PARENT-FIELD-ATTRIBUTE"), text{"Unsupported parent field", $parent/fn:name()})
 };
 
-declare function domain-impl:get-model-name-from-instance(
+declare %module:memoize function domain-impl:get-model-name-from-instance(
   $instance as element()
 ) as xs:string? {
   if ($instance/@xsi:type) then
@@ -3340,7 +3397,7 @@ declare function domain-impl:get-model-name-from-instance(
     $instance/fn:local-name()
 };
 
-declare function domain-impl:get-model-from-instance(
+declare %module:memoize function domain-impl:get-model-from-instance(
   $instance as element()
 ) as element(domain:model)? {
   let $model-name := domain-impl:get-model-name-from-instance($instance)
@@ -3461,7 +3518,7 @@ declare function domain-impl:find-field-from-path-model(
         ()
 };
 
-declare function domain-impl:generate-schema(
+declare %module:memoize function domain-impl:generate-schema(
   $model as element(domain:model),
   $options as map:map?
 ) as element()* {
@@ -3627,7 +3684,7 @@ declare %private function domain-impl:generate-schema-default(
     ()
 };
 
-declare function domain-impl:generate-json-schema(
+declare %module:memoize function domain-impl:generate-json-schema(
   $field as element(),
   $options as map:map?
 ) as json:object? {

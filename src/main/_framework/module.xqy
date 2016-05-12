@@ -18,8 +18,10 @@ declare option xdmp:mapping "false";
 declare variable $EVENT-NAME := "xquerrail.module";
 
 declare variable $CACHE := json:object();
+declare variable $MEMOIZE-CACHE := cache:get-server-field-cache-map("module-memoize-cache");
 declare variable $GLOBAL-FUNCTION-CACHE-KEY := "global-function-cache";
 declare variable $FUNCTION-CACHE := cache:get-server-field-cache-map("module-function-cache");
+declare variable $FUNCTION-DEFINITION-CACHE := cache:get-server-field-cache-map("module-function-definition-cache");
 declare variable $GLOBAL-FUNCTION-CACHE := cache:get-server-field-cache-map($GLOBAL-FUNCTION-CACHE-KEY);
 declare variable $FUNCTION-NOT-FOUND := "function-not-found";
 declare variable $CONTROLLER-EXTENSION-TYPE := "controller-extension";
@@ -113,7 +115,17 @@ declare function module:get-modules-map(
 };
 
 declare function module:lookup-functions-module(
-  $application as xs:string,
+  $module-type as xs:string?,
+  $function-name as xs:string?,
+  $function-arity as xs:integer?,
+  $namespace as xs:string?,
+  $location as xs:string?
+) as xdmp:function* {
+  module:lookup-functions-module((), $module-type, $function-name, $function-arity, $namespace, $location)
+};
+
+declare function module:lookup-functions-module(
+  $application as xs:string?,
   $module-type as xs:string?,
   $function-name as xs:string?,
   $function-arity as xs:integer?,
@@ -313,82 +325,248 @@ declare function module:load-function-module(
 };
 
 declare function module:get-function-module-definition(
-  $application as xs:string,
   $module-type as xs:string?,
   $function-name as xs:string,
   $function-arity as xs:integer,
   $namespace as xs:string?,
   $location as xs:string?
-) as element(function)? {
-  module:get-modules($application)/library[
-    (if (fn:exists($module-type)) then @type eq $module-type else fn:true()) and
-    (if (fn:exists($namespace)) then @namespace eq $namespace else fn:true()) and
-    (if (fn:exists($location)) then @location eq $location else fn:true())
-  ]/function[@name eq $function-name and @arity eq $function-arity]
+) as element(function)* {
+  module:get-function-module-definition((), $module-type, $function-name, $function-arity, $namespace, $location, ())
+};
+
+declare function module:get-function-module-definition(
+  $application as xs:string?,
+  $module-type as xs:string?,
+  $function-name as xs:string,
+  $function-arity as xs:integer,
+  $namespace as xs:string?,
+  $location as xs:string?,
+  $interface as xs:boolean?
+) as element(function)* {
+  let $key := fn:string-join(("get-function-module-definition", "$application", $application, "$module-type", $module-type, "$function-name", $function-name, "$function-arity", xs:string($function-arity), "$namespace", $namespace, "$location", $location), ":")
+  return
+    if (cache:contains-cache-map($FUNCTION-DEFINITION-CACHE, $key)) then
+      cache:get-cache-map($FUNCTION-DEFINITION-CACHE, $key)
+    else
+      cache:set-cache-map(
+        $FUNCTION-DEFINITION-CACHE,
+        $key,
+        let $namespace :=
+          if (fn:exists($location)) then
+            if (fn:exists($namespace) and fn:not(xdmp-api:is-javascript-modules($location))) then
+              $namespace
+            else
+              ()
+          else
+            $namespace
+        let $libraries :=
+          if (fn:exists($application)) then
+          (
+            module:get-modules($application),
+            module:get-modules()
+          )
+          else
+          (
+            module:get-modules(),
+            module:get-modules(
+              if (fn:exists($application)) then
+                $application
+              else if (fn:count(config:get-applications()) eq 1) then
+                config:default-application()
+              else
+                ()
+            )
+          )
+        return fn:head((
+          $libraries ! (./library[
+            (if (fn:exists($module-type)) then @type eq $module-type else fn:true()) and
+            (if (fn:exists($namespace)) then @namespace eq $namespace else fn:true()) and
+            (if (fn:exists($location)) then @location eq $location else fn:true()) and
+            (if (fn:exists($interface)) then @interface eq $interface else fn:true())
+          ]/function[@name eq $function-name and @arity eq $function-arity])
+        ))
+        (:module:get-modules($application)/library[
+          (if (fn:exists($module-type)) then @type eq $module-type else fn:true()) and
+          (if (fn:exists($namespace)) then @namespace eq $namespace else fn:true()) and
+          (if (fn:exists($location)) then @location eq $location else fn:true())
+        ]/function[@name eq $function-name and @arity eq $function-arity]:)
+      )
 };
 
 declare function module:apply-function-module(
-  $application as xs:string,
+  $application as xs:string?,
   $module-type as xs:string?,
   $function-name as xs:string,
-  $function-arguments,
+  $function-arity as xs:positiveInteger,
   $namespace as xs:string?,
-  $location as xs:string?
+  $location as xs:string?,
+  $argument-1 as item()*,
+  $argument-2 as item()*,
+  $argument-3 as item()*,
+  $argument-4 as item()*,
+  $argument-5 as item()*,
+  $argument-6 as item()*,
+  $argument-7 as item()*,
+  $argument-8 as item()*,
+  $argument-9 as item()*,
+  $argument-10 as item()*
 ) {
   let $function :=
     module:get-function-module-definition(
       $application,
       $module-type,
       $function-name,
-      fn:count($function-arguments),
+      $function-arity,
       $namespace,
-      $location
+      $location,
+      fn:false()
     )
   let $function :=
     if (fn:empty($function)) then
-      fn:error(xs:QName("APPLY-FUNCTION-MODULE-ERROR"), text{"Function", $function-name, fn:count($function-arguments), "from", $module-type ,"module type not found."})
+      fn:error(xs:QName("APPLY-FUNCTION-MODULE-ERROR"), text{"Function", $function-name, $function-arity, "from", $module-type ,"module type not found."})
     else
       $function
   return
     if (generator:function-contains-annotation($function, xs:QName("module:memoize"))) then
-      module:memoize(generator:get-xdmp-function($function), $function-arguments)
+      module:memoize(generator:get-xdmp-function($function), $function-arity, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8, $argument-9, $argument-10)
     else
-    module:apply-function(generator:get-xdmp-function($function), $function-arguments)
+      module:apply-function(generator:get-xdmp-function($function), $function-arity, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8, $argument-9, $argument-10)
 };
 
 declare function module:apply-function(
   $funct,
-  $arguments
+  $function-arity,
+  $argument-1 as item()*,
+  $argument-2 as item()*,
+  $argument-3 as item()*,
+  $argument-4 as item()*,
+  $argument-5 as item()*,
+  $argument-6 as item()*,
+  $argument-7 as item()*,
+  $argument-8 as item()*,
+  $argument-9 as item()*,
+  $argument-10 as item()*
 ) {
-  if (fn:count($arguments) eq 1) then
+  if ($function-arity eq 0) then
+    $funct()
+  else if ($function-arity eq 1) then
+    $funct($argument-1)
+  else if ($function-arity eq 2) then
+    $funct($argument-1, $argument-2)
+  else if ($function-arity eq 3) then
+    $funct($argument-1, $argument-2, $argument-3)
+  else if ($function-arity eq 4) then
+    $funct($argument-1, $argument-2, $argument-3, $argument-4)
+  else if ($function-arity eq 5) then
+    $funct($argument-1, $argument-2, $argument-3, $argument-4, $argument-5)
+  else if ($function-arity eq 6) then
+    $funct($argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6)
+  else if ($function-arity eq 7) then
+    $funct($argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7)
+  else if ($function-arity eq 8) then
+    $funct($argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8)
+  else if ($function-arity eq 9) then
+    $funct($argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8, $argument-9)
+  else if ($function-arity eq 10) then
+    $funct($argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8, $argument-9, $argument-10)
+  else
+    fn:error()
+
+  (:if (fn:empty($arguments)) then
+    $funct()
+  else if (fn:count($arguments) eq 1) then
     $funct($arguments)
   else
     module:apply-function(
       $funct(fn:head($arguments), ?),
       fn:tail($arguments)
+    ):)
+};
+
+declare function module:hash(
+  $items as item()*
+) as xs:string? {
+  if (fn:empty($items)) then
+    ()
+  else
+    fn:string-join(
+      (
+        for $item in $items
+          return
+            if ($item instance of node()) then
+              fn:generate-id($item)
+            else if ($item instance of binary() or $item instance of xs:string) then
+              xdmp:md5($item)
+            else
+              xdmp:md5(xdmp:describe($item))
+      )
+      , ":"
     )
 };
 
 (:~ TODO: Handle function returning empty-sequence() :)
 declare function module:memoize(
-  $function,
-  $arguments as item()*
+  $funct as xdmp:function,
+  $arity as xs:positiveInteger,
+  $argument-1 as item()*,
+  $argument-2 as item()*,
+  $argument-3 as item()*,
+  $argument-4 as item()*,
+  $argument-5 as item()*,
+  $argument-6 as item()*,
+  $argument-7 as item()*,
+  $argument-8 as item()*,
+  $argument-9 as item()*,
+  $argument-10 as item()*
 ) {
-  let $key := xs:string(xdmp:hash64(
-      $arguments ! (
-        fn:string(.)
-      )
-  ))
-  return
-    if (map:contains($CACHE, $key)) then
-    (
-      map:get($CACHE, $key)
-    )
+  let $arity :=
+    if ($arity gt 10) then
+      fn:error(xs:QName("MEMOIZE-ERROR"), fn:concat("Arity not supported ", $arity))
     else
-      let $value := module:apply-function($function, $arguments)
-      return (
-        map:put($CACHE, $key, $value),
-        $value
+      $arity
+  let $key := fn:string-join((
+    xdmp:function-module($funct),
+    xdmp:key-from-QName(xdmp:function-name($funct)),
+    if ($arity ge 1) then module:hash($argument-1) else (),
+    if ($arity ge 2) then module:hash($argument-2) else (),
+    if ($arity ge 3) then module:hash($argument-3) else (),
+    if ($arity ge 4) then module:hash($argument-4) else (),
+    if ($arity ge 5) then module:hash($argument-5) else (),
+    if ($arity ge 6) then module:hash($argument-6) else (),
+    if ($arity ge 7) then module:hash($argument-7) else (),
+    if ($arity ge 8) then module:hash($argument-8) else (),
+    if ($arity ge 9) then module:hash($argument-9) else (),
+    if ($arity ge 10) then module:hash($argument-10) else ()
+  ), ":")
+  return
+    if (cache:contains-cache-map($MEMOIZE-CACHE, $key)) then
+      cache:get-cache-map($MEMOIZE-CACHE, $key)
+    else
+      cache:set-cache-map(
+        $MEMOIZE-CACHE,
+        $key,
+        if ($arity eq 0) then
+          $funct()
+        else if ($arity eq 1) then
+          $funct($argument-1)
+        else if ($arity eq 2) then
+          $funct($argument-1, $argument-2)
+        else if ($arity eq 3) then
+          $funct($argument-1, $argument-2, $argument-3)
+        else if ($arity eq 4) then
+          $funct($argument-1, $argument-2, $argument-3, $argument-4)
+        else if ($arity eq 5) then
+          $funct($argument-1, $argument-2, $argument-3, $argument-4, $argument-5)
+        else if ($arity eq 6) then
+          $funct($argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6)
+        else if ($arity eq 7) then
+          $funct($argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7)
+        else if ($arity eq 8) then
+          $funct($argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8)
+        else if ($arity eq 9) then
+          $funct($argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8, $argument-9)
+        else
+          $funct($argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8, $argument-9, $argument-10)
       )
 };
 
@@ -698,7 +876,7 @@ declare %private function module:load-module-definition(
       $module-namespace,
       $module-location,
       $attributes,
-      $annotations
+      ($annotations, xs:QName("module:memoize"))
     )
   else
     ()

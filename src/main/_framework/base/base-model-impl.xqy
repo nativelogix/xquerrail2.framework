@@ -17,7 +17,7 @@ import module namespace config = "http://xquerrail.com/config" at "../config.xqy
 
 import module namespace xdmp-api = "http://xquerrail.com/xdmp/api" at "../lib/xdmp-api.xqy";
 
-import module namespace module-loader = "http://xquerrail.com/module" at "../module.xqy";
+import module namespace module = "http://xquerrail.com/module" at "../module.xqy";
 
 import module namespace functx = "http://www.functx.com" at "/MarkLogic/functx/functx-1.0-doc-2007-01.xqy";
 
@@ -26,8 +26,6 @@ import module namespace model = "http://xquerrail.com/model/base" at "base-model
 import module namespace generator = "http://xquerrail.com/generator/base" at "../generators/generator-base.xqy";
 
 import module namespace sem = "http://marklogic.com/semantics" at "/MarkLogic/semantics.xqy";
-
-declare namespace module = "http://xquerrail.com/module";
 
 declare namespace as = "http://www.w3.org/2005/xpath-functions";
 
@@ -1454,7 +1452,7 @@ declare function model-impl:get-model-expression(
   $expression as element(domain:expression),
   $arity as xs:integer
 ) as xdmp:function? {
-  let $function := module-loader:load-function-module(
+  let $function := module:load-function-module(
     domain:get-default-application(),
     "model-expression",
     $expression/@function,
@@ -1466,7 +1464,7 @@ declare function model-impl:get-model-expression(
     if (fn:exists($function)) then
       $function
     else
-      module-loader:load-function-module(
+      module:load-function-module(
         (),
         (),
         $expression/@function,
@@ -2302,7 +2300,7 @@ declare private function model-impl:operator-to-cts(
  : @param $model the model of the content type
  : @return search options for the given model
  :)
-declare function model-impl:build-search-options(
+declare %module:memoize function model-impl:build-search-options(
   $model as element(domain:model),
   $params as item()
 ) as element(search:options) {
@@ -2393,7 +2391,7 @@ declare function model-impl:build-search-options(
   return $options
 };
 
-declare function model-impl:build-search-constraints(
+declare %module:memoize function model-impl:build-search-constraints(
   $field as element(),
   $params as item(),
   $prefix as xs:string*
@@ -2478,7 +2476,7 @@ declare function model-impl:build-search-constraints(
         )
 };
 
-declare function model-impl:build-search-element(
+declare %module:memoize function model-impl:build-search-element(
   $field as element(),
   $name as xs:string?
 ) as element()* {
@@ -2493,7 +2491,7 @@ declare function model-impl:build-search-element(
     <search:element ns="{domain:get-field-namespace($field)}" name="{fn:head(($name, $field/@name))}"/>
 };
 
-declare function model-impl:search-sort-state(
+declare %module:memoize function model-impl:search-sort-state(
   $field as element(),
   $prefix as xs:string*,
   $order as xs:string?
@@ -2511,7 +2509,7 @@ declare function model-impl:search-sort-state(
   return fn:concat($name, "-", $order)
 };
 
-declare %private function model-impl:build-sort-element(
+declare %module:memoize function model-impl:build-sort-element(
   $field as element(),
   $name as xs:string*
 ) as element()* {

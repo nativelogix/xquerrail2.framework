@@ -17,7 +17,7 @@ import module namespace domain = "http://xquerrail.com/domain" at "../domain.xqy
 
 import module namespace config = "http://xquerrail.com/config" at "../config.xqy";
 
-import module namespace module-loader = "http://xquerrail.com/module" at "../module.xqy";
+import module namespace module = "http://xquerrail.com/module" at "../module.xqy";
 
 import module namespace functx = "http://www.functx.com" at "/MarkLogic/functx/functx-1.0-doc-2007-01.xqy";
 
@@ -38,12 +38,12 @@ declare variable $EXPANDO-PATTERN := "\$\((\i\c*(/@?\i\c*)*)\)";
 
 declare %config:module-location function model:module-location(
 ) as element(module)* {
-  let $modules-map := module-loader:get-modules-map("http://xquerrail.com/model/base/", fn:concat("/base/base", config:model-suffix()))
+  let $modules-map := module:get-modules-map("http://xquerrail.com/model/base/", fn:concat("/base/base", config:model-suffix()))
   return (
     element module {
       attribute type {"base-model"},
       attribute namespace { "http://xquerrail.com/model/base" },
-      attribute location { module-loader:normalize-uri((config:framework-path(), "/base/base-model.xqy")) },
+      attribute location { module:normalize-uri((config:framework-path(), "/base/base-model.xqy")) },
       attribute interface { fn:true() }
     },
     for $namespace in map:keys($modules-map)
@@ -57,12 +57,133 @@ declare %config:module-location function model:module-location(
   )
 };
 
-declare function model:model-function(
+declare function model:apply-function(
+  $name as xs:string
+) {
+  module:apply-function-module("base-model", $name)
+};
+
+declare function model:apply-function(
+  $name as xs:string,
+  $argument-1 as item()*
+) {
+  module:apply-function-module("base-model", $name, $argument-1)
+};
+
+declare function model:apply-function(
+  $name as xs:string,
+  $argument-1 as item()*,
+  $argument-2 as item()*
+) {
+  module:apply-function-module("base-model", $name, $argument-1, $argument-2)
+};
+
+declare function model:apply-function(
+  $name as xs:string,
+  $argument-1 as item()*,
+  $argument-2 as item()*,
+  $argument-3 as item()*
+) {
+  module:apply-function-module("base-model", $name, $argument-1, $argument-2, $argument-3)
+};
+
+declare function model:apply-function(
+  $name as xs:string,
+  $argument-1 as item()*,
+  $argument-2 as item()*,
+  $argument-3 as item()*,
+  $argument-4 as item()*
+) {
+  module:apply-function-module("base-model", $name, $argument-1, $argument-2, $argument-3, $argument-4)
+};
+
+declare function model:apply-function(
+  $name as xs:string,
+  $argument-1 as item()*,
+  $argument-2 as item()*,
+  $argument-3 as item()*,
+  $argument-4 as item()*,
+  $argument-5 as item()*
+) {
+  module:apply-function-module("base-model", $name, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5)
+};
+
+declare function model:apply-function(
+  $name as xs:string,
+  $argument-1 as item()*,
+  $argument-2 as item()*,
+  $argument-3 as item()*,
+  $argument-4 as item()*,
+  $argument-5 as item()*,
+  $argument-6 as item()*
+) {
+  module:apply-function-module("base-model", $name, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6)
+};
+
+declare function model:apply-function(
+  $name as xs:string,
+  $argument-1 as item()*,
+  $argument-2 as item()*,
+  $argument-3 as item()*,
+  $argument-4 as item()*,
+  $argument-5 as item()*,
+  $argument-6 as item()*,
+  $argument-7 as item()*
+) {
+  module:apply-function-module("base-model", $name, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7)
+};
+
+declare function model:apply-function(
+  $name as xs:string,
+  $argument-1 as item()*,
+  $argument-2 as item()*,
+  $argument-3 as item()*,
+  $argument-4 as item()*,
+  $argument-5 as item()*,
+  $argument-6 as item()*,
+  $argument-7 as item()*,
+  $argument-8 as item()*
+) {
+  module:apply-function-module("base-model", $name, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8)
+};
+
+declare function model:apply-function(
+  $name as xs:string,
+  $argument-1 as item()*,
+  $argument-2 as item()*,
+  $argument-3 as item()*,
+  $argument-4 as item()*,
+  $argument-5 as item()*,
+  $argument-6 as item()*,
+  $argument-7 as item()*,
+  $argument-8 as item()*,
+  $argument-9 as item()*
+) {
+  module:apply-function-module("base-model", $name, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8, $argument-9)
+};
+
+declare function model:apply-function(
+  $name as xs:string,
+  $argument-1 as item()*,
+  $argument-2 as item()*,
+  $argument-3 as item()*,
+  $argument-4 as item()*,
+  $argument-5 as item()*,
+  $argument-6 as item()*,
+  $argument-7 as item()*,
+  $argument-8 as item()*,
+  $argument-9 as item()*,
+  $argument-10 as item()*
+) {
+  module:apply-function-module("base-model", $name, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8, $argument-9, $argument-10)
+};
+
+(:declare function model:model-function(
   $name as xs:string,
   $arity as xs:integer
 ) as xdmp:function {
   let $function :=
-    module-loader:load-function-module(
+    module:load-function-module(
       (),
       "base-model",
       $name,
@@ -76,7 +197,7 @@ declare function model:model-function(
       fn:error(xs:QName("LOAD-FUNCTION-MODULE-ERROR"), text{"Function", $name, "from base-model module type not found."})
     else
       $function
-};
+};:)
 
 declare function model:uuid-string(
 ) as xs:string {
@@ -86,7 +207,7 @@ declare function model:uuid-string(
 declare function model:uuid-string(
   $seed as xs:integer?
 ) as xs:string {
-  model:model-function("uuid-string", 1)($seed)
+  model:apply-function("uuid-string", $seed)
 };
 
 (:~
@@ -94,7 +215,7 @@ declare function model:uuid-string(
  :)
 declare function  model:get-identity(
 ) {
-  model:model-function("get-identity", 0)()
+  model:apply-function("get-identity")
 };
 
 (:~
@@ -105,22 +226,22 @@ declare function  model:get-identity(
 declare function model:generate-uuid(
   $seed as xs:integer?
 ) as xs:string {
-  model:model-function("generate-uuid", 1)($seed)
+  model:apply-function("generate-uuid", $seed)
 };
 
 (:~
  :  Generates a UUID based on randomization function
  :)
-declare function model:generate-uuid() as xs:string
-{
-   model:model-function("generate-uuid", 0)()
+declare function model:generate-uuid(
+) as xs:string {
+  model:apply-function("generate-uuid")
 };
 
 (:~
  : Creates an ID for an element using fn:generate-id.   This corresponds to the config:identity-scheme
  :)
 declare function model:generate-fnid($instance as item()) {
-  model:model-function("generate-fnid", 1)($instance)
+  model:apply-function("generate-fnid", $instance)
 };
 
 (:~
@@ -128,7 +249,7 @@ declare function model:generate-fnid($instance as item()) {
  : This is not a performant id pattern as randomly generated one.
 ~:)
 declare function model:generate-sequenceid($seed as xs:integer) {
-  model:model-function("generate-sequenceid", 1)($seed)
+  model:apply-function("generate-sequenceid", $seed)
 };
 
 (:~
@@ -142,7 +263,7 @@ declare function model:generate-iri(
   $field as element(),
   $instance as item()
 ) {
-  model:model-function("generate-iri", 3)($uri, $field, $instance)
+  model:apply-function("generate-iri", $uri, $field, $instance)
 };
 
 (:~
@@ -156,7 +277,7 @@ declare function model:generate-uri(
   $model as element(domain:model),
   $instance as item()
 ) {
-  model:model-function("generate-uri", 3)($uri, $model, $instance)
+  model:apply-function("generate-uri", $uri, $model, $instance)
 };
 
 declare function model:node-uri(
@@ -164,7 +285,7 @@ declare function model:node-uri(
   $current as item()*,
   $updates as item()*
 ) as xs:string? {
-  model:model-function("node-uri", 3)($context, $current, $updates)
+  model:apply-function("node-uri", $context, $current, $updates)
 };
 
 (:~
@@ -175,7 +296,7 @@ declare function build-collections(
   $model as element(domain:model),
   $instance as item()
 ) {
-  model:model-function("build-collections", 3)($collections, $model, $instance)
+  model:apply-function("build-collections", $collections, $model, $instance)
 };
 
 (:~
@@ -188,7 +309,7 @@ declare function model:get-root-node(
   $model as element(domain:model),
   $doc as node()
 ) as node() {
-  model:model-function("get-root-node", 2)($model, $doc)
+  model:apply-function("get-root-node", $model, $doc)
 };
 
 (:~
@@ -201,7 +322,7 @@ declare function model:get-id-from-params(
   $model as element(domain:model),
   $params as item()*
 ) as xs:string? {
-  model:model-function("get-id-from-params", 2)($model, $params)
+  model:apply-function("get-id-from-params", $model, $params)
 };
 
 (:~
@@ -235,7 +356,7 @@ declare function model:new(
   $model as element(domain:model),
   $params as item()
 ) {
-  model:model-function("new", 2)($model, $params)
+  model:apply-function("new", $model, $params)
 };
 
 (:~
@@ -257,7 +378,7 @@ declare function model:create-binary-dependencies(
   $permissions as element(sec:permission)*,
   $collections as xs:string*
 ) {
-  model:model-function("create-binary-dependencies", 4)($identity, $instance, $permissions, $collections)
+  model:apply-function("create-binary-dependencies", $identity, $instance, $permissions, $collections)
 };
 
 (:~
@@ -267,7 +388,7 @@ declare function model:create-reference-cache(
   $model as element(domain:model),
   $instance
 ) {
-  model:model-function("create-reference-cache", 2)($model, $instance)
+  model:apply-function("create-reference-cache", $model, $instance)
 };
 
 (:~
@@ -280,7 +401,6 @@ declare function model:create(
   $model as element(domain:model),
   $params as item()
 ) as element()? {
-  (:model:model-function("create", 2)($model, $params):)
   model:create($model, $params, xdmp:default-collections())
 };
 
@@ -310,7 +430,7 @@ declare function model:create(
   $collections as xs:string*,
   $permissions as element(sec:permission)*
 ) as element()? {
-  model:model-function("create", 4)($model, $params, $collections, $permissions)
+  model:apply-function("create", $model, $params, $collections, $permissions)
 };
 
 (:~
@@ -320,7 +440,7 @@ declare function model:exists(
   $model as element(domain:model),
   $params as item()
 ) as xs:boolean {
-  model:model-function("exists", 2)($model, $params)
+  model:apply-function("exists", $model, $params)
 };
 
 (:~
@@ -333,7 +453,7 @@ declare function model:get(
   $model as element(domain:model),
   $params as item()
 ) as element()? {
-  model:model-function("get", 2)($model, $params)
+  model:apply-function("get", $model, $params)
 };
 
 (:~
@@ -346,7 +466,7 @@ declare function model:reference-by-keylabel(
   $model as element(domain:model),
   $params as item()
 ) as element()? {
-  model:model-function("reference-by-keylabel", 2)($model, $params)
+  model:apply-function("reference-by-keylabel", $model, $params)
 };
 
 declare function model:update-partial(
@@ -363,14 +483,14 @@ declare function model:update-partial(
   $params as item(),
   $collections as xs:string*
 ) {
-  model:model-function("update-partial", 3)($model, $params, $collections)
+  model:apply-function("update-partial", $model, $params, $collections)
 };
 
 (: %private? :)
 declare function model:parse-patch-path(
   $path as xs:string
 ) {
-  model:model-function("parse-patch-path", 1)($path)
+  model:apply-function("parse-patch-path", $path)
 };
 
 declare function model:patch(
@@ -378,7 +498,7 @@ declare function model:patch(
   $instance as element(),
   $params as item()*
 ) {
-  model:model-function("patch", 3)($model, $instance, $params)
+  model:apply-function("patch", $model, $instance, $params)
 };
 
 (:~
@@ -416,14 +536,14 @@ declare function model:update(
   $collections as xs:string*,
   $partial as xs:boolean
 ) as element() {
-  model:model-function("update", 4)($model, $params, $collections, $partial)
+  model:apply-function("update", $model, $params, $collections, $partial)
 };
 
 declare function model:create-or-update(
   $model as element(domain:model),
   $params as item()
 ) {
-  model:model-function("create-or-update", 2)($model, $params)
+  model:apply-function("create-or-update", $model, $params)
 };
 
 (:~
@@ -432,7 +552,7 @@ declare function model:create-or-update(
 declare function model:get-namespaces(
   $model as element(domain:model)
 ) {
-  model:model-function("get-namespaces", 1)($model)
+  model:apply-function("get-namespaces", $model)
 };
 
 (:~
@@ -443,7 +563,7 @@ declare function model:recursive-update-partial(
   $current as node()?,
   $updates as map:map
 ) {
-  model:model-function("recursive-update-partial", 3)($context, $current, $updates)
+  model:apply-function("recursive-update-partial", $context, $current, $updates)
 };
 
 (:~
@@ -462,7 +582,7 @@ declare function model:recursive-create(
   $updates as item()?,
   $partial as xs:boolean
 ) {
-  model:model-function("recursive-create", 4)($model, $current, $updates, $partial)
+  model:apply-function("recursive-create", $model, $current, $updates, $partial)
 };
 
 (:~
@@ -505,7 +625,7 @@ declare function model:recursive-build(
   $updates as item()?,
   $partial as xs:boolean
 ) {
-  model:model-function("recursive-build", 4)($context, $current, $updates, $partial)
+  model:apply-function("recursive-build", $context, $current, $updates, $partial)
 };
 
 (:declare function model:add-triples(
@@ -513,7 +633,7 @@ declare function model:recursive-build(
   $current as node()?,
   $updates as node()
 ) {
-  model:model-function("add-triples", 3)($model, $current, $updates)
+  model:apply-function("add-triples", $model, $current, $updates)
 };:)
 
 declare function model:triple-identity-value(
@@ -521,7 +641,7 @@ declare function model:triple-identity-value(
   $current as item(),
   $updates as item()*
 ) {
-  model:model-function("triple-identity-value", 3)($context, $current, $updates)
+  model:apply-function("triple-identity-value", $context, $current, $updates)
 };
 
 (:declare function model:build-triples(
@@ -529,14 +649,14 @@ declare function model:triple-identity-value(
   $current as node()?,
   $updates as item()
 ) as element(sem:triples) {
-  model:model-function("build-triples", 3)($model, $current, $updates)
+  model:apply-function("build-triples", $model, $current, $updates)
 };:)
 
 declare function model:get-triple-identity(
   $model as element(domain:model),
   $params as item()?
 ) as xs:string? {
-  model:model-function("get-triple-identity", 2)($model, $params)
+  model:apply-function("get-triple-identity", $model, $params)
 };
 
 declare function model:build-element(
@@ -545,7 +665,7 @@ declare function model:build-element(
   $updates as item(),
   $partial as xs:boolean
 ) {
-  model:model-function("build-element", 4)($context, $current, $updates, $partial)
+  model:apply-function("build-element", $context, $current, $updates, $partial)
 };
 
 (:~
@@ -558,7 +678,7 @@ declare function model:build-attribute(
   $partial as xs:boolean,
   $relative as xs:boolean
 ) as attribute()? {
-  model:model-function("build-attribute", 5)($context, $current, $updates, $partial, $relative)
+  model:apply-function("build-attribute", $context, $current, $updates, $partial, $relative)
 };
 (:~
  : Builds a Reference Value by its type
@@ -569,7 +689,7 @@ declare function model:build-reference(
   $updates as item()*,
   $partial as xs:boolean
 ) {
-  model:model-function("build-reference", 4)($context, $current, $updates, $partial)
+  model:apply-function("build-reference", $context, $current, $updates, $partial)
 };
 
 declare function model:build-schema-element(
@@ -578,7 +698,7 @@ declare function model:build-schema-element(
   $updates as item()*,
   $partial as xs:boolean
 ) as element() {
-  model:model-function("build-schema-element", 4)($context, $current, $updates, $partial)
+  model:apply-function("build-schema-element", $context, $current, $updates, $partial)
 };
 
 (:~
@@ -590,7 +710,7 @@ declare function model:build-binary(
   $updates as item(),
   $partial as xs:boolean
 ) {
-  model:model-function("build-binary", 4)($context, $current, $updates, $partial)
+  model:apply-function("build-binary", $context, $current, $updates, $partial)
 };
 
 (:~
@@ -602,7 +722,7 @@ declare function model:build-instance(
   $updates as item()?,
   $partial as xs:boolean
 ) {
-  model:model-function("build-instance", 4)($context, $current, $updates, $partial)
+  model:apply-function("build-instance", $context, $current, $updates, $partial)
 };
 
 declare function model:build-langString(
@@ -611,7 +731,7 @@ declare function model:build-langString(
   $updates as item()*,
   $partial as xs:boolean
 ) {
-  model:model-function("build-langString", 4)($context, $current, $updates, $partial)
+  model:apply-function("build-langString", $context, $current, $updates, $partial)
 };
 
 declare function model:build-triple-subject(
@@ -619,7 +739,7 @@ declare function model:build-triple-subject(
   $params as item()*,
   $value as item()
 ) as element(sem:subject) {
-  model:model-function("build-triple-subject", 3)($field, $params, $value)
+  model:apply-function("build-triple-subject", $field, $params, $value)
 };
 
 declare function model:build-triple-predicate(
@@ -627,7 +747,7 @@ declare function model:build-triple-predicate(
   $params as item()*,
   $value as item()
 ) as element(sem:predicate) {
-  model:model-function("build-triple-predicate", 3)($field, $params, $value)
+  model:apply-function("build-triple-predicate", $field, $params, $value)
 };
 
 declare function model:build-triple-object(
@@ -635,7 +755,7 @@ declare function model:build-triple-object(
   $params as item()*,
   $value as item()
 ) as element(sem:object) {
-  model:model-function("build-triple-object", 3)($field, $params, $value)
+  model:apply-function("build-triple-object", $field, $params, $value)
 };
 
 declare function model:build-triple-graph(
@@ -643,7 +763,7 @@ declare function model:build-triple-graph(
   $params as item()*,
   $value as item()
 ) as element(sem:graph) {
-  model:model-function("build-triple-graph", 3)($field, $params, $value)
+  model:apply-function("build-triple-graph", $field, $params, $value)
 };
 
 declare function model:get-model-expression(
@@ -651,7 +771,7 @@ declare function model:get-model-expression(
   $expression as element(domain:expression),
   $arity as xs:integer
 ) as xdmp:function? {
-  model:model-function("get-model-expression", 3)($model, $expression, $arity)
+  model:apply-function("get-model-expression", $model, $expression, $arity)
 };
 
 (:~
@@ -663,7 +783,7 @@ declare function model:build-triple(
   $updates as item()*,
   $partial as xs:boolean
 ) as element(sem:triple)* {
-  model:model-function("build-triple", 4)($context, $current, $updates, $partial)
+  model:apply-function("build-triple", $context, $current, $updates, $partial)
 };
 
 (:~
@@ -676,7 +796,7 @@ declare function model:delete(
   $model as element(domain:model),
   $params as item()
 ) {
-  model:model-function("delete", 2)($model, $params)
+  model:apply-function("delete", $model, $params)
 };
 
 (:~
@@ -686,7 +806,7 @@ declare function model:delete-binary-dependencies(
   $model as element(domain:model),
   $current as element()
 ) as empty-sequence() {
-  model:model-function("delete-binary-dependencies", 2)($model, $current)
+  model:apply-function("delete-binary-dependencies", $model, $current)
 };
 
 (:~
@@ -696,7 +816,7 @@ declare function model:lookup(
   $model as element(domain:model),
   $params as item()
 ) as element(lookups)? {
-  model:model-function("lookup", 2)($model, $params)
+  model:apply-function("lookup", $model, $params)
 };
 
 (:~Recursively Removes elements based on @listable = true :)
@@ -705,7 +825,7 @@ declare function model:filter-list-result(
   $result,
   $params as item()
 ) {
-  model:model-function("filter-list-result", 3)($field, $result, $params)
+  model:apply-function("filter-list-result", $field, $result, $params)
 };
 
 (:~
@@ -724,7 +844,7 @@ declare function model:list(
   $params as item(),
   $filter-function as function(*)?
 ) as element(list)? {
-  model:model-function("list", 3)($model, $params, $filter-function)
+  model:apply-function("list", $model, $params, $filter-function)
 };
 
 declare function model:render-list(
@@ -742,7 +862,7 @@ declare function model:render-list(
   $params as item()*,
   $filter-function as function(*)?
 ) as element() {
-  model:model-function("render-list", 4)($model, $list, $params, $filter-function)
+  model:apply-function("render-list", $model, $list, $params, $filter-function)
 };
 
 (:~
@@ -752,7 +872,7 @@ declare function model:list-params(
   $model as element(domain:model),
   $params as item()
 ) {
-  model:model-function("list-params", 2)($model, $params)
+  model:apply-function("list-params", $model, $params)
 };
 
 declare function model:page-size(
@@ -760,7 +880,7 @@ declare function model:page-size(
   $params,
   $param-name as xs:string?
 ) as xs:unsignedLong? {
-  model:model-function("page-size", 3)($model, $params, $param-name)
+  model:apply-function("page-size", $model, $params, $param-name)
 };
 
 declare function model:sort-field(
@@ -768,7 +888,7 @@ declare function model:sort-field(
   $params,
   $param-name as xs:string?
 ) as xs:string? {
-  model:model-function("sort-field", 3)($model, $params, $param-name)
+  model:apply-function("sort-field", $model, $params, $param-name)
 };
 
 declare function model:sort-order(
@@ -776,7 +896,7 @@ declare function model:sort-order(
   $params,
   $param-name as xs:string?
 ) as xs:string? {
-  model:model-function("sort-order", 3)($model, $params, $param-name)
+  model:apply-function("sort-order", $model, $params, $param-name)
 };
 
 (: sorting function support dotted notation for $field-param-name and $order-param-name :)
@@ -786,7 +906,7 @@ declare function model:sorting(
   $field-param-name as xs:string*,
   $order-param-name as xs:string*
 ) as element(sort)? {
-  model:model-function("sorting", 4)($model, $params, $field-param-name, $order-param-name)
+  model:apply-function("sorting", $model, $params, $field-param-name, $order-param-name)
 };
 
 (:~
@@ -809,7 +929,7 @@ declare function model:operator-to-cts(
   $value as item()?,
   $ranged as xs:boolean
 ) {
-  model:model-function("operator-to-cts", 4)($field, $op, $value, $ranged)
+  model:apply-function("operator-to-cts", $field, $op, $value, $ranged)
 };
 
 declare function model:build-search-options(
@@ -827,7 +947,7 @@ declare function model:build-search-options(
   $model as element(domain:model),
   $params as item()
 ) as element(search:options) {
-  model:model-function("build-search-options", 2)($model, $params)
+  model:apply-function("build-search-options", $model, $params)
 };
 
 declare function model:build-search-constraints(
@@ -848,7 +968,7 @@ declare function model:build-search-constraints(
   $params as item(),
   $prefix as xs:string*
 ) {
-  model:model-function("build-search-constraints", 3)($field, $params, $prefix)
+  model:apply-function("build-search-constraints", $field, $params, $prefix)
 };
 
 declare function model:build-search-element(
@@ -861,7 +981,7 @@ declare function model:build-search-element(
   $field as element(),
   $name as xs:string?
 ) as element()* {
-  model:model-function("build-search-element", 2)($field, $name)
+  model:apply-function("build-search-element", $field, $name)
 };
 
 declare function model:search-sort-state(
@@ -876,14 +996,14 @@ declare function model:search-sort-state(
   $prefix as xs:string*,
   $order as xs:string?
 ) as xs:string {
-  model:model-function("search-sort-state", 3)($field, $prefix, $order)
+  model:apply-function("search-sort-state", $field, $prefix, $order)
 };
 
 declare function model:build-sort-element(
   $field as element(),
   $name as xs:string*
 ) as element()* {
-  model:model-function("build-sort-element", 2)($field, $name)
+  model:apply-function("build-sort-element", $field, $name)
 };
 
 declare function model:build-search-query(
@@ -898,7 +1018,7 @@ declare function model:build-search-query(
   $params as item(),
   $output as xs:string?
 ) {
-  model:model-function("build-search-query", 3)($model, $params, $output)
+  model:apply-function("build-search-query", $model, $params, $output)
 };
 
 (:~
@@ -911,7 +1031,7 @@ declare function model:search(
   $model as element(domain:model),
   $params as item()
 ) as element(search:response) {
-  model:model-function("search", 2)($model, $params)
+  model:apply-function("search", $model, $params)
 };
 
 (:~
@@ -924,7 +1044,7 @@ declare function model:suggest(
   $model as element(domain:model),
   $params as item()
 ) as xs:string* {
-  model:model-function("suggest", 2)($model, $params)
+  model:apply-function("suggest", $model, $params)
 };
 
 (:~
@@ -934,13 +1054,13 @@ declare function model:get-references(
   $field as element(),
   $params as item()*
 ) {
-  model:model-function("get-references", 2)($field, $params)
+  model:apply-function("get-references", $field, $params)
 };
 
 declare function model:get-function-cache(
   $function as function(*)?
 ) {
-  model:model-function("get-function-cache", 1)($function)
+  model:apply-function("get-function-cache", $function)
 };
 
 (:~
@@ -953,7 +1073,7 @@ declare function model:get-model-references(
   $reference as element(domain:element),
   $params as item()*
 ) as element()* {
-  model:model-function("get-model-references", 2)($reference, $params)
+  model:apply-function("get-model-references", $reference, $params)
 };
 
 (:~
@@ -963,7 +1083,7 @@ declare function model:get-controller-reference(
   $reference as element(domain:element),
   $params as item()
 ) {
-  model:model-function("get-controller-reference", 2)($reference, $params)
+  model:apply-function("get-controller-reference", $reference, $params)
 };
 
 
@@ -974,7 +1094,7 @@ declare function model:get-optionlist-reference(
   $reference as element(domain:element),
   $params as item()
 ) {
-  model:model-function("get-optionlist-reference", 2)($reference, $params)
+  model:apply-function("get-optionlist-reference", $reference, $params)
 };
 
 (:~~:)
@@ -982,7 +1102,7 @@ declare function model:get-extension-reference(
   $reference as element(domain:element),
   $params as item()
 ) {
-  model:model-function("get-extension-reference", 2)($reference, $params)
+  model:apply-function("get-extension-reference", $reference, $params)
 };
 
 declare function model:set-cache-reference(
@@ -990,14 +1110,14 @@ declare function model:set-cache-reference(
   $keys as xs:string*,
   $values as item()*
 ) {
-  model:model-function("set-cache-reference", 3)($model, $keys, $values)
+  model:apply-function("set-cache-reference", $model, $keys, $values)
 };
 
 declare function model:get-cache-reference(
   $model as element(domain:model),
   $keys as xs:string
 ) {
-  model:model-function("get-cache-reference", 2)($model, $keys)
+  model:apply-function("get-cache-reference", $model, $keys)
 };
 
 declare function model:reference(
@@ -1005,7 +1125,7 @@ declare function model:reference(
   $model as element(domain:model),
   $params as item()*
 ) as element()? {
-  model:model-function("reference", 3)($context, $model, $params)
+  model:apply-function("reference", $context, $model, $params)
 };
 
 (:~
@@ -1019,7 +1139,7 @@ declare function model:instance(
   $model as element(domain:model),
   $params as item()*
 ) {
-  model:model-function("instance", 3)($context, $model, $params)
+  model:apply-function("instance", $context, $model, $params)
 };
 
 (:~
@@ -1029,7 +1149,7 @@ declare function model:get-application-reference(
   $field as element(),
   $params as item()*
 ) {
-  model:model-function("get-application-reference", 2)($field, $params)
+  model:apply-function("get-application-reference", $field, $params)
 };
 
  (:~
@@ -1038,7 +1158,7 @@ declare function model:get-application-reference(
 declare  function model:get-application-reference-values(
   $field
 ) {
-  model:model-function("get-application-reference-values", 1)($field)
+  model:apply-function("get-application-reference-values", $field)
 };
 
 (:~
@@ -1052,13 +1172,13 @@ declare function model:validate-params(
   $params as item()*,
   $mode as xs:string
 ) as empty-sequence() {
-  model:model-function("validate-params", 3)($model, $params, $mode)
+  model:apply-function("validate-params", $model, $params, $mode)
 };
 
 declare function model:validation-errors(
   $error as element(error:error)
 ) as element (validationErrors)? {
-  model:model-function("validation-errors", 1)($error)
+  model:apply-function("validation-errors", $error)
 };
 
 (:~
@@ -1089,14 +1209,14 @@ declare function model:build-params-map-from-body(
   $model as element(domain:model),
   $body as node()
 ) as map:map {
-  model:model-function("build-params-map-from-body", 2)($model, $body)
+  model:apply-function("build-params-map-from-body", $model, $body)
 };
 
 declare function model:convert-to-map(
   $model as element(domain:model),
   $current as item()
 ) as map:map? {
-  model:model-function("convert-to-map", 2)($model, $current)
+  model:apply-function("convert-to-map", $model, $current)
 };
 
 (:~
@@ -1108,7 +1228,7 @@ declare function model:build-value(
   $value as item()*,
   $current as item()*
 ) {
-  model:model-function("build-value", 3)($context, $value, $current)
+  model:apply-function("build-value", $context, $value, $current)
 };
 
 (:~
@@ -1130,7 +1250,7 @@ declare function model:find(
   $model as element(domain:model),
   $params
 ) {
-  model:model-function("find", 2)($model, $params)
+  model:apply-function("find", $model, $params)
 };
 (:~
  :  "fieldname==" Equality
@@ -1149,14 +1269,14 @@ declare function model:find-params(
   $model as element(domain:model),
   $params
 ) {
-  model:model-function("find-params", 2)($model, $params)
+  model:apply-function("find-params", $model, $params)
 };
 
 declare function partial-update(
   $model as element(domain:model),
   $updates as map:map
 ) {
-  model:model-function("partial-update", 2)($model, $updates)
+  model:apply-function("partial-update", $model, $updates)
 };
 
 (:~
@@ -1166,7 +1286,7 @@ declare function model:find-and-update(
   $model as element(domain:model),
   $params
 ) {
-  model:model-function("find-and-update", 2)($model, $params)
+  model:apply-function("find-and-update", $model, $params)
 };
 
 declare function model:export(
@@ -1186,7 +1306,7 @@ declare function model:export(
   $params as map:map,
   $fields as xs:string*
 ) as element(results) {
-  model:model-function("export", 3)($model, $params, $fields)
+  model:apply-function("export", $model, $params, $fields)
 };
 
 declare function convert-attributes-to-elements(
@@ -1194,7 +1314,7 @@ declare function convert-attributes-to-elements(
   $attributes,
   $convert-attributes
 ) {
-  model:model-function("convert-attributes-to-elements", 3)($namespace, $attributes, $convert-attributes)
+  model:apply-function("convert-attributes-to-elements", $namespace, $attributes, $convert-attributes)
 };
 
 declare function serialize-to-flat-xml(
@@ -1202,21 +1322,21 @@ declare function serialize-to-flat-xml(
   $model as element(domain:model),
   $current as node()
 ) {
-  model:model-function("serialize-to-flat-xml", 3)($namespace, $model, $current)
+  model:apply-function("serialize-to-flat-xml", $namespace, $model, $current)
 };
 
 declare function convert-flat-xml-to-map(
   $model as element(domain:model),
   $current as node()
 ) as map:map {
-  model:model-function("convert-flat-xml-to-map", 2)($model, $current)
+  model:apply-function("convert-flat-xml-to-map", $model, $current)
 };
 
 declare function model:import(
   $model as element(domain:model),
   $dataset as element(results)
 ) as empty-sequence() {
-  model:model-function("import", 2)($model, $dataset)
+  model:apply-function("import", $model, $dataset)
 };
 
 (:~
@@ -1226,7 +1346,7 @@ declare function model:from-json(
   $model as element(domain:model),
   $update as item()
 ) {
-  model:model-function("from-json", 2)($model, $update)
+  model:apply-function("from-json", $model, $update)
 };
 
 (:~
@@ -1238,7 +1358,7 @@ declare function model:from-json(
   $current as element()?,
   $mode as xs:string
 ) {
-  model:model-function("from-json", 4)($model, $update, $current, $mode)
+  model:apply-function("from-json", $model, $update, $current, $mode)
 };
 
 (:~
@@ -1250,7 +1370,7 @@ declare function model:build-from-json(
   $updates as element(),
   $partial as xs:boolean
 ) {
-  model:model-function("build-from-json", 4)($context, $current, $updates, $partial)
+  model:apply-function("build-from-json", $context, $current, $updates, $partial)
 };
 
 (:~
@@ -1262,7 +1382,7 @@ declare function build-complex(
   $updates as item(),
   $partial as xs:boolean
 ) {
-  model:model-function("build-complex", 4)($context, $current, $updates, $partial)
+  model:apply-function("build-complex", $context, $current, $updates, $partial)
 };
 
 (:~
@@ -1274,12 +1394,12 @@ declare function build-simple(
   $updates as item()?,
   $partial as xs:boolean
 ) {
-  model:model-function("build-simple", 4)($context, $current, $updates, $partial)
+  model:apply-function("build-simple", $context, $current, $updates, $partial)
 };
 
 (:Normalizes the path to ensure // are removed:)
 declare function model:normalize-path(
   $path as xs:string
 ) {
-  model:model-function("normalize-path", 1)($path)
+  model:apply-function("normalize-path", $path)
 };

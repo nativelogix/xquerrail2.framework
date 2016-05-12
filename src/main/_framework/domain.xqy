@@ -51,10 +51,16 @@ declare %config:module-location function domain:module-location(
 };
 
 declare function domain:apply-function(
+  $name as xs:string
+) {
+  module:apply-function-module("domain", $name)
+};
+
+declare function domain:apply-function(
   $name as xs:string,
   $argument-1 as item()*
 ) {
-  domain:apply-function($name, 1, $argument-1, (), (), (), (), (), (), (), (), ())
+  module:apply-function-module("domain", $name, $argument-1)
 };
 
 declare function domain:apply-function(
@@ -62,7 +68,7 @@ declare function domain:apply-function(
   $argument-1 as item()*,
   $argument-2 as item()*
 ) {
-  domain:apply-function($name, 2, $argument-1, $argument-2, (), (), (), (), (), (), (), ())
+  module:apply-function-module("domain", $name, $argument-1, $argument-2)
 };
 
 declare function domain:apply-function(
@@ -71,7 +77,7 @@ declare function domain:apply-function(
   $argument-2 as item()*,
   $argument-3 as item()*
 ) {
-  domain:apply-function($name, 3, $argument-1, $argument-2, $argument-3, (), (), (), (), (), (), ())
+  module:apply-function-module("domain", $name, $argument-1, $argument-2, $argument-3)
 };
 
 declare function domain:apply-function(
@@ -81,7 +87,7 @@ declare function domain:apply-function(
   $argument-3 as item()*,
   $argument-4 as item()*
 ) {
-  domain:apply-function($name, 4, $argument-1, $argument-2, $argument-3, $argument-4, (), (), (), (), (), ())
+  module:apply-function-module("domain", $name, $argument-1, $argument-2, $argument-3, $argument-4)
 };
 
 declare function domain:apply-function(
@@ -92,7 +98,7 @@ declare function domain:apply-function(
   $argument-4 as item()*,
   $argument-5 as item()*
 ) {
-  domain:apply-function($name, 5, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, (), (), (), (), ())
+  module:apply-function-module("domain", $name, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5)
 };
 
 declare function domain:apply-function(
@@ -104,7 +110,7 @@ declare function domain:apply-function(
   $argument-5 as item()*,
   $argument-6 as item()*
 ) {
-  domain:apply-function($name, 6, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, (), (), (), ())
+  module:apply-function-module("domain", $name, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6)
 };
 
 declare function domain:apply-function(
@@ -117,7 +123,7 @@ declare function domain:apply-function(
   $argument-6 as item()*,
   $argument-7 as item()*
 ) {
-  domain:apply-function($name, 7, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, (), (), ())
+  module:apply-function-module("domain", $name, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7)
 };
 
 declare function domain:apply-function(
@@ -131,7 +137,7 @@ declare function domain:apply-function(
   $argument-7 as item()*,
   $argument-8 as item()*
 ) {
-  domain:apply-function($name, 8, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8, (), ())
+  module:apply-function-module("domain", $name, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8)
 };
 
 declare function domain:apply-function(
@@ -146,7 +152,7 @@ declare function domain:apply-function(
   $argument-8 as item()*,
   $argument-9 as item()*
 ) {
-  domain:apply-function($name, 9, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8, $argument-9, ())
+  module:apply-function-module("domain", $name, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8, $argument-9)
 };
 
 declare function domain:apply-function(
@@ -162,10 +168,10 @@ declare function domain:apply-function(
   $argument-9 as item()*,
   $argument-10 as item()*
 ) {
-  domain:apply-function($name, 10, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8, $argument-9, $argument-10)
+  module:apply-function-module("domain", $name, $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8, $argument-9, $argument-10)
 };
 
-declare function domain:apply-function(
+(:declare function domain:apply-function(
   $name as xs:string,
   $arity as xs:positiveInteger,
   $argument-1 as item()*,
@@ -188,7 +194,7 @@ declare function domain:apply-function(
     (),
     $argument-1, $argument-2, $argument-3, $argument-4, $argument-5, $argument-6, $argument-7, $argument-8, $argument-9, $argument-10
   )
-};
+};:)
 
 (:declare function domain:domain-function(
   $name as xs:string,
